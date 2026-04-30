@@ -142,7 +142,7 @@ verify confirmed OK. The probe itself is functional.
 - No RTOS threads — single main-thread blocking loop (`k_msleep`).
 - `DEVKIT_TICK_MS = 500` is a compile-time constant; not runtime configurable.
 - LED identified by board DTS alias `led0` — no custom board overlay.
-- RTT logging only (no UART console); STLink V2 required for log read.
+- RTT logging only (no UART console on this board revision); RTT log requires ST-Link/SWD debug access.
 - No shell, scheduler, event bus, or peripheral drivers at this phase.
 - **Manual RESET required after every `west flash`** (OpenOCD runner exits before reset; ST-LINK/V2 probe is functional).
 - `CONFIG_LOG_DEFAULT_LEVEL=3` (INF) — kernel debug messages suppressed by design.
