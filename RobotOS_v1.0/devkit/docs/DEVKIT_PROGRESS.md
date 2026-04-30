@@ -33,11 +33,16 @@ changing observable behavior (blink rate, log output, boot sequence).
 | `src/main.c` | Reduced to thin entry: init + run, no direct GPIO or LOG |
 | `CMakeLists.txt` | Added `devkit_status_led.c` and `devkit_runtime.c` to `target_sources` |
 
+### Files Modified (post-validation fix)
+
+| File       | Change                                                                                    |
+| ---------- | ----------------------------------------------------------------------------------------- |
+| `prj.conf` | `LOG_DEFAULT_LEVEL` 4→3, added `LOG_PROCESS_THREAD_STACK_SIZE=1536` (see Issues section) |
+
 ### Files Unchanged
 
 | File | Reason |
 |------|--------|
-| `prj.conf` | RTT logging config confirmed working — no change needed |
 | `README.md` | Phase 1/2 reference preserved; update deferred to Phase 3A close |
 
 ---
@@ -88,6 +93,46 @@ PD13 orange LED blinks at 500ms interval. RTT log active.
 
 ---
 
+### Issues Found and Fixed During Validation
+
+#### Issue 1 — MemManage fault: log processing thread stack overflow
+
+**Symptom:** LED solid ON, not blinking. CPU halted in MemManage exception
+(`xPSR: 0x21000004`, `pc: z_log_msg_local_claim`). RTT ticks logged once
+then firmware died.
+
+**Root cause:** `CONFIG_LOG_DEFAULT_LEVEL=4` (DBG) caused the Zephyr kernel
+to emit a flood of debug messages (`os`, `mpu` subsystems) during boot into
+the deferred log queue. The log processing thread (768 B stack by default)
+exhausted its stack servicing this burst, triggering a MemManage fault
+via the MPU guard region.
+
+**Fix — `prj.conf`:**
+```
+CONFIG_LOG_DEFAULT_LEVEL=3          # INF: keeps app LOG_INF, suppresses kernel DBG
+CONFIG_LOG_PROCESS_THREAD_STACK_SIZE=1536   # safety margin
+```
+
+**Result:** Firmware stable, no MemManage fault. 14 consecutive RTT ticks
+captured at exact 500ms intervals. Build delta: FLASH 27252→25520 B.
+
+---
+
+#### Issue 2 — STLink V1 reset limitation: firmware does not start after flash
+
+**Symptom:** After `west flash`, LED stays OFF. Board appears dead.
+
+**Root cause:** STLink V1 (`V2J47S0`) cannot assert the nRST line to reset
+the MCU after programming. OpenOCD writes the firmware and exits (code 1)
+without triggering a reset. The CPU remains halted at the pre-flash PC.
+
+**Fix:** Press the physical **RESET button** on the Discovery board after
+`west flash` completes. Firmware starts immediately on release.
+
+**Confirmed:** LED blinks at 500ms (PD13 orange) after manual RESET.
+
+---
+
 ### Known Limitations
 
 - No RTOS threads — single main-thread blocking loop (`k_msleep`).
@@ -95,6 +140,8 @@ PD13 orange LED blinks at 500ms interval. RTT log active.
 - LED identified by board DTS alias `led0` — no custom board overlay.
 - RTT logging only (no UART console); STLink V2 required for log read.
 - No shell, scheduler, event bus, or peripheral drivers at this phase.
+- **Manual RESET required after every `west flash`** (STLink V1 limitation).
+- `CONFIG_LOG_DEFAULT_LEVEL=3` (INF) — kernel debug messages suppressed by design.
 
 ---
 
@@ -140,11 +187,15 @@ src/devkit_runtime.c
 
 #### Build Memory Summary
 
+Post-fix build (LOG_DEFAULT_LEVEL=3, LOG_PROCESS_THREAD_STACK_SIZE=1536):
+
 ```
 Memory region    Used Size   Region Size   %age Used
-FLASH:            27252 B       512 KB       5.20%
-RAM:               7808 B       128 KB       5.96%
+FLASH:            25520 B       512 KB       4.87%
+RAM:               8576 B       128 KB       6.54%
 ```
+
+Initial build before fix (LOG_DEFAULT_LEVEL=4): FLASH 27252 B, RAM 7808 B.
 
 #### Flash Evidence
 
@@ -166,25 +217,26 @@ Manual RESET on board required to start execution. Firmware write and verify: **
 #### RTT Log Evidence
 
 OpenOCD RTT server at `_SEGGER_RTT = 0x20000800`, port 9090.
-Captured via Python TCP client after `reset halt` + `reset run`.
+Captured via Python TCP client (post-fix firmware, after manual RESET).
 
 ```
 *** Booting Zephyr OS build v3.6.0 ***
 [00:00:00.000,000] <inf> devkit_runtime: RobotOS devkit starting — board: stm32f411e_disco
 [00:00:00.000,000] <inf> devkit_runtime: LED blink loop starting
 [00:00:00.000,000] <inf> devkit_runtime: tick
-[00:00:00.000,000] <dbg> os: z_tick_sleep: thread 0x20000608 for 5000 ticks
+[00:00:00.500,000] <inf> devkit_runtime: tick
+[00:00:01.000,000] <inf> devkit_runtime: tick
+[00:00:01.500,000] <inf> devkit_runtime: tick
+...
+[00:00:06.501,000] <inf> devkit_runtime: tick
 ```
+
+14 consecutive ticks at exact 500ms intervals. No faults. No log errors.
 
 - Log module: `devkit_runtime` ✓ (changed from `devkit_main` — expected)
 - Boot banner: present ✓
-- LED blink loop: started ✓
-- Tick log: present ✓
-- k_msleep(500) active: confirmed via `z_tick_sleep` debug line ✓
-
-**RTT session note:** OpenOCD rtt server drops TCP connection after buffer drain.
-Subsequent ticks not captured in same TCP session — this is RTT tooling behavior,
-not a firmware regression. Firmware is confirmed running (LED blinks visually, sleep active).
+- Tick interval: 500ms exact ✓
+- LED blink: PD13 orange confirmed visually after manual RESET ✓
 
 ---
 
