@@ -12,7 +12,5 @@ int main(void)
 		return -1;
 	}
 
-	devkit_runtime_run();
-
-	return 0;
+	devkit_runtime_run(); /* does not return */
 }

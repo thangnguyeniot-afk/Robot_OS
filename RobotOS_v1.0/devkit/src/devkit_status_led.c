@@ -9,7 +9,7 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/logging/log.h>
 
-LOG_MODULE_REGISTER(devkit_status_led, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(devkit_status_led, LOG_LEVEL_INF);
 
 #define LED0_NODE DT_ALIAS(led0)
 

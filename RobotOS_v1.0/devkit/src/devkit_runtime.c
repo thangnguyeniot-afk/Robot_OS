@@ -10,7 +10,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
-LOG_MODULE_REGISTER(devkit_runtime, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(devkit_runtime, LOG_LEVEL_INF);
 
 int devkit_runtime_init(void)
 {
