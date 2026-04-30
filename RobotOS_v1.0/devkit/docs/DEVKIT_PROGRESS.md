@@ -118,13 +118,17 @@ captured at exact 500ms intervals. Build delta: FLASH 27252→25520 B.
 
 ---
 
-#### Issue 2 — STLink V1 reset limitation: firmware does not start after flash
+#### Issue 2 — No auto-reset after flash: firmware does not start after `west flash`
 
 **Symptom:** After `west flash`, LED stays OFF. Board appears dead.
 
-**Root cause:** STLink V1 (`V2J47S0`) cannot assert the nRST line to reset
-the MCU after programming. OpenOCD writes the firmware and exits (code 1)
-without triggering a reset. The CPU remains halted at the pre-flash PC.
+**Root cause:** The `west flash` OpenOCD runner programs the firmware and
+calls `shutdown` without issuing a reset command. The CPU remains halted
+at the pre-flash PC. This is an OpenOCD runner behavior for this board
+configuration — not a hardware limitation of the probe.
+
+**Probe identified:** ST-LINK/V2 (`V2J47S0`, API v2). Firmware write and
+verify confirmed OK. The probe itself is functional.
 
 **Fix:** Press the physical **RESET button** on the Discovery board after
 `west flash` completes. Firmware starts immediately on release.
@@ -140,7 +144,7 @@ without triggering a reset. The CPU remains halted at the pre-flash PC.
 - LED identified by board DTS alias `led0` — no custom board overlay.
 - RTT logging only (no UART console); STLink V2 required for log read.
 - No shell, scheduler, event bus, or peripheral drivers at this phase.
-- **Manual RESET required after every `west flash`** (STLink V1 limitation).
+- **Manual RESET required after every `west flash`** (OpenOCD runner exits before reset; ST-LINK/V2 probe is functional).
 - `CONFIG_LOG_DEFAULT_LEVEL=3` (INF) — kernel debug messages suppressed by design.
 
 ---
@@ -211,7 +215,7 @@ wrote 32768 bytes from file zephyr.hex in 1.103585s (28.996 KiB/s)
 shutdown command invoked
 ```
 
-Exit code 1 = STLink V1 reset limitation (firmware written, no auto-reset).
+Exit code 1 = OpenOCD runner exits after programming without issuing reset (firmware written and verified OK).
 Manual RESET on board required to start execution. Firmware write and verify: **confirmed**.
 
 #### RTT Log Evidence
