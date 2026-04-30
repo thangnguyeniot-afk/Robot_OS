@@ -1,0 +1,121 @@
+# ============================================================================
+# RobotOS Kconfig — Adapter + Application configuration
+# ============================================================================
+
+menu "RobotOS Adapter Configuration"
+
+config RO_MAX_THREADS
+    int "Maximum concurrent RobotOS threads"
+    default 8
+    range 4 32
+    help
+      Static thread slot pool size. Each slot costs ~64 bytes.
+
+config RO_IPC_SLAB_SIZE
+    int "Global IPC slab backing memory (bytes)"
+    default 4096
+    help
+      Shared memory pool for Adapter-level IPC queues.
+      App-owned queues (cmd_q, seg_q) do NOT consume this slab.
+
+config RO_LOG_RING_SIZE
+    int "Log ring buffer size (bytes, must be power of 2)"
+    default 2048
+    range 256 8192
+
+config RO_STEPPER_POOL_SIZE
+    int "Maximum stepper instances (DT nodes)"
+    default 4
+    range 1 16
+
+config RO_SERVO_POOL_SIZE
+    int "Maximum servo instances"
+    default 4
+    range 1 16
+
+config RO_ENCODER_POOL_SIZE
+    int "Maximum encoder instances"
+    default 4
+    range 1 16
+
+config RO_ENDSTOP_POOL_SIZE
+    int "Maximum endstop instances"
+    default 4
+    range 1 16
+
+config RO_ALLOW_SW_PULSE_THREAD
+    bool "Allow software-pulse thread at RO_PRIO_RT_PULSE"
+    default y
+
+config RO_COOP_WATCHDOG
+    bool "Enable cooperative-thread hold-time watchdog"
+    default y
+
+config RO_COOP_MAX_HOLD_US
+    int "Max microseconds a cooperative thread may hold CPU before warning"
+    default 500
+    depends on RO_COOP_WATCHDOG
+
+endmenu
+
+menu "RobotOS Application Configuration"
+
+config APP_PLANNER_TICK_HZ
+    int "Lane B planner tick rate in Hz"
+    default 1000
+    range 100 10000
+
+config APP_CMD_QUEUE_DEPTH
+    int "Depth of cmd_q (parsed G-code commands)"
+    default 64
+
+config APP_MAX_MOTION_SEGMENTS
+    int "Depth of seg_q (motion_seg_t segments)"
+    default 64
+
+config APP_EVT_QUEUE_DEPTH
+    int "Depth of evt_q_isr (step-done ISR events)"
+    default 8
+
+config APP_GCODE_LINE_MAX
+    int "Maximum G-code line length (bytes)"
+    default 96
+
+config APP_SEG_PUSH_TIMEOUT_TICKS
+    int "Ticks Lane B waits on full seg_q"
+    default 2
+
+config APP_SHELL_STACK_SIZE
+    int "t_shell stack size (bytes)"
+    default 1024
+
+config APP_PLANNER_STACK_SIZE
+    int "t_planner stack size (bytes)"
+    default 2048
+
+config APP_PULSE_MGR_STACK_SIZE
+    int "t_pulse_mgr stack size (bytes)"
+    default 1024
+
+config APP_DEFAULT_PROFILE
+    int "Default machine profile (0=CNC_2AXIS, 1=CNC_3AXIS, 2=PRINTER_2AXIS, 3=PRINTER_3AXIS)"
+    default 0
+    range 0 3
+
+config APP_ENABLE_ISR_EVENTS
+    bool "Enable evt_q_isr: step-done/stall events from ISR"
+    default n
+
+config APP_ENABLE_FS
+    bool "Enable filesystem support"
+    default n
+
+config APP_ENABLE_ARC
+    bool "Enable G2/G3 arc motion"
+    default n
+
+config APP_ENABLE_TEMP_WAIT
+    bool "Enable M109/M190 wait-for-temperature"
+    default n
+
+endmenu

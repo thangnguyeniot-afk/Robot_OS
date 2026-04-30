@@ -1,0 +1,54 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "devkit: Debug + RTT (stm32f411e_disco)",
+      "type": "cortex-debug",
+      "request": "launch",
+      "servertype": "openocd",
+      "device": "STM32F411VE",
+      "configFiles": [
+        "D:/Robot_OS/zephyr/boards/arm/stm32f411e_disco/support/openocd.cfg"
+      ],
+      "openOCDLaunchCommands": [
+        "init",
+        "reset halt"
+      ],
+      "executable": "D:/Robot_OS/build/zephyr/zephyr.elf",
+      "cwd": "D:/Robot_OS",
+      "runToEntryPoint": "main",
+      "svdFile": "D:/Robot_OS/zephyr/dts/arm/st/f4/stm32f411.svd",
+      "rttConfig": {
+        "enabled": true,
+        "address": "0x20000800",
+        "decoders": [
+          {
+            "port": 0,
+            "type": "console",
+            "label": "Zephyr LOG"
+          }
+        ]
+      },
+      "preLaunchTask": ""
+    },
+    {
+      "name": "C/C++ Runner: Debug Session",
+      "type": "cppdbg",
+      "request": "launch",
+      "args": [],
+      "stopAtEntry": false,
+      "externalConsole": true,
+      "cwd": "d:/Robot_OS",
+      "program": "d:/Robot_OS/build/Debug/outDebug",
+      "MIMode": "gdb",
+      "miDebuggerPath": "gdb",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        }
+      ]
+    }
+  ]
+}
