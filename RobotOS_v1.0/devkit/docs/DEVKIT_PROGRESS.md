@@ -144,7 +144,7 @@ verify confirmed OK. The probe itself is functional.
 - LED identified by board DTS alias `led0` — no custom board overlay.
 - RTT logging only (no UART console on this board revision); RTT log requires ST-Link/SWD debug access.
 - No shell, scheduler, event bus, or peripheral drivers at this phase.
-- **Manual RESET required after every `west flash`** (OpenOCD runner exits before reset; ST-LINK/V2 probe is functional).
+- ~~Manual RESET required after every `west flash`~~ — Corrected in Phase 3B-R analysis: `west flash` issues `reset run` before shutdown. The Phase 3A "no blink after flash" was caused by the MemManage fault (LED stuck ON), not a missing reset. Manual RESET is not required with fixed firmware.
 - `CONFIG_LOG_DEFAULT_LEVEL=3` (INF) — kernel debug messages suppressed by design.
 
 ---
@@ -186,7 +186,7 @@ src/devkit_runtime.c
 | Gate | Result |
 | ---- | ------ |
 | BUILD | `BUILD_PASS` |
-| FLASH | `FLASH_WRITTEN_RESET_LIMITATION` |
+| FLASH | `FLASH_WRITTEN_PASS` (corrected from `FLASH_WRITTEN_RESET_LIMITATION` — see Phase 3B-R analysis) |
 | RUNTIME | `RUNTIME_PASS` |
 
 #### Build Memory Summary
@@ -215,8 +215,11 @@ wrote 32768 bytes from file zephyr.hex in 1.103585s (28.996 KiB/s)
 shutdown command invoked
 ```
 
-Exit code 1 = OpenOCD runner exits after programming without issuing reset (firmware written and verified OK).
-Manual RESET on board required to start execution. Firmware write and verify: **confirmed**.
+Exit code 1 = OpenOCD runner exited with errors from initial connection (board was running prior firmware).
+Firmware write and verify: **confirmed**. `reset run` was issued by the runner but firmware immediately
+hit MemManage fault — LED stuck ON, appeared as if reset had not occurred. Manual RESET applied as
+workaround; by that time the logging fix was in effect and firmware ran cleanly. Root cause was not
+the reset but the MemManage fault. See Phase 3B-R for corrected analysis.
 
 #### RTT Log Evidence
 
@@ -391,8 +394,8 @@ wrote 32768 bytes from file zephyr.hex in 1.104510s (28.972 KiB/s)
 shutdown command invoked
 ```
 
-Note: `west flash` exits without reset (same runner behavior as Phase 3A). Subsequent
-OpenOCD session with `reset run` starts firmware without requiring physical RESET button.
+Note: `west flash` issues `reset run` before shutdown (hardcoded in Zephyr openocd runner).
+Firmware auto-starts after flash. Manual RESET is not required with Phase 3B firmware.
 
 #### RTT Log — Captured via Direct Memory Dump
 
@@ -468,7 +471,7 @@ src/devkit_fault.c
 - No watchdog enabled — considered but deferred; no runtime-confirmed need at this phase.
 - `devkit_fault_test_panic()` not invoked by default — requires explicit `DEVKIT_FAULT_TEST` define.
 - No fatal hook override — Option A chosen (log-only); Zephyr default fatal handler remains active.
-- **Manual RESET required after every `west flash`** — OpenOCD runner exits after programming; ST-LINK/V2 probe is functional.
+- `west flash` auto-resets via `reset run` (hardcoded in Zephyr openocd runner `openocd.py:271`); manual RESET is not required with Phase 3B firmware. The Phase 3A "manual RESET required" note was a misdiagnosis — the real cause was the MemManage fault making the LED appear stuck rather than the reset failing. Manual RESET may still help recover from edge-case exit-code-1 flash failures.
 - RTT server address (`_SEGGER_RTT`) must be re-read from symbol map after pristine build (clean build relocates symbols).
 - Custom STM32F407VET6 board remains hardware-unvalidated.
 - `CONFIG_LOG_DEFAULT_LEVEL=3` (INF) — kernel debug messages suppressed by design.
