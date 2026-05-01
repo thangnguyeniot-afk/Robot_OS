@@ -144,7 +144,7 @@ verify confirmed OK. The probe itself is functional.
 - LED identified by board DTS alias `led0` — no custom board overlay.
 - RTT logging only (no UART console on this board revision); RTT log requires ST-Link/SWD debug access.
 - No shell, scheduler, event bus, or peripheral drivers at this phase.
-- ~~Manual RESET required after every `west flash`~~ — Corrected in Phase 3B-R analysis: `west flash` issues `reset run` before shutdown. The Phase 3A "no blink after flash" was caused by the MemManage fault (LED stuck ON), not a missing reset. Manual RESET is not required with fixed firmware.
+- Manual RESET required after `west flash` — Phase 3B-R analysis shows `west flash` writes/verifies firmware correctly and issues `reset run`, but post-flash auto-start is unreliable on this board/probe/OpenOCD path. Physical RESET button is the required operational workaround.
 - `CONFIG_LOG_DEFAULT_LEVEL=3` (INF) — kernel debug messages suppressed by design.
 
 ---
@@ -186,8 +186,8 @@ src/devkit_runtime.c
 | Gate | Result |
 | ---- | ------ |
 | BUILD | `BUILD_PASS` |
-| FLASH | `FLASH_WRITTEN_PASS` (corrected from `FLASH_WRITTEN_RESET_LIMITATION` — see Phase 3B-R analysis) |
-| RUNTIME | `RUNTIME_PASS` |
+| FLASH_WRITE | `PASS` |
+| RUNTIME_AFTER_MANUAL_RESET | `PASS` |
 
 #### Build Memory Summary
 
@@ -220,6 +220,14 @@ Firmware write and verify: **confirmed**. `reset run` was issued by the runner b
 hit MemManage fault — LED stuck ON, appeared as if reset had not occurred. Manual RESET applied as
 workaround; by that time the logging fix was in effect and firmware ran cleanly. Root cause was not
 the reset but the MemManage fault. See Phase 3B-R for corrected analysis.
+
+#### Phase 3B Validation Status
+
+| Gate | Status | Notes |
+| ---- | ------ | ----- |
+| `FLASH_WRITE` | `PASS` | Firmware programmed and verified successfully. |
+| `POST_FLASH_AUTOSTART` | `OPEN / UNRELIABLE` | See Open Issue section. Manual RESET is required workaround. |
+| `RUNTIME_AFTER_MANUAL_RESET` | `PASS` | All features confirmed: build metadata log, fault visibility, tick counter, LED blink, RTT. |
 
 #### RTT Log Evidence
 
@@ -394,8 +402,8 @@ wrote 32768 bytes from file zephyr.hex in 1.104510s (28.972 KiB/s)
 shutdown command invoked
 ```
 
-Note: `west flash` issues `reset run` before shutdown (hardcoded in Zephyr openocd runner).
-Firmware auto-starts after flash. Manual RESET is not required with Phase 3B firmware.
+Note: `west flash` writes/verifies firmware and issues `reset run` before shutdown (hardcoded in Zephyr openocd runner).
+However, post-flash auto-start is unreliable on this board/probe/OpenOCD path. Physical RESET after flash is currently required before judging runtime behavior.
 
 #### RTT Log — Captured via Direct Memory Dump
 
@@ -578,14 +586,15 @@ completes. Firmware starts on button release. LED blinks at 500ms.
 
 ### Next Recommended Phase
 
-Phase 4A — Core Bootstrap (if Phase 3B runtime confirmed):
+**Phase 4A — Core Bootstrap is unblocked.**
+
+Operational limitation acknowledged: **Manual RESET button is required after `west flash`** before firmware starts.
+This does not block core development; future work may investigate post-flash auto-start reliability separately.
+
+Phase 4A scope:
 
 - Introduce `robotos_core` module under `RobotOS_v1.0/core/`.
 - Define first RobotOS kernel interface (event queue or scheduler stub).
 - devkit becomes integration harness for core validation.
 
-Phase 3B-R — Runtime Follow-up (if runtime pending or fails):
-
-- Flash Phase 3B firmware, capture RTT boot log, confirm tick_count progression.
-- Confirm no MemManage fault from additional log modules.
-- Update this section with `RUNTIME_PASS` evidence and close 3B.
+Workflow note: `west build ... && west flash && [press RESET] && [attach RTT]` confirms runtime before core integration.
