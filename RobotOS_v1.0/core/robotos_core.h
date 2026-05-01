@@ -21,6 +21,8 @@ typedef enum {
 	ROBOTOS_CORE_OK                = 0,
 	ROBOTOS_CORE_ERR_INVALID_STATE = -1,
 	ROBOTOS_CORE_ERR_NULL          = -2,
+	ROBOTOS_CORE_ERR_FULL          = -3,
+	ROBOTOS_CORE_ERR_EMPTY         = -4,
 } robotos_core_status_t;
 
 /*

@@ -1,6 +1,6 @@
 /*
  * robotos_core.c
- * RobotOS portable core — Phase 4B contract implementation.
+ * RobotOS portable core — Phase 4D: event queue integrated.
  *
  * Zephyr logging is used in firmware builds. The public API (robotos_core.h)
  * remains free of Zephyr types.
@@ -13,6 +13,7 @@
  */
 
 #include "robotos_core.h"
+#include "robotos_event_queue.h"
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -41,6 +42,7 @@ static robotos_core_state_t core_state     = ROBOTOS_CORE_STATE_UNINITIALIZED;
 static uint32_t             core_tick_count;
 static uint32_t             core_init_count;
 static bool                 core_tick_warn_emitted;
+static robotos_event_queue_t s_core_event_queue;
 
 const char *robotos_core_version(void)
 {
@@ -60,7 +62,11 @@ robotos_core_status_t robotos_core_init(void)
 	core_tick_warn_emitted = false;
 	core_state             = ROBOTOS_CORE_STATE_READY;
 
+	robotos_event_queue_init(&s_core_event_queue);
+
 	CORE_LOG_INF("RobotOS core init — version=%s state=READY", CORE_VERSION);
+	CORE_LOG_INF("event queue initialized capacity=%u",
+	             ROBOTOS_EVENT_QUEUE_CAPACITY);
 
 	return ROBOTOS_CORE_OK;
 }

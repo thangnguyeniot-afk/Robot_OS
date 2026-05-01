@@ -1240,3 +1240,199 @@ No `RobotOS_v1.0/src/` legacy file compiled or staged.
 - **Core Concurrency/Host Test Expansion** — extend host tests to cover future thread-safety requirements before introducing RTOS threads.
 
 Do not implement Phase 4D until explicitly assigned.
+
+---
+
+## Phase 4D — Core Event Queue Contract Stub
+
+**Date:** 2026-05-01
+**Branch:** master
+**Phase 4C baseline commit:** `db64cf3` — "core: add host contract tests"
+
+---
+
+### Phase 4D Purpose
+
+Introduce a minimal, deterministic, fixed-capacity Core Event Queue under
+`RobotOS_v1.0/core/`. The queue contract is defined and validated via host tests
+before Zephyr/hardware integration. No scheduler or dispatcher is added — this is
+the data structure and contract only.
+
+---
+
+### Phase 4D Files Added
+
+| File | Role |
+| ---- | ---- |
+| `core/robotos_event_queue.h` | Event type, queue struct, and full queue API — no Zephyr types |
+| `core/robotos_event_queue.c` | Ring buffer implementation — zero Zephyr dependency |
+| `tests/host/test_robotos_event_queue_contract.c` | 58 host contract tests for event queue |
+
+### Phase 4D Files Modified
+
+| File | Change |
+| ---- | ------ |
+| `core/robotos_core.h` | Added `ROBOTOS_CORE_ERR_FULL=-3` and `ROBOTOS_CORE_ERR_EMPTY=-4` to status enum |
+| `core/robotos_core.c` | Includes `robotos_event_queue.h`; `robotos_core_init()` initializes static internal queue and logs "event queue initialized capacity=16" |
+| `core/README.md` | Added Event Queue Contract section |
+| `tests/host/CMakeLists.txt` | Added `robotos_event_queue_contract_test` target; added `robotos_event_queue.c` to core contract test target (required by new include) |
+| `devkit/CMakeLists.txt` | Added `../core/robotos_event_queue.c` to Zephyr target_sources |
+| `devkit/docs/DEVKIT_PROGRESS.md` | Added Phase 4D section (this file) |
+
+### Phase 4D Files Unchanged
+
+| File | Reason |
+| ---- | ------ |
+| `devkit/src/devkit_runtime.c` | No devkit-visible integration needed |
+| `devkit/prj.conf` | No new Kconfig requirements |
+
+---
+
+### Phase 4D Event Queue Contract Summary
+
+#### Event Types (`robotos_event_type_t`)
+
+| Name | Value | Meaning |
+| ---- | ----- | ------- |
+| `ROBOTOS_EVENT_NONE` | 0 | No event / cleared slot |
+| `ROBOTOS_EVENT_CORE_TICK` | 1 | Core tick elapsed (reserved for future dispatcher) |
+| `ROBOTOS_EVENT_USER` | 100 | Base for application-defined events |
+
+#### Event Struct (`robotos_event_t`)
+
+```c
+typedef struct {
+    robotos_event_type_t type;
+    uint32_t             timestamp_tick;
+    uint32_t             arg0;
+    uint32_t             arg1;
+} robotos_event_t;
+```
+
+#### Queue Struct (`robotos_event_queue_t`)
+
+Fixed capacity 16. Caller owns the struct (static/stack). No dynamic allocation.
+
+#### API Contract
+
+| Function | Behavior |
+| -------- | -------- |
+| `init(NULL)` | `ERR_NULL` |
+| `init(q)` | OK; sets initialized=true, count=0, dropped=0 |
+| Queries on NULL | Safe defaults: `is_initialized=false`, `is_empty=true`, `is_full=false`, `count/capacity/dropped=0` |
+| `push(NULL q/event)` | `ERR_NULL` |
+| `push` before init | `ERR_INVALID_STATE` |
+| `push` when full | `ERR_FULL`, `dropped_count++`, queue content unchanged |
+| `push` normal | OK, copies event, count++ |
+| `pop(NULL)` | `ERR_NULL` |
+| `pop` before init | `ERR_INVALID_STATE` |
+| `pop` empty | `ERR_EMPTY` |
+| `pop` normal | OK, FIFO order, count-- |
+| `peek` empty | `ERR_EMPTY`, queue unchanged |
+| `peek` normal | OK, reads front without removing |
+| `clear(NULL)` | `ERR_NULL` |
+| `clear` before init | `ERR_INVALID_STATE` |
+| `clear` normal | OK, count=0; `dropped_count` preserved (diagnostic history) |
+
+All operations are O(1), deterministic, single-threaded only.
+
+#### Core Integration
+
+`robotos_core_init()` initializes `static robotos_event_queue_t s_core_event_queue`.
+No events are pushed in `robotos_core_tick()` — queue available for future Phase 4E dispatcher.
+
+---
+
+### Phase 4D Host Test Evidence
+
+**Commands (WSL Ubuntu, gcc 13.3.0):**
+
+```bash
+cmake -S RobotOS_v1.0/tests/host -B build-host-core
+cmake --build build-host-core
+ctest --test-dir build-host-core --output-on-failure
+```
+
+**Result:**
+
+```text
+1/2 Test #1: robotos_core_contract ............   Passed    0.00 sec
+2/2 Test #2: robotos_event_queue_contract .....   Passed    0.00 sec
+
+100% tests passed, 0 tests failed out of 2
+Total Test time (real) = 0.01 sec
+```
+
+Phase 4C core contract: **35/35 PASS** (preserved)
+Phase 4D event queue: **58/58 PASS**
+
+---
+
+### Phase 4D Zephyr Build Evidence
+
+```text
+Memory region    Used Size   Region Size   %age Used
+FLASH:            26392 B       512 KB       5.03%
+RAM:               8832 B       128 KB       6.74%
+```
+
+Phase 4C baseline: FLASH 26288 B, RAM 8576 B.
+Delta: FLASH +104 B, RAM +256 B (16 × 16 B event buffer).
+No app warnings.
+
+---
+
+### Phase 4D Runtime Evidence
+
+**Status:** RUNTIME_CONFIRMED
+
+**Validation date:** 2026-05-01
+**Hardware:** STM32F411E-DISCO, ST-LINK/V2 FW V2J47S0
+
+#### Phase 4D Runtime Validation Status
+
+| Gate | Status | Notes |
+| ---- | ------ | ----- |
+| `FLASH_WRITE` | `PASS` | Firmware programmed, 32768 B verified. |
+| `POST_FLASH_AUTOSTART` | `OPEN` | Manual RESET required per known workaround. |
+| `CORE_STATE_READY` | `PASS` | `core_state` @ `0x200009f9` = `0x01` = READY. |
+| `EVENT_QUEUE_INITIALIZED` | `PASS` | `s_core_event_queue.initialized` @ `0x200007b8` = `0x01` = true. |
+| `EVENT_QUEUE_COUNT_ZERO` | `PASS` | `s_core_event_queue.count` @ `0x200007b0` = `0x00000000` = 0 (no events pushed). |
+| `LED` | `PASS` | GPIOD_ODR `0x00002000` → `0x00000000` — PD13 toggles, 500ms blink. |
+| `FAULT_STATUS` | `PASS` | No fault. LED blink confirms clean runtime. |
+
+---
+
+### Phase 4D Legacy Isolation Confirmation
+
+Host test build compiles only:
+
+```text
+tests/host/test_robotos_core_contract.c
+tests/host/test_robotos_event_queue_contract.c
+core/robotos_core.c
+core/robotos_event_queue.c
+```
+
+No `RobotOS_v1.0/src/` legacy file compiled or staged.
+
+---
+
+### Phase 4D Known Limitations
+
+- No event dispatcher or scheduler — queue is a contract stub only.
+- No automatic event push in `robotos_core_tick()` — avoids fill/spam with no drain loop.
+- No concurrent/ISR-safe access — single-threaded assumption.
+- No dynamic allocation — capacity fixed at 16.
+- `dropped_count` preserved across `clear()` — no public reset for diagnostic integrity.
+- Windows MinGW64 host build broken; WSL Ubuntu used for host tests.
+
+---
+
+### Phase 4E Recommendation
+
+**Phase 4E — Core Event Dispatch Stub** (Phase 4D runtime confirmed):
+
+Introduce a minimal dispatcher that drains `s_core_event_queue` each tick,
+delivering events to registered handlers. Requires Phase 4D queue contract
+as foundation. Do not implement until explicitly assigned.
