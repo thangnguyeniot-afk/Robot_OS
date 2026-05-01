@@ -466,12 +466,110 @@ src/devkit_fault.c
 
 ---
 
+### Open Issue — Post-flash Auto-start Unreliable (ST-LINK/SWD)
+
+**Status: OPEN — no clean fix found. Manual RESET is the required workaround.**
+
+#### Symptom
+
+After `west flash`, the LED does not blink. Board appears partially dead.
+
+Two observed failure modes depending on timing:
+
+| Scenario             | LED State          | Cause                                                        |
+|----------------------|--------------------|--------------------------------------------------------------|
+| Standard cold flash  | LED solid ON       | Firmware reached GPIO init, then CPU halted before tick loop |
+| Double-reset attempt | LED completely OFF | Second reset interrupted firmware before GPIO init           |
+
+Pressing the physical RESET button after flash starts the firmware cleanly in all cases.
+
+#### What `west flash` actually does
+
+The Zephyr OpenOCD runner (`openocd.py:271`) always issues `reset run` before `shutdown`:
+
+```
+flash write_image erase → [post_verify cmds] → reset run → shutdown
+```
+
+There is no configurable position to inject commands AFTER `reset run`. The `--cmd-post-verify`
+hook runs BEFORE `reset run`, not after.
+
+#### Root cause
+
+After `reset run`, the CPU starts booting. OpenOCD then calls `shutdown` immediately — the
+ST-LINK USB debug connection is dropped while the MCU is mid-boot. In cold-start conditions
+(no prior debug session), the ST-LINK `shutdown` sequence leaves the CPU halted before the
+firmware tick loop is reached.
+
+Hardware evidence (DHCSR at `0xE000EDF0`):
+
+| Session state                     | DHCSR value  | Decoded                                    |
+|-----------------------------------|--------------|--------------------------------------------|
+| After halt command                | `0x00030003` | S_HALT=1, C_HALT=1 (explicitly halted)     |
+| After west flash (no halt issued) | `0x00050001` | S_SLEEP=1, S_HALT=0 (in WFI / k_msleep)    |
+
+The `0x00050001` reading (S_SLEEP=1, firmware in WFI) was observed consistently from within
+the same debug session chain. In a true cold-start, the CPU may be halted at a different
+point — the DHCSR reading is influenced by prior OpenOCD session state.
+
+DEMCR at `0xE000EDFC` = `0x01000000`: TRCENA=1, VC_CORERESET=0. The halt-on-reset bit is
+not set, so the halt is not from that mechanism.
+
+#### Attempted fix and why it failed
+
+`app_set_runner_args` in `CMakeLists.txt` was used to inject `reset run + sleep 300`
+in `--cmd-post-verify`. This produced a double-reset sequence:
+
+```
+flash → reset run (post-verify) → sleep 300 → reset run (built-in) → shutdown
+```
+
+Observed output (4 speed-change warnings = 2 resets confirmed):
+
+```
+wrote 32768 bytes ...
+Info : Unable to match requested speed 2000 kHz, using 1800 kHz   ← reset #1
+Info : Unable to match requested speed 2000 kHz, using 1800 kHz
+Info : Unable to match requested speed 2000 kHz, using 1800 kHz   ← reset #2
+Info : Unable to match requested speed 2000 kHz, using 1800 kHz
+shutdown command invoked
+```
+
+Result: **LED completely OFF** — the second `reset run` interrupted the firmware during early
+boot (before `gpio_pin_configure_dt` was called), leaving GPIO in default input/floating
+mode. The third `shutdown` then disconnected with no GPIO configured. This was worse than
+the original single-reset behavior (LED solid ON).
+
+The double-reset fix was reverted. CMakeLists.txt is clean with no runner overrides.
+
+#### Why physical RESET works
+
+The RESET button drives the MCU's NRST pin directly, bypassing the SWD interface entirely.
+After NRST release, the CPU boots with no active debug connection. DEMCR and DHCSR are at
+power-on defaults, no debug halt is possible. The firmware runs through its full boot
+sequence and enters the tick loop cleanly.
+
+#### Approaches not yet tried
+
+- JLink runner (`west flash -r jlink --reset`): JLink has explicit reset-after-load support
+  and generally more reliable auto-start. Requires J-Link software installation.
+- `openocd.cfg` overlay with custom `reset-end` event to issue `resume` after reset.
+- `adapter srst pulse_width` tuning to extend NRST assertion time.
+- Investigation of whether specific ST-LINK firmware versions handle shutdown differently.
+
+#### Workaround
+
+Press the physical **RESET button** on the Discovery board immediately after `west flash`
+completes. Firmware starts on button release. LED blinks at 500ms.
+
+---
+
 ### Known Limitations
 
 - No watchdog enabled — considered but deferred; no runtime-confirmed need at this phase.
 - `devkit_fault_test_panic()` not invoked by default — requires explicit `DEVKIT_FAULT_TEST` define.
 - No fatal hook override — Option A chosen (log-only); Zephyr default fatal handler remains active.
-- **Manual RESET required after `west flash`** — ST-LINK/SWD disconnect after `reset run` leaves CPU halted before the tick loop starts. Root cause is the ST-LINK `shutdown` sequence; no reliable OpenOCD-side fix found without introducing new failure modes (double-reset makes LED go fully dark). Press physical RESET button after flash to start firmware cleanly. RTT address must be re-read from symbol map after pristine build.
+- **Manual RESET required after `west flash`** — see Open Issue above.
 - RTT server address (`_SEGGER_RTT`) must be re-read from symbol map after pristine build (clean build relocates symbols).
 - Custom STM32F407VET6 board remains hardware-unvalidated.
 - `CONFIG_LOG_DEFAULT_LEVEL=3` (INF) — kernel debug messages suppressed by design.
