@@ -1,6 +1,6 @@
 /*
  * robotos_core.c
- * RobotOS portable core — Phase 4E: event dispatcher integrated.
+ * RobotOS portable core — Phase 4F: event ingestion API.
  *
  * Zephyr logging is used in firmware builds. The public API (robotos_core.h)
  * remains free of Zephyr types.
@@ -121,10 +121,56 @@ robotos_core_status_t robotos_core_snapshot(robotos_core_snapshot_t *out)
 		return ROBOTOS_CORE_ERR_NULL;
 	}
 
-	out->state      = core_state;
-	out->tick_count = core_tick_count;
-	out->init_count = core_init_count;
-	out->version    = CORE_VERSION;
+	out->state                  = core_state;
+	out->tick_count             = core_tick_count;
+	out->init_count             = core_init_count;
+	out->version                = CORE_VERSION;
+	out->pending_event_count    = robotos_event_queue_count(&s_core_event_queue);
+	out->dropped_event_count    = robotos_event_queue_dropped_count(&s_core_event_queue);
+	out->dispatched_event_count = robotos_event_dispatcher_dispatched_count(&s_core_dispatcher);
+	out->handler_error_count    = robotos_event_dispatcher_handler_error_count(&s_core_dispatcher);
 
 	return ROBOTOS_CORE_OK;
+}
+
+robotos_core_status_t robotos_core_post_event(const robotos_event_t *event)
+{
+	if (event == NULL) {
+		return ROBOTOS_CORE_ERR_NULL;
+	}
+	if (core_state != ROBOTOS_CORE_STATE_READY) {
+		return ROBOTOS_CORE_ERR_INVALID_STATE;
+	}
+	return robotos_event_queue_push(&s_core_event_queue, event);
+}
+
+robotos_core_status_t robotos_core_dispatch_events(uint32_t max_events)
+{
+	if (core_state != ROBOTOS_CORE_STATE_READY) {
+		return ROBOTOS_CORE_ERR_INVALID_STATE;
+	}
+	if (max_events == 0u) {
+		return ROBOTOS_CORE_OK;
+	}
+	return robotos_event_dispatcher_dispatch_all(&s_core_dispatcher, max_events);
+}
+
+uint32_t robotos_core_pending_event_count(void)
+{
+	return robotos_event_queue_count(&s_core_event_queue);
+}
+
+uint32_t robotos_core_dropped_event_count(void)
+{
+	return robotos_event_queue_dropped_count(&s_core_event_queue);
+}
+
+uint32_t robotos_core_dispatched_event_count(void)
+{
+	return robotos_event_dispatcher_dispatched_count(&s_core_dispatcher);
+}
+
+uint32_t robotos_core_handler_error_count(void)
+{
+	return robotos_event_dispatcher_handler_error_count(&s_core_dispatcher);
 }

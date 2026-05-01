@@ -1623,3 +1623,160 @@ Add a public `robotos_core_post_event()` API to allow callers to enqueue events
 into the internal queue. In `robotos_core_tick()`, call `dispatch_all(max=n)` to drain
 the queue. This completes the produce → dispatch → handle cycle without a scheduler.
 Do not implement until explicitly assigned.
+
+---
+
+## Phase 4F — Core Event Ingestion API
+
+**Date:** 2026-05-02
+**Branch:** master
+**Phase 4E baseline commit:** `254ea16` — "core: add event dispatcher contract stub"
+
+---
+
+### Phase 4F Purpose
+
+Add public event post and dispatch APIs to the RobotOS core, completing the
+produce → dispatch → handle cycle. Host-tested before Zephyr/hardware integration.
+No scheduler, threads, or auto-generation of events.
+
+---
+
+### Phase 4F Files Added
+
+| File | Role |
+| ---- | ---- |
+| `tests/host/test_robotos_core_ingestion_contract.c` | 57 host contract tests for post_event / dispatch_events / counters |
+
+### Phase 4F Files Modified
+
+| File | Change |
+| ---- | ------ |
+| `core/robotos_core.h` | Moved `robotos_event_type_t` and `robotos_event_t` here (core concepts); extended `robotos_core_snapshot_t` with event counter fields; added `post_event`, `dispatch_events`, 4 counter getter declarations |
+| `core/robotos_event_queue.h` | Removed `robotos_event_type_t` and `robotos_event_t` (now in `robotos_core.h`); kept queue struct and API |
+| `core/robotos_core.c` | Implemented `post_event`, `dispatch_events`, 4 counter getters; updated `snapshot()` with event counter fields |
+| `tests/host/CMakeLists.txt` | Added `robotos_core_ingestion_contract_test` target |
+| `devkit/docs/DEVKIT_PROGRESS.md` | Added Phase 4F section (this file) |
+
+### Phase 4F Files Unchanged
+
+| File | Reason |
+| ---- | ------ |
+| `devkit/CMakeLists.txt` | No new source files — all code is in existing `robotos_core.c` |
+| `devkit/src/devkit_runtime.c` | No integration change — explicit dispatch not called yet |
+| `core/robotos_event_queue.c` | No changes needed |
+| `core/robotos_event_dispatcher.c` | No changes needed |
+
+---
+
+### Phase 4F Event Ingestion Contract Summary
+
+#### Architectural Note
+
+`robotos_event_type_t` and `robotos_event_t` moved from `robotos_event_queue.h` to
+`robotos_core.h` to resolve a circular include dependency. Events are core concepts.
+`robotos_event_queue.h` includes `robotos_core.h` to obtain them. No API or behavior change.
+
+#### Phase 4F API Summary
+
+| Function | Behavior |
+| -------- | -------- |
+| `post_event(NULL)` | `ERR_NULL` |
+| `post_event(ev)` before init | `ERR_INVALID_STATE` |
+| `post_event(ev)` after init | pushes to queue; `ERR_FULL` if full (`dropped_count++`) |
+| `dispatch_events(n)` before init | `ERR_INVALID_STATE` (including n=0) |
+| `dispatch_events(0)` after init | `OK` — nothing dispatched |
+| `dispatch_events(n>0)` empty | `ERR_EMPTY` |
+| `dispatch_events(n>0)` with events | dispatches up to n; `OK` if ≥1 dispatched |
+| `pending_event_count()` | current events in queue; 0 before init |
+| `dropped_event_count()` | cumulative drops due to full queue; 0 before init |
+| `dispatched_event_count()` | cumulative dispatches; 0 before init |
+| `handler_error_count()` | cumulative handler errors; 0 before init |
+
+#### Phase 4F Snapshot Extension
+
+`robotos_core_snapshot_t` now includes four additional fields:
+`pending_event_count`, `dropped_event_count`, `dispatched_event_count`, `handler_error_count`.
+All are 0 before init. Backward-compatible (new fields appended at end of struct).
+
+#### Phase 4F Repeated Init Contract
+
+Repeated `robotos_core_init()` does NOT reinitialize the internal queue or dispatcher.
+Queued events are preserved across repeated init calls (confirmed by TC49).
+
+---
+
+### Phase 4F Host Test Evidence
+
+**Commands (WSL Ubuntu, gcc 13.3.0):**
+
+```bash
+cmake -S RobotOS_v1.0/tests/host -B build-host-core
+cmake --build build-host-core
+ctest --test-dir build-host-core --output-on-failure
+```
+
+**Result:**
+
+```text
+1/4 Test #1: robotos_core_contract ...............   Passed    0.00 sec
+2/4 Test #2: robotos_event_queue_contract ........   Passed    0.00 sec
+3/4 Test #3: robotos_event_dispatcher_contract ...   Passed    0.00 sec
+4/4 Test #4: robotos_core_ingestion_contract .....   Passed    0.00 sec
+
+100% tests passed, 0 tests failed out of 4
+Total Test time (real) = 0.02 sec
+```
+
+Phase 4C core contract: **35/35 PASS** (preserved)
+Phase 4D event queue: **58/58 PASS** (preserved)
+Phase 4E dispatcher: **55/55 PASS** (preserved)
+Phase 4F ingestion: **57/57 PASS**
+
+---
+
+### Phase 4F Zephyr Build Evidence
+
+```text
+Memory region    Used Size   Region Size   %age Used
+FLASH:            26520 B       512 KB       5.06%
+RAM:               8832 B       128 KB       6.74%
+```
+
+Identical to Phase 4E — no new source files; new functions compiled into existing `robotos_core.c`.
+
+---
+
+### Phase 4F Runtime Evidence
+
+Not run. `devkit_runtime.c` unchanged. No new log output. Phase 4E runtime evidence
+(core READY, dispatcher initialized, LED blinks, no fault) remains valid.
+
+---
+
+### Phase 4F Legacy Isolation Confirmation
+
+No `RobotOS_v1.0/src/` legacy file compiled or staged.
+
+---
+
+### Phase 4F Known Limitations
+
+- No auto-dispatch in `robotos_core_tick()` — caller must call `dispatch_events()` explicitly.
+- Internal handler is default no-op; no observable event content in current devkit.
+- No public handler registration API — internal dispatcher only.
+- No scheduler or event priority — strict FIFO.
+- No concurrent/ISR-safe access — single-threaded only.
+- Windows MinGW64 host build broken; WSL Ubuntu used for host tests.
+
+---
+
+### Phase 4G Recommendation
+
+**Phase 4G options (team decision required):**
+
+- **Scheduler Tick Policy Stub** — define how many events `robotos_core_tick()` dispatches per tick; bound the dispatch budget.
+- **Event Handler Policy** — expose a public handler registration API for user-defined handlers.
+- **Phase 5A Zephyr Adapter Boundary** — formalize the Zephyr/core boundary before growing core further.
+
+Do not implement Phase 4G until explicitly assigned.

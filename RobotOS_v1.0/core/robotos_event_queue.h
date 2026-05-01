@@ -5,6 +5,9 @@
  * Fixed-capacity, single-threaded ring buffer for core events.
  * No dynamic allocation. No Zephyr or board-specific types.
  *
+ * NOTE: robotos_event_type_t and robotos_event_t are defined in robotos_core.h,
+ * which is included here. They are core concepts, not queue-specific.
+ *
  * Limitations (Phase 4D):
  *   - Single-threaded only: no mutex, no ISR-safe access.
  *   - No dispatcher or scheduler — events are pushed/popped by caller.
@@ -15,38 +18,13 @@
 #ifndef ROBOTOS_EVENT_QUEUE_H
 #define ROBOTOS_EVENT_QUEUE_H
 
+/* robotos_core.h provides: robotos_core_status_t, robotos_event_type_t, robotos_event_t */
 #include "robotos_core.h"
 
-#include <stdint.h>
 #include <stdbool.h>
 
 /* Fixed capacity of each event queue instance. */
 #define ROBOTOS_EVENT_QUEUE_CAPACITY 16u
-
-/*
- * Core event types.
- * ROBOTOS_EVENT_NONE   = no event / cleared slot.
- * ROBOTOS_EVENT_CORE_TICK = one devkit tick elapsed (reserved for future use).
- * ROBOTOS_EVENT_USER   = base value for application-defined events.
- */
-typedef enum {
-	ROBOTOS_EVENT_NONE      = 0,
-	ROBOTOS_EVENT_CORE_TICK = 1,
-	ROBOTOS_EVENT_USER      = 100,
-} robotos_event_type_t;
-
-/*
- * Generic core event.
- * type            — identifies the event class.
- * timestamp_tick  — core tick_count at time of push (set by caller).
- * arg0, arg1      — optional event-specific payload.
- */
-typedef struct {
-	robotos_event_type_t type;
-	uint32_t             timestamp_tick;
-	uint32_t             arg0;
-	uint32_t             arg1;
-} robotos_event_t;
 
 /*
  * Ring buffer queue for core events.
