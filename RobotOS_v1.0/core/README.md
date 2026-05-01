@@ -1,4 +1,4 @@
-# RobotOS Core — Phase 4B Contract
+# RobotOS Core — Phase 5A Platform Logging Boundary
 
 This directory contains the portable RobotOS core module.
 
@@ -7,6 +7,11 @@ This directory contains the portable RobotOS core module.
 The core layer is the **Kernel/Core seed** of RobotOS. It holds no board assumptions,
 no Zephyr types in its public API, and no hardware drivers. It is designed to be
 portable across any host environment that can provide a C99 toolchain.
+
+**Phase 5A change:** `robotos_core.c` no longer includes `<zephyr/logging/log.h>`
+directly. All diagnostic logging is routed through `robotos_platform_log.h` — the
+platform logging interface. The Zephyr backend is compiled separately for devkit
+builds; host tests compile the no-op stub. The public API remains Zephyr-free.
 
 The devkit harness (`RobotOS_v1.0/devkit/`) is the integration host. It:
 
@@ -109,12 +114,16 @@ need a mutex or atomic snapshot mechanism.
 | File | Role |
 | ---- | ---- |
 | `robotos_core.h` | Public portable API — no Zephyr or board types |
-| `robotos_core.c` | Implementation — Zephyr logging in firmware; silent shim in host test mode |
+| `robotos_core.c` | Implementation — logs through `robotos_platform_log.h`; no direct Zephyr dependency |
 
 ## Host Contract Tests (Phase 4C)
 
 Core contract semantics are validated without Zephyr, hardware, or `west build` via
 a host test binary. This is **Tier 1 validation**: the fastest feedback loop.
+
+**Phase 5A:** Host tests compile `robotos_platform_log_host_stub.c` (no-op backend)
+alongside core. `ROBOTOS_CORE_HOST_TEST` is no longer needed and has been removed from
+the host test build — the platform log boundary handles backend selection instead.
 
 ### How to Run
 
@@ -165,7 +174,7 @@ The shim is local to `robotos_core.c`. `robotos_core.h` has no Zephyr types.
 ## Limitations
 
 - **Single-threaded assumption**: No mutex or atomic operations. Safe only in single-threaded runtime. Revisit when RTOS threads are introduced.
-- **Zephyr logging dependency**: `robotos_core.c` uses `LOG_MODULE_REGISTER` in firmware mode. Host tests use the `ROBOTOS_CORE_HOST_TEST` shim to avoid Zephyr dependency.
+- **Platform logging boundary**: `robotos_core.c` logs through `robotos_platform_log.h`. No direct Zephyr dependency in core.
 - **No scheduler or event bus**: Phase 4B/4C scope is lifecycle contract only.
 
 ## Next Phase

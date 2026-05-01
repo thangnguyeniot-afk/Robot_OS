@@ -2093,3 +2093,176 @@ No `RobotOS_v1.0/src/` legacy file compiled or staged.
 - **Phase 4I Scheduler Admission Policy** — define backpressure/admission rules for event posting.
 
 Do not implement Phase 4I until explicitly assigned.
+
+---
+
+## Phase 5A — Zephyr / Platform Adapter Boundary Seed
+
+**Date:** 2026-05-02
+**Branch:** master
+**Baseline commit:** `8e21f89` — "core: add event handler registration policy"
+
+---
+
+### Purpose
+
+Introduce the first minimal RobotOS platform adapter boundary so that
+`robotos_core.c` no longer directly depends on Zephyr logging APIs.
+
+Before Phase 5A, `robotos_core.c` contained a compile-time shim:
+`#ifdef ROBOTOS_CORE_HOST_TEST` that silenced Zephyr logging in host
+builds and used `LOG_MODULE_REGISTER` + Zephyr `LOG_*` macros in
+firmware builds. This created a direct Zephyr dependency inside core.
+
+Phase 5A replaces that shim with a stable platform logging boundary:
+
+- `platform/robotos_platform_log.h` — portable interface, no Zephyr types
+- `platform/zephyr/robotos_platform_log_zephyr.c` — Zephyr backend (devkit)
+- `tests/host/robotos_platform_log_host_stub.c` — no-op host backend
+
+`robotos_core.c` now calls `robotos_platform_logf()` exclusively.
+`ROBOTOS_CORE_HOST_TEST` is no longer needed and has been removed.
+
+---
+
+### Files Added
+
+| File | Role |
+|------|------|
+| `platform/robotos_platform_log.h` | Platform log interface — portable, no Zephyr |
+| `platform/zephyr/robotos_platform_log_zephyr.c` | Zephyr backend — routes to LOG_INF/WRN/DBG/ERR |
+| `platform/README.md` | Platform layer boundary documentation |
+| `tests/host/robotos_platform_log_host_stub.c` | Host no-op backend for contract tests |
+
+### Files Modified
+
+| File | Change |
+|------|--------|
+| `core/robotos_core.c` | Removed Zephyr shim; added `#include "robotos_platform_log.h"`; CORE_LOG_* macros now call `robotos_platform_logf()` |
+| `core/README.md` | Updated to reflect platform log boundary |
+| `devkit/CMakeLists.txt` | Added `../platform` include dir; added Zephyr log adapter to `target_sources` |
+| `tests/host/CMakeLists.txt` | Added `PLATFORM_DIR` include + `PLATFORM_HOST_STUB` to all core-using targets; removed `ROBOTOS_CORE_HOST_TEST` definitions |
+| `devkit/docs/DEVKIT_PROGRESS.md` | This entry |
+
+---
+
+### Platform Boundary Summary
+
+```
+platform/
+├── robotos_platform_log.h              ← portable interface (stdarg.h only)
+├── zephyr/
+│   └── robotos_platform_log_zephyr.c  ← Zephyr backend, owns LOG_MODULE_REGISTER
+└── README.md
+
+tests/host/
+└── robotos_platform_log_host_stub.c   ← no-op host backend
+```
+
+**API:**
+```c
+typedef enum {
+    ROBOTOS_LOG_LEVEL_DEBUG = 0,
+    ROBOTOS_LOG_LEVEL_INFO,
+    ROBOTOS_LOG_LEVEL_WARN,
+    ROBOTOS_LOG_LEVEL_ERROR,
+} robotos_log_level_t;
+
+void robotos_platform_logf(robotos_log_level_t level,
+                           const char *module,
+                           const char *fmt, ...);
+```
+
+**Boundary rules enforced:**
+- `robotos_core.c` includes `robotos_platform_log.h` only — no `<zephyr/logging/log.h>`
+- `LOG_MODULE_REGISTER` lives in `platform/zephyr/robotos_platform_log_zephyr.c` only
+- `robotos_platform_log.h` contains no Zephyr, k_*, GPIO, DTS, or board types
+- Host tests compile and link without Zephyr SDK
+
+---
+
+### Host Test Evidence
+
+```
+cmake -S RobotOS_v1.0/tests/host -B build-host-core
+cmake --build build-host-core
+ctest --test-dir build-host-core --output-on-failure
+```
+
+| Test | Result |
+|------|--------|
+| `robotos_core_contract` | PASS |
+| `robotos_event_queue_contract` | PASS |
+| `robotos_event_dispatcher_contract` | PASS |
+| `robotos_core_ingestion_contract` | PASS |
+| `robotos_core_tick_policy_contract` | PASS |
+| `robotos_core_handler_policy_contract` | PASS |
+
+**6/6 tests passed. 0 failed.**
+No Zephyr SDK required. No legacy source compiled.
+
+---
+
+### Zephyr Build Evidence
+
+```
+west build -b stm32f411e_disco RobotOS_v1.0/devkit/ --pristine
+```
+
+| Check | Result |
+|-------|--------|
+| Build pass | PASS |
+| Compiler warnings | None |
+| Platform log adapter compiled | PASS — `platform/zephyr/robotos_platform_log_zephyr.c` |
+| Core Zephyr logging removed | PASS — no `LOG_MODULE_REGISTER` in `robotos_core.c` |
+| Legacy src/ compiled | NONE — confirmed clean |
+
+Memory delta from Phase 4H: minimal increase (platform log wrapper + 128-byte
+vsnprintf buffer on stack, ephemeral). No significant code size change expected.
+
+---
+
+### Runtime Evidence
+
+**Status: PENDING — hardware validation not performed in this session.**
+
+Reason: Phase 5A changes the logging backend path. Runtime should be validated
+to confirm:
+- Boot log still emits through Zephyr RTT after platform log boundary insertion
+- Core init and tick logs appear with `[robotos_core]` prefix in output
+- LED blink continues at 500ms
+- No fault/panic
+- No RTT flood
+
+Known workaround still applies: after `west flash`, press physical RESET before
+RTT connection (established in Phase 3B).
+
+---
+
+### Legacy Isolation Confirmation
+
+No `RobotOS_v1.0/src/` legacy file compiled, staged, or referenced.
+`platform/` sources are new — no legacy dependency.
+
+---
+
+### Known Limitations
+
+- Only logging boundary implemented in Phase 5A.
+- No time, thread, mutex, or assert/fault abstraction yet.
+- Zephyr backend only for devkit; host backend is no-op only.
+- Custom STM32F407VET6 board remains hardware-unvalidated.
+- 128-byte vsnprintf buffer in Zephyr adapter: sufficient for all current
+  core messages; silent truncation if exceeded (acceptable for diagnostics).
+- Single-threaded assumption unchanged — no ISR-safe log calls.
+
+---
+
+### Next Recommended Phase
+
+**Phase 5B — Platform Time Boundary**
+
+Abstract the tick/time source out of the devkit harness into a platform
+interface (`robotos_platform_time.h`), following the same boundary pattern
+established in Phase 5A. This will decouple core tick scheduling from
+`k_msleep` / Zephyr kernel time APIs.

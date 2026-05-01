@@ -1,5 +1,12 @@
 # tests/host/CMakeLists.txt
-# Phase 4H: isolated host build — core, queue, dispatcher, ingestion, tick policy, handler policy.
+# Phase 5A: isolated host build — core, queue, dispatcher, ingestion, tick policy, handler policy.
+#
+# Platform logging: each target that compiles robotos_core.c also compiles
+# the no-op host stub (robotos_platform_log_host_stub.c) and adds the
+# platform include directory. No Zephyr dependency.
+#
+# ROBOTOS_CORE_HOST_TEST is no longer needed — the logging shim has been
+# replaced by the platform log boundary introduced in Phase 5A.
 #
 # Standalone — does not depend on root CMake, west, or legacy src/.
 # Does not require Zephyr SDK or ZEPHYR_BASE.
@@ -18,7 +25,11 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 # Locate core/ relative to this CMakeLists (two levels up from tests/host/)
-set(CORE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../core")
+set(CORE_DIR    "${CMAKE_CURRENT_SOURCE_DIR}/../../core")
+set(PLATFORM_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../platform")
+
+# Host no-op platform log backend — compiled into any target that includes core.
+set(PLATFORM_HOST_STUB "${CMAKE_CURRENT_SOURCE_DIR}/robotos_platform_log_host_stub.c")
 
 # Common core sources shared across tests that include robotos_core.h dependency chain.
 set(CORE_SRCS
@@ -28,22 +39,22 @@ set(CORE_SRCS
 )
 
 # ---- Core lifecycle contract test (Phase 4C) --------------------------------
-# robotos_core.c now includes event_queue and dispatcher headers.
+# robotos_core.c includes event_queue and dispatcher headers.
+# Platform log stub satisfies robotos_platform_logf() symbol.
 add_executable(robotos_core_contract_test
     test_robotos_core_contract.c
     ${CORE_SRCS}
+    ${PLATFORM_HOST_STUB}
 )
 
-target_include_directories(robotos_core_contract_test PRIVATE "${CORE_DIR}")
-
-# ROBOTOS_CORE_HOST_TEST silences Zephyr logging in robotos_core.c.
-# event_queue and dispatcher have zero Zephyr dependency — no define needed.
-target_compile_definitions(robotos_core_contract_test PRIVATE
-    ROBOTOS_CORE_HOST_TEST=1
+target_include_directories(robotos_core_contract_test PRIVATE
+    "${CORE_DIR}"
+    "${PLATFORM_DIR}"
 )
 
 # ---- Event queue contract test (Phase 4D) -----------------------------------
 # Only needs robotos_event_queue.c (no core or dispatcher dependency).
+# Does not compile robotos_core.c — no platform stub needed.
 add_executable(robotos_event_queue_contract_test
     test_robotos_event_queue_contract.c
     "${CORE_DIR}/robotos_event_queue.c"
@@ -53,6 +64,7 @@ target_include_directories(robotos_event_queue_contract_test PRIVATE "${CORE_DIR
 
 # ---- Event dispatcher contract test (Phase 4E) ------------------------------
 # Needs queue and dispatcher; does not include robotos_core.c.
+# No platform stub needed.
 add_executable(robotos_event_dispatcher_contract_test
     test_robotos_event_dispatcher_contract.c
     "${CORE_DIR}/robotos_event_queue.c"
@@ -66,36 +78,36 @@ target_include_directories(robotos_event_dispatcher_contract_test PRIVATE "${COR
 add_executable(robotos_core_ingestion_contract_test
     test_robotos_core_ingestion_contract.c
     ${CORE_SRCS}
+    ${PLATFORM_HOST_STUB}
 )
 
-target_include_directories(robotos_core_ingestion_contract_test PRIVATE "${CORE_DIR}")
-
-target_compile_definitions(robotos_core_ingestion_contract_test PRIVATE
-    ROBOTOS_CORE_HOST_TEST=1
+target_include_directories(robotos_core_ingestion_contract_test PRIVATE
+    "${CORE_DIR}"
+    "${PLATFORM_DIR}"
 )
 
 # ---- Tick policy contract test (Phase 4G) -----------------------------------
 add_executable(robotos_core_tick_policy_contract_test
     test_robotos_core_tick_policy_contract.c
     ${CORE_SRCS}
+    ${PLATFORM_HOST_STUB}
 )
 
-target_include_directories(robotos_core_tick_policy_contract_test PRIVATE "${CORE_DIR}")
-
-target_compile_definitions(robotos_core_tick_policy_contract_test PRIVATE
-    ROBOTOS_CORE_HOST_TEST=1
+target_include_directories(robotos_core_tick_policy_contract_test PRIVATE
+    "${CORE_DIR}"
+    "${PLATFORM_DIR}"
 )
 
 # ---- Handler policy contract test (Phase 4H) --------------------------------
 add_executable(robotos_core_handler_policy_contract_test
     test_robotos_core_handler_policy_contract.c
     ${CORE_SRCS}
+    ${PLATFORM_HOST_STUB}
 )
 
-target_include_directories(robotos_core_handler_policy_contract_test PRIVATE "${CORE_DIR}")
-
-target_compile_definitions(robotos_core_handler_policy_contract_test PRIVATE
-    ROBOTOS_CORE_HOST_TEST=1
+target_include_directories(robotos_core_handler_policy_contract_test PRIVATE
+    "${CORE_DIR}"
+    "${PLATFORM_DIR}"
 )
 
 enable_testing()

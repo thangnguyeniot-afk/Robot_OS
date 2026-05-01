@@ -1,12 +1,13 @@
 /*
  * robotos_core.c
- * RobotOS portable core — Phase 4H: handler registration policy.
+ * RobotOS portable core — Phase 5A: platform logging boundary.
  *
- * Zephyr logging is used in firmware builds. The public API (robotos_core.h)
- * remains free of Zephyr types.
+ * Logging is routed through robotos_platform_log.h — a portable interface.
+ * The Zephyr backend (platform/zephyr/robotos_platform_log_zephyr.c) is
+ * compiled for devkit builds. The host no-op stub is compiled for host tests.
  *
- * When ROBOTOS_CORE_HOST_TEST is defined (host contract tests), all log
- * output is silenced. No Zephyr headers are included in that mode.
+ * robotos_core.c no longer includes <zephyr/logging/log.h> directly.
+ * The public API (robotos_core.h) remains free of Zephyr types.
  *
  * Single-threaded assumption: no mutex or atomic operations applied.
  * Revisit when RTOS threads are introduced.
@@ -15,25 +16,21 @@
 #include "robotos_core.h"
 #include "robotos_event_queue.h"
 #include "robotos_event_dispatcher.h"
+#include "robotos_platform_log.h"
 
 #include <stdbool.h>
 #include <stddef.h>
 
-/* ---- Internal logging shim ------------------------------------------------
- * In firmware mode: use Zephyr LOG_MODULE_REGISTER + LOG_* macros.
- * In host test mode: silence all log output (no Zephyr dependency).
+/* ---- Internal logging helpers ---------------------------------------------
+ * Thin wrappers that fix the module label to "robotos_core".
+ * All log output goes through robotos_platform_logf() — no Zephyr dependency.
  */
-#ifdef ROBOTOS_CORE_HOST_TEST
-#define CORE_LOG_INF(...) ((void)0)
-#define CORE_LOG_WRN(...) ((void)0)
-#define CORE_LOG_DBG(...) ((void)0)
-#else
-#include <zephyr/logging/log.h>
-LOG_MODULE_REGISTER(robotos_core, LOG_LEVEL_INF);
-#define CORE_LOG_INF(...) LOG_INF(__VA_ARGS__)
-#define CORE_LOG_WRN(...) LOG_WRN(__VA_ARGS__)
-#define CORE_LOG_DBG(...) LOG_DBG(__VA_ARGS__)
-#endif
+#define CORE_LOG_INF(fmt, ...) \
+    robotos_platform_logf(ROBOTOS_LOG_LEVEL_INFO,  "robotos_core", fmt, ##__VA_ARGS__)
+#define CORE_LOG_WRN(fmt, ...) \
+    robotos_platform_logf(ROBOTOS_LOG_LEVEL_WARN,  "robotos_core", fmt, ##__VA_ARGS__)
+#define CORE_LOG_DBG(fmt, ...) \
+    robotos_platform_logf(ROBOTOS_LOG_LEVEL_DEBUG, "robotos_core", fmt, ##__VA_ARGS__)
 /* -------------------------------------------------------------------------- */
 
 #define CORE_VERSION           "4B-contract"
