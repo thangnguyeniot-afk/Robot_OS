@@ -246,13 +246,211 @@ Captured via Python TCP client (post-fix firmware, after manual RESET).
 
 ### Next Recommended Phase
 
-**Phase 3B — Devkit Hardening (suggested):**
-- Add `devkit_assert` or fault hook stub for panic visibility.
-- Add `CONFIG_REBOOT=y` + watchdog consideration note.
-- Measure and document actual RTT log latency.
-- Prepare migration checklist for custom STM32F407VET6 board.
+**Phase 3B — Devkit Hardening:** See Phase 3B section below (implemented, runtime validation pending).
 
-**Phase 4 — Core Bootstrap (future):**
+**Phase 4A — Core Bootstrap (future):**
 - Introduce `robotos_core` module under `RobotOS_v1.0/core/`.
 - Define first RobotOS kernel interface (event queue or scheduler stub).
 - devkit becomes the integration harness for core validation.
+
+---
+
+## Phase 3B — Devkit Hardening
+
+**Date:** 2026-05-01
+**Branch:** master
+**Phase 3A baseline commit:** `7163fed` — "devkit: stabilize runtime skeleton logging"
+
+---
+
+### Purpose
+
+Add minimal observability and failure visibility to the devkit validation harness
+before introducing RobotOS core modules. Ensures future core/scheduler work can
+be diagnosed cleanly from boot logs without requiring a debug session.
+
+---
+
+### Files Added
+
+| File | Role |
+|------|------|
+| `src/devkit_build_info.h` | Build metadata log interface |
+| `src/devkit_build_info.c` | Logs board, Zephyr version, build timestamp, tick interval, log backend |
+| `src/devkit_fault.h` | Fault visibility interface (init + guarded test panic) |
+| `src/devkit_fault.c` | Logs "fault visibility active" at init; optional test panic off by default |
+
+### Files Modified
+
+| File | Change |
+|------|--------|
+| `src/devkit_runtime.c` | Added fault_init + build_info_log calls in init; added `tick_count` to run loop |
+| `CMakeLists.txt` | Added `devkit_build_info.c` and `devkit_fault.c` to `target_sources` |
+| `docs/DEVKIT_PROGRESS.md` | Added Phase 3B section (this file) |
+
+### Files Unchanged
+
+| File | Reason |
+|------|--------|
+| `src/main.c` | Remains thin entry point; no Phase 3B changes needed |
+| `src/devkit_runtime.h` | No interface changes; `DEVKIT_TICK_MS` constant unchanged |
+| `src/devkit_status_led.h` | Unchanged |
+| `src/devkit_status_led.c` | Unchanged |
+| `prj.conf` | No new Kconfig requirements for Phase 3B |
+
+---
+
+### Feature Summary
+
+#### Build/runtime metadata log
+
+`devkit_build_info_log()` emits at boot:
+```
+[devkit_build_info] RobotOS devkit build info:
+[devkit_build_info]   board=stm32f411e_disco
+[devkit_build_info]   zephyr=3.6.0
+[devkit_build_info]   build=May  1 2026 <time>
+[devkit_build_info]   tick_ms=500
+[devkit_build_info]   log_backend=RTT
+```
+
+Uses `KERNEL_VERSION_STRING` from Zephyr generated `version.h` (confirmed in build output).
+Uses `__DATE__` and `__TIME__` for build timestamp (accepted tradeoff: non-reproducible builds, same as prior art).
+
+#### Fault visibility active
+
+`devkit_fault_init()` emits at boot:
+```
+[devkit_fault] fault visibility active
+```
+
+No fatal hook override. Option A chosen: safe log-only announcement.
+Optional test panic (`devkit_fault_test_panic`) is available if `DEVKIT_FAULT_TEST` is defined — not invoked during normal runtime.
+
+#### Runtime tick counter
+
+`tick_count` variable added to `devkit_runtime_run()`. Increments each loop.
+Log line changed from `tick` to `tick count=<n>`:
+```
+[devkit_runtime] tick count=0
+[devkit_runtime] tick count=1
+...
+```
+
+---
+
+### Phase 3B Responsibility Map
+
+| Module | Responsibility | Dependencies |
+|--------|---------------|--------------|
+| `main.c` | Entry point only — init + run | `devkit_runtime.h` |
+| `devkit_status_led` | GPIO binding for `led0` alias | Zephyr GPIO driver |
+| `devkit_runtime` | Boot sequence, tick loop + counter, LED orchestration | `devkit_status_led`, `devkit_build_info`, `devkit_fault`, Zephyr kernel/log |
+| `devkit_build_info` | Boot-time metadata log | `devkit_runtime.h` (for `DEVKIT_TICK_MS`), generated `version.h` |
+| `devkit_fault` | Fault visibility announcement | Zephyr kernel/log |
+
+---
+
+### Build Command
+
+```powershell
+$env:ZEPHYR_TOOLCHAIN_VARIANT = "zephyr"
+$env:ZEPHYR_SDK_INSTALL_DIR   = "C:\zephyr-sdk-0.17.0"
+west build -b stm32f411e_disco RobotOS_v1.0/devkit/ --pristine
+```
+
+### Build Memory Summary
+
+Phase 3B post-build (all new modules compiled, no app warnings):
+
+```
+Memory region    Used Size   Region Size   %age Used
+FLASH:            25848 B       512 KB       4.93%
+RAM:               8576 B       128 KB       6.54%
+```
+
+Phase 3A baseline (for reference): FLASH 25520 B, RAM 8576 B.
+Delta: FLASH +328 B, RAM unchanged.
+
+---
+
+### Flash/Runtime Evidence
+
+Status: RUNTIME_PENDING
+
+Build verified clean. Flash and runtime validation require hardware and RTT session.
+Hardware not available during automated Phase 3B execution session.
+
+To validate:
+
+1. Run `west flash` (OpenOCD programs firmware, exits without reset).
+2. Press physical RESET button on Discovery board.
+3. Capture RTT log (OpenOCD RTT server port 9090).
+4. Confirm expected boot sequence and tick count progression.
+
+Expected boot log after Phase 3B:
+
+```
+*** Booting Zephyr OS build v3.6.0 ***
+[00:00:00.000,000] <inf> devkit_fault: fault visibility active
+[00:00:00.000,000] <inf> devkit_build_info: RobotOS devkit build info:
+[00:00:00.000,000] <inf> devkit_build_info:   board=stm32f411e_disco
+[00:00:00.000,000] <inf> devkit_build_info:   zephyr=3.6.0
+[00:00:00.000,000] <inf> devkit_build_info:   build=May  1 2026 <HH:MM:SS>
+[00:00:00.000,000] <inf> devkit_build_info:   tick_ms=500
+[00:00:00.000,000] <inf> devkit_build_info:   log_backend=RTT
+[00:00:00.000,000] <inf> devkit_runtime: RobotOS devkit starting — board: stm32f411e_disco
+[00:00:00.000,000] <inf> devkit_runtime: LED blink loop starting
+[00:00:00.000,000] <inf> devkit_runtime: tick count=0
+[00:00:00.500,000] <inf> devkit_runtime: tick count=1
+[00:00:01.000,000] <inf> devkit_runtime: tick count=2
+...
+```
+
+---
+
+### Legacy Isolation Confirmation
+
+Phase 3B sources contain **no references** to:
+
+- `app_glue_robotos.c`
+- `encoder.c`, `servo.c`, `endstop.c`
+- Any file under `RobotOS_v1.0/src/` (legacy Opus-generated reference)
+
+CMakeLists.txt explicitly lists only:
+
+```
+src/main.c
+src/devkit_status_led.c
+src/devkit_runtime.c
+src/devkit_build_info.c
+src/devkit_fault.c
+```
+
+---
+
+### Known Limitations
+
+- No watchdog enabled — considered but deferred; no runtime-confirmed need at this phase.
+- `devkit_fault_test_panic()` not invoked by default — requires explicit `DEVKIT_FAULT_TEST` define.
+- No fatal hook override — Option A chosen (log-only); Zephyr default fatal handler remains active.
+- **Manual RESET required after every `west flash`** — OpenOCD runner exits after programming; ST-LINK/V2 probe is functional.
+- RTT server address (`_SEGGER_RTT`) must be re-read from symbol map after pristine build (clean build relocates symbols).
+- Custom STM32F407VET6 board remains hardware-unvalidated.
+- `CONFIG_LOG_DEFAULT_LEVEL=3` (INF) — kernel debug messages suppressed by design.
+
+---
+
+### Next Recommended Phase
+
+Phase 4A — Core Bootstrap (if Phase 3B runtime confirmed):
+
+- Introduce `robotos_core` module under `RobotOS_v1.0/core/`.
+- Define first RobotOS kernel interface (event queue or scheduler stub).
+- devkit becomes integration harness for core validation.
+
+Phase 3B-R — Runtime Follow-up (if runtime pending or fails):
+
+- Flash Phase 3B firmware, capture RTT boot log, confirm tick_count progression.
+- Confirm no MemManage fault from additional log modules.
+- Update this section with `RUNTIME_PASS` evidence and close 3B.
