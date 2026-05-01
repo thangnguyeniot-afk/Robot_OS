@@ -1,13 +1,14 @@
 /*
  * devkit_runtime.c
  * Boot sequence, periodic tick log, and status LED orchestration.
- * Phase 3B: fault visibility + build metadata logged at init; tick counter added.
+ * Phase 4A: RobotOS core init and tick integrated.
  */
 
 #include "devkit_runtime.h"
 #include "devkit_build_info.h"
 #include "devkit_fault.h"
 #include "devkit_status_led.h"
+#include "robotos_core.h"
 
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
@@ -20,6 +21,11 @@ int devkit_runtime_init(void)
 
 	devkit_fault_init();
 	devkit_build_info_log();
+
+	ret = robotos_core_init();
+	if (ret < 0) {
+		LOG_ERR("Core init failed: %d — continuing", ret);
+	}
 
 	LOG_INF("RobotOS devkit starting — board: %s", CONFIG_BOARD);
 
@@ -45,6 +51,12 @@ void devkit_runtime_run(void)
 			LOG_ERR("LED toggle failed: %d", ret);
 		}
 		LOG_INF("tick count=%u", tick_count++);
+
+		ret = robotos_core_tick();
+		if (ret < 0) {
+			LOG_ERR("Core tick failed: %d", ret);
+		}
+
 		k_msleep(DEVKIT_TICK_MS);
 	}
 }

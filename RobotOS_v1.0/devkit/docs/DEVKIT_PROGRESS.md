@@ -598,3 +598,244 @@ Phase 4A scope:
 - devkit becomes integration harness for core validation.
 
 Workflow note: `west build ... && west flash && [press RESET] && [attach RTT]` confirms runtime before core integration.
+
+---
+
+## Phase 4A — Core Bootstrap
+
+**Date:** 2026-05-01
+**Branch:** master
+**Phase 3B baseline commit:** `6e9c360` — "devkit: clarify post-flash reset limitation"
+
+---
+
+### Phase 4A Purpose
+
+Introduce the first portable RobotOS core module under `RobotOS_v1.0/core/` and connect
+it to the devkit runtime harness. This establishes the first clean system boundary between
+devkit-specific runtime code and portable RobotOS core logic.
+
+---
+
+### Phase 4A Files Added
+
+| File | Role |
+| ---- | ---- |
+| `core/robotos_core.h` | Public portable API — no Zephyr or board-specific types |
+| `core/robotos_core.c` | Implementation — Zephyr logging used internally |
+| `core/README.md` | Core module documentation |
+
+### Phase 4A Files Modified
+
+| File | Change |
+| ---- | ------ |
+| `devkit/CMakeLists.txt` | Added `../core` include directory; added `../core/robotos_core.c` to `target_sources` |
+| `devkit/src/devkit_runtime.c` | Added `robotos_core_init()` call in init path; added `robotos_core_tick()` call in run loop |
+| `devkit/docs/DEVKIT_PROGRESS.md` | Added Phase 4A section (this file) |
+
+### Phase 4A Files Unchanged
+
+| File | Reason |
+| ---- | ------ |
+| `devkit/src/main.c` | Thin entry point; no Phase 4A changes needed |
+| `devkit/src/devkit_runtime.h` | No interface changes |
+| `devkit/src/devkit_status_led.*` | Unchanged |
+| `devkit/src/devkit_build_info.*` | Unchanged |
+| `devkit/src/devkit_fault.*` | Unchanged |
+| `devkit/prj.conf` | No new Kconfig requirements for Phase 4A |
+
+---
+
+### Core API
+
+```c
+// robotos_core.h — Phase 4A portable bootstrap API
+const char *robotos_core_version(void);  // returns "4A-bootstrap"
+int robotos_core_init(void);             // logs init, returns 0
+int robotos_core_tick(void);             // increments counter, logs first + every 10th tick
+```
+
+No Zephyr types or board types exposed in the public header. Internally uses
+`LOG_MODULE_REGISTER(robotos_core, LOG_LEVEL_INF)`.
+
+Tick log policy: first tick and every 10th tick logged to avoid RTT flood.
+
+---
+
+### Integration Points
+
+`devkit_runtime_init()` call order:
+
+```
+devkit_fault_init()
+devkit_build_info_log()
+robotos_core_init()       ← Phase 4A addition
+devkit_status_led_init()
+```
+
+`devkit_runtime_run()` per-loop:
+
+```
+devkit_status_led_toggle()
+devkit_runtime: tick count=N    ← existing
+robotos_core_tick()             ← Phase 4A addition
+k_msleep(DEVKIT_TICK_MS)
+```
+
+Core init failure is non-fatal: error logged and LED blink continues.
+
+---
+
+### Phase 4A Build Command
+
+```powershell
+$env:ZEPHYR_TOOLCHAIN_VARIANT = "zephyr"
+$env:ZEPHYR_SDK_INSTALL_DIR   = "C:\zephyr-sdk-0.17.0"
+west build -b stm32f411e_disco RobotOS_v1.0/devkit/ --pristine
+```
+
+### Phase 4A Build Memory Summary
+
+Phase 4A post-build (no app warnings):
+
+```
+Memory region    Used Size   Region Size   %age Used
+FLASH:            26180 B       512 KB       4.99%
+RAM:               8576 B       128 KB       6.54%
+```
+
+Phase 3B baseline: FLASH 25848 B, RAM 8576 B. Delta: FLASH +332 B, RAM unchanged.
+
+---
+
+### Flash/Runtime Evidence
+
+**Status:** RUNTIME_CONFIRMED
+
+**Validation date:** 2026-05-01
+**Hardware:** STM32F411E-DISCO, ST-LINK/V2 FW V2J47S0, OpenOCD 0.12.0-01025-g662bf274f
+
+**Operational workflow:** `west flash` → press physical RESET → attach RTT (post-flash auto-start remains OPEN)
+
+#### Phase 4A Flash Output
+
+```text
+Info : STLINK V2J47S0 (API v2) VID:PID 0483:3748
+Info : Target voltage: 2.933652
+Info : flash size = 512 KiB
+wrote 32768 bytes from file zephyr.hex in 1.096093s (29.195 KiB/s)
+shutdown command invoked
+```
+
+#### Phase 4A Validation Status
+
+| Gate | Status | Notes |
+| ---- | ------ | ----- |
+| `FLASH_WRITE` | `PASS` | Firmware programmed and verified. |
+| `POST_FLASH_AUTOSTART` | `OPEN / UNRELIABLE` | Manual RESET required. See Phase 3B Open Issue. |
+| `CORE_INIT` | `PASS` | `robotos_core_init()` confirmed via RTT log and memory read. |
+| `CORE_TICK` | `PASS` | `core_tick_count` increments at exact 500ms interval (confirmed via memory read). |
+| `RUNTIME_AFTER_MANUAL_RESET` | `PASS` | All Phase 3B features preserved plus core active. |
+| `LED` | `PASS` | PD13 blinks 500ms confirmed via GPIOD_ODR toggle. |
+| `RTT_LOG` | `PASS` | Boot sequence logged in full. |
+| `FAULT_STATUS` | `PASS` | DHCSR=0x00050001 (S_SLEEP=1, S_HALT=0) — firmware in WFI, no fault. |
+
+#### RTT Log (captured via direct memory dump, post-RESET)
+
+RTT buffer address: `_SEGGER_RTT = 0x20000800`, up buffer at `0x20000906` (1024 B).
+
+```
+*** Booting Zephyr OS build v3.6.0 ***
+[00:00:00.000,000] <inf> devkit_fault: fault visibility active
+[00:00:00.000,000] <inf> devkit_build_info: RobotOS devkit build info:
+[00:00:00.000,000] <inf> devkit_build_info:   board=stm32f411e_disco
+[00:00:00.000,000] <inf> devkit_build_info:   zephyr=3.6.0
+[00:00:00.000,000] <inf> devkit_build_info:   build=May  1 2026 17:31:56
+[00:00:00.000,000] <inf> devkit_build_info:   tick_ms=500
+[00:00:00.000,000] <inf> devkit_build_info:   log_backend=RTT
+[00:00:00.000,000] <inf> robotos_core: RobotOS core init — version=4A-bootstrap
+[00:00:00.000,000] <inf> devkit_runtime: RobotOS devkit starting — board: stm32f411e_disco
+[00:00:00.0... ← buffer full (1023/1024 B used by boot sequence)
+```
+
+Note: RTT buffer fills during boot sequence (same as Phase 3B). Tick messages are logged by
+firmware but cannot be captured via memory dump once the buffer is full. Core tick confirmed
+via direct memory read instead (see below).
+
+#### Core Tick Confirmation (via direct memory read)
+
+Symbol addresses from Phase 4A ELF (`arm-zephyr-eabi-nm`):
+
+| Symbol | Address | Value (T+2.0s) | Value (T+2.5s) | Conclusion |
+| ------ | ------- | -------------- | -------------- | ---------- |
+| `core_tick_count` | `0x200006a8` | `0x27b` (635) | `0x27c` (636) | +1 in 500ms — exact tick interval |
+| `core_initialized` | `0x200008e0` | `0x101` (non-zero) | — | `true` — init confirmed |
+
+#### LED Confirmation (via GPIOD_ODR)
+
+| Read time | GPIOD_ODR (`0x40020C14`) | PD13 state |
+| --------- | ------------------------ | ---------- |
+| T+3.0s | `0x00002000` | HIGH (LED ON) |
+| T+3.5s | `0x00000000` | LOW (LED OFF) |
+
+Bit 13 toggles — PD13 orange LED blinks at 500ms confirmed.
+
+---
+
+### Phase 4A Legacy Isolation Confirmation
+
+Phase 4A sources contain **no references** to:
+
+- `app_glue_robotos.c`
+- `encoder.c`, `servo.c`, `endstop.c`
+- Any file under `RobotOS_v1.0/src/` (legacy Opus-generated reference)
+
+CMakeLists.txt source list:
+
+```text
+src/main.c
+src/devkit_status_led.c
+src/devkit_runtime.c
+src/devkit_build_info.c
+src/devkit_fault.c
+../core/robotos_core.c
+```
+
+---
+
+### Known Limitations
+
+- Core is bootstrap only — no scheduler, event bus, or peripheral drivers.
+- No RTOS threads — core runs synchronously in devkit's main-thread tick loop.
+- No custom board support — core is board-agnostic by design.
+- `robotos_core_tick()` log policy: first tick and every 10th tick to limit RTT usage.
+- RTT buffer fills during boot; tick log messages cannot be captured via memory dump.
+  Core tick confirmed via direct memory read (`core_tick_count` symbol address).
+- **Manual RESET required after `west flash`** — post-flash auto-start remains OPEN.
+- `CONFIG_LOG_DEFAULT_LEVEL=3` (INF) — kernel debug suppressed.
+
+---
+
+### Operational Flash Procedure
+
+```bash
+west build -b stm32f411e_disco RobotOS_v1.0/devkit/ --pristine
+west flash
+[press physical RESET button on board]
+[attach RTT: OpenOCD → dump_image 0x20000800 1024]
+[read core_tick_count at 0x200006a8 to confirm ticking]
+```
+
+---
+
+### Phase 4B Recommendation
+
+**Phase 4B — Core Contract Hardening** (Phase 4A runtime confirmed).
+
+Options for Phase 4B (team decision):
+
+- Define and validate the core module contract more formally (return codes, error states, reset/reinit behavior).
+- Introduce the first event queue stub inside `core/`.
+- Both options require Phase 4A runtime confirmed — which is now the case.
+
+Do not implement Phase 4B until explicitly assigned.
