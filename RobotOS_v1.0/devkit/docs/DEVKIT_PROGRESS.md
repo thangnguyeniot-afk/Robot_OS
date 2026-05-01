@@ -376,19 +376,28 @@ Delta: FLASH +328 B, RAM unchanged.
 
 ### Flash/Runtime Evidence
 
-Status: RUNTIME_PENDING
+Status: RUNTIME_PASS
 
-Build verified clean. Flash and runtime validation require hardware and RTT session.
-Hardware not available during automated Phase 3B execution session.
+Validation date: 2026-05-01 — Hardware: STM32F411E-DISCO, ST-LINK/V2, FW V2J47S0 — OpenOCD: 0.12.0-01025-g662bf274f
 
-To validate:
+#### Flash
 
-1. Run `west flash` (OpenOCD programs firmware, exits without reset).
-2. Press physical RESET button on Discovery board.
-3. Capture RTT log (OpenOCD RTT server port 9090).
-4. Confirm expected boot sequence and tick count progression.
+```
+Info : STLINK V2J47S0 (API v2) VID:PID 0483:3748
+Info : Target voltage: 2.927284
+Info : [stm32f4x.cpu] Cortex-M4 r0p1 processor detected
+Info : flash size = 512 KiB
+wrote 32768 bytes from file zephyr.hex in 1.104510s (28.972 KiB/s)
+shutdown command invoked
+```
 
-Expected boot log after Phase 3B:
+Note: `west flash` exits without reset (same runner behavior as Phase 3A). Subsequent
+OpenOCD session with `reset run` starts firmware without requiring physical RESET button.
+
+#### RTT Log — Captured via Direct Memory Dump
+
+RTT buffer address: `_SEGGER_RTT = 0x20000800` (confirmed from Phase 3B ELF nm).
+Method: `dump_image` of up buffer at `0x20000901` (1024 B) after 3s runtime, decoded in Python.
 
 ```
 *** Booting Zephyr OS build v3.6.0 ***
@@ -396,7 +405,7 @@ Expected boot log after Phase 3B:
 [00:00:00.000,000] <inf> devkit_build_info: RobotOS devkit build info:
 [00:00:00.000,000] <inf> devkit_build_info:   board=stm32f411e_disco
 [00:00:00.000,000] <inf> devkit_build_info:   zephyr=3.6.0
-[00:00:00.000,000] <inf> devkit_build_info:   build=May  1 2026 <HH:MM:SS>
+[00:00:00.000,000] <inf> devkit_build_info:   build=May  1 2026 10:12:30
 [00:00:00.000,000] <inf> devkit_build_info:   tick_ms=500
 [00:00:00.000,000] <inf> devkit_build_info:   log_backend=RTT
 [00:00:00.000,000] <inf> devkit_runtime: RobotOS devkit starting — board: stm32f411e_disco
@@ -404,8 +413,33 @@ Expected boot log after Phase 3B:
 [00:00:00.000,000] <inf> devkit_runtime: tick count=0
 [00:00:00.500,000] <inf> devkit_runtime: tick count=1
 [00:00:01.000,000] <inf> devkit_runtime: tick count=2
-...
+[00:00:01.500,000] <inf> devkit_runtime: tick count=3
+[00:00:02.000,000] <inf> dev  ← buffer full (1018/1024 B)
 ```
+
+4 consecutive ticks at exact 500ms intervals confirmed. Buffer fills after ~4 ticks because
+Phase 3B boot metadata (~550 B) leaves ~470 B for tick messages. Not a runtime blocker.
+RTT buffer WrOff=1018, RdOff=0 verified via `mdw 0x20000800`.
+
+#### LED
+
+GPIOD_ODR at `0x40020C14` read at two 500ms intervals after firmware start:
+
+| Halt    | ODR Value    | PD13 State    |
+|---------|--------------|---------------|
+| T+1.25s | `0x00000000` | LOW (LED OFF) |
+| T+1.75s | `0x00002000` | HIGH (LED ON) |
+
+Bit 13 toggles between reads — PD13 orange LED blinks at 500ms confirmed.
+
+#### Fault Status
+
+Normal execution context at both halts:
+
+- `xPSR: 0x41000000` — Thread mode, no exception active
+- No MemManage fault
+- No unexpected panic
+- No RTT flood
 
 ---
 
