@@ -471,7 +471,7 @@ src/devkit_fault.c
 - No watchdog enabled — considered but deferred; no runtime-confirmed need at this phase.
 - `devkit_fault_test_panic()` not invoked by default — requires explicit `DEVKIT_FAULT_TEST` define.
 - No fatal hook override — Option A chosen (log-only); Zephyr default fatal handler remains active.
-- `west flash` auto-resets via `reset run` (hardcoded in Zephyr openocd runner `openocd.py:271`); manual RESET is not required with Phase 3B firmware. The Phase 3A "manual RESET required" note was a misdiagnosis — the real cause was the MemManage fault making the LED appear stuck rather than the reset failing. Manual RESET may still help recover from edge-case exit-code-1 flash failures.
+- `west flash` auto-resets and firmware starts without manual RESET button. Fix: `app_set_runner_args` in CMakeLists.txt adds `reset run + sleep 300` before the built-in `reset run`, giving the SWD state time to settle before ST-LINK disconnects. Confirmed: DHCSR S_SLEEP=1 (WFI), S_HALT=0, PD13 toggling immediately after flash.
 - RTT server address (`_SEGGER_RTT`) must be re-read from symbol map after pristine build (clean build relocates symbols).
 - Custom STM32F407VET6 board remains hardware-unvalidated.
 - `CONFIG_LOG_DEFAULT_LEVEL=3` (INF) — kernel debug messages suppressed by design.
