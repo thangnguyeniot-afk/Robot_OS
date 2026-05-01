@@ -1,10 +1,10 @@
 /*
  * robotos_core.h
- * RobotOS portable core — Phase 4F ingestion API.
+ * RobotOS portable core — Phase 4G scheduler tick policy stub.
  *
- * Phase 4F: adds event ingestion (post/dispatch) and counter introspection.
- * Scheduler, event bus, and peripherals are intentionally not implemented yet.
- * No Zephyr or board-specific types exposed in this header.
+ * Phase 4G: each tick dispatches up to ROBOTOS_CORE_MAX_EVENTS_PER_TICK events.
+ * This is a deterministic tick policy stub, not a scheduler.
+ * No task registry, no priority, no threads, no Zephyr types.
  */
 
 #ifndef ROBOTOS_CORE_H
@@ -80,6 +80,13 @@ typedef struct {
 	uint32_t             handler_error_count;    /* handler errors during dispatch */
 } robotos_core_snapshot_t;
 
+/*
+ * Maximum events dispatched from the internal queue on each robotos_core_tick() call.
+ * Bounds the dispatch budget per tick. Must be > 0.
+ * Phase 4G stub value: 1. Callers may drain remaining events via dispatch_events().
+ */
+#define ROBOTOS_CORE_MAX_EVENTS_PER_TICK 1u
+
 /* Return the core version string. Never NULL. */
 const char *robotos_core_version(void);
 
@@ -95,7 +102,18 @@ robotos_core_status_t robotos_core_init(void);
 
 /*
  * Advance the core by one tick. Requires state == READY.
+ *
+ * On each successful tick:
+ *   1. tick_count increments.
+ *   2. Up to ROBOTOS_CORE_MAX_EVENTS_PER_TICK events dispatched from internal queue.
+ *   3. Empty queue is normal — returns OK (not ERR_EMPTY).
+ *   4. Handler errors are returned and reflected in handler_error_count.
+ *   5. No automatic CORE_TICK event is generated.
+ *   6. State does not transition to ERROR on handler error (Phase 4G stub).
+ *
  * Returns ROBOTOS_CORE_ERR_INVALID_STATE before init (warns once, then silent).
+ * Returns ROBOTOS_CORE_OK on success.
+ * Returns handler's non-OK status if dispatch encounters a handler error.
  */
 robotos_core_status_t robotos_core_tick(void);
 

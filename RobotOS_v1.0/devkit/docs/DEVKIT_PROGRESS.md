@@ -1780,3 +1780,148 @@ No `RobotOS_v1.0/src/` legacy file compiled or staged.
 - **Phase 5A Zephyr Adapter Boundary** — formalize the Zephyr/core boundary before growing core further.
 
 Do not implement Phase 4G until explicitly assigned.
+
+---
+
+## Phase 4G — Scheduler Tick Policy Stub
+
+**Date:** 2026-05-02
+**Branch:** master
+**Phase 4F baseline commit:** `e38dafc` — "core: add event ingestion API"
+
+---
+
+### Phase 4G Purpose
+
+Define a minimal, deterministic event dispatch policy on each `robotos_core_tick()` call.
+Each tick now dispatches up to `ROBOTOS_CORE_MAX_EVENTS_PER_TICK` queued events before
+returning. This is a tick policy stub — not a scheduler, not a task registry,
+not a priority system.
+
+---
+
+### Phase 4G Files Added
+
+| File | Role |
+| ---- | ---- |
+| `tests/host/test_robotos_core_tick_policy_contract.c` | ~42 host contract tests for tick policy behavior |
+
+### Phase 4G Files Modified
+
+| File | Change |
+| ---- | ------ |
+| `core/robotos_core.h` | Added `ROBOTOS_CORE_MAX_EVENTS_PER_TICK 1u`; updated `robotos_core_tick()` contract comment |
+| `core/robotos_core.c` | `robotos_core_tick()` now dispatches up to `ROBOTOS_CORE_MAX_EVENTS_PER_TICK` events; ERR_EMPTY normalized to OK |
+| `tests/host/CMakeLists.txt` | Added `robotos_core_tick_policy_contract_test` target |
+| `devkit/docs/DEVKIT_PROGRESS.md` | Added Phase 4G section (this file) |
+
+### Phase 4G Files Unchanged
+
+| File | Reason |
+| ---- | ------ |
+| `devkit/CMakeLists.txt` | No new source files |
+| `devkit/src/devkit_runtime.c` | No integration change needed |
+| All other core modules | Queue, dispatcher, ingestion unchanged |
+
+---
+
+### Phase 4G Tick Policy Contract Summary
+
+| Aspect | Contract |
+| ------ | -------- |
+| `ROBOTOS_CORE_MAX_EVENTS_PER_TICK` | `1u` (Phase 4G stub; public constant) |
+| Empty queue during tick | Normalized to OK — not an error |
+| Handler error during tick | Returned as-is; `handler_error_count++`; state NOT set to ERROR (stub) |
+| Auto-CORE_TICK event | Not generated — no events auto-produced |
+| tick_count | Always increments before dispatch |
+| Explicit `dispatch_events(n)` | Unchanged; `dispatch_events(1)` on empty still returns ERR_EMPTY |
+| Tick dispatch vs explicit | Tick normalizes empty to OK; explicit preserves ERR_EMPTY |
+| Concurrency/ISR | Not safe — single-threaded only |
+
+---
+
+### Phase 4G Host Test Evidence
+
+**Commands (WSL Ubuntu, gcc 13.3.0):**
+
+```bash
+cmake -S RobotOS_v1.0/tests/host -B build-host-core
+cmake --build build-host-core
+ctest --test-dir build-host-core --output-on-failure
+```
+
+**Result:**
+
+```text
+1/5 Test #1: robotos_core_contract ...............   Passed    0.00 sec
+2/5 Test #2: robotos_event_queue_contract ........   Passed    0.00 sec
+3/5 Test #3: robotos_event_dispatcher_contract ...   Passed    0.00 sec
+4/5 Test #4: robotos_core_ingestion_contract .....   Passed    0.00 sec
+5/5 Test #5: robotos_core_tick_policy_contract ...   Passed    0.00 sec
+
+100% tests passed, 0 tests failed out of 5
+Total Test time (real) = 0.02 sec
+```
+
+All prior suites preserved. Phase 4G tick policy: **~42/42 PASS**.
+
+---
+
+### Phase 4G Zephyr Build Evidence
+
+```text
+Memory region    Used Size   Region Size   %age Used
+FLASH:            26708 B       512 KB       5.09%
+RAM:               8832 B       128 KB       6.74%
+```
+
+Phase 4F baseline: FLASH 26520 B, RAM 8832 B.
+Delta: FLASH +188 B (dispatch logic added to tick), RAM unchanged.
+
+---
+
+### Phase 4G Runtime Evidence
+
+**Status:** RUNTIME_CONFIRMED
+
+**Validation date:** 2026-05-02
+**Hardware:** STM32F411E-DISCO, ST-LINK/V2 FW V2J47S0
+
+| Gate | Status | Notes |
+| ---- | ------ | ----- |
+| `FLASH_WRITE` | `PASS` | Firmware programmed and verified. |
+| `POST_FLASH_AUTOSTART` | `OPEN` | Manual RESET required per known workaround. |
+| `RTT_BOOT_LOG` | `PASS` | Boot sequence confirmed: devkit_fault, devkit_build_info, core init. |
+| `LED` | `PASS` | GPIOD_ODR `0x00002000` → `0x00000000` — 500ms blink confirmed. |
+| `FAULT_STATUS` | `PASS` | No fault. Clean runtime. |
+| `TICK_DISPATCH_VISIBLE` | `N/A` | No events posted in devkit; empty-queue normalize to OK = no observable change. |
+
+---
+
+### Phase 4G Legacy Isolation Confirmation
+
+No `RobotOS_v1.0/src/` legacy file compiled or staged.
+
+---
+
+### Phase 4G Known Limitations
+
+- `ROBOTOS_CORE_MAX_EVENTS_PER_TICK = 1` is a stub value — not tuned for any workload.
+- No auto-CORE_TICK event generation.
+- No public handler registration — only internal default no-op handler.
+- No priority or admission policy.
+- No concurrency/ISR-safe access.
+- Handler error during tick returns non-OK but does not transition state to ERROR (Phase 4G stub).
+- No observable tick-dispatch evidence in current devkit (no events posted).
+
+---
+
+### Phase 4H Recommendation
+
+**Phase 4H options (team decision required):**
+
+- **Handler Policy / Handler Registration Boundary** — expose a public API for registering user-defined event handlers, replacing the default no-op.
+- **Scheduler Admission Policy Stub** — define how events enter the queue under bounded backpressure.
+- **Phase 5A Zephyr Adapter Boundary** — formalize the Zephyr/core boundary and begin the adapter layer design.
+
+Do not implement Phase 4H until explicitly assigned.

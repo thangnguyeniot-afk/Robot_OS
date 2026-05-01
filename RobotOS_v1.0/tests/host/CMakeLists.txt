@@ -1,5 +1,5 @@
 # tests/host/CMakeLists.txt
-# Phase 4F: isolated host build for core, event queue, dispatcher, and ingestion contract tests.
+# Phase 4G: isolated host build — core, event queue, dispatcher, ingestion, tick policy tests.
 #
 # Standalone — does not depend on root CMake, west, or legacy src/.
 # Does not require Zephyr SDK or ZEPHYR_BASE.
@@ -74,8 +74,21 @@ target_compile_definitions(robotos_core_ingestion_contract_test PRIVATE
     ROBOTOS_CORE_HOST_TEST=1
 )
 
+# ---- Tick policy contract test (Phase 4G) -----------------------------------
+add_executable(robotos_core_tick_policy_contract_test
+    test_robotos_core_tick_policy_contract.c
+    ${CORE_SRCS}
+)
+
+target_include_directories(robotos_core_tick_policy_contract_test PRIVATE "${CORE_DIR}")
+
+target_compile_definitions(robotos_core_tick_policy_contract_test PRIVATE
+    ROBOTOS_CORE_HOST_TEST=1
+)
+
 enable_testing()
-add_test(NAME robotos_core_contract             COMMAND robotos_core_contract_test)
-add_test(NAME robotos_event_queue_contract      COMMAND robotos_event_queue_contract_test)
-add_test(NAME robotos_event_dispatcher_contract COMMAND robotos_event_dispatcher_contract_test)
-add_test(NAME robotos_core_ingestion_contract   COMMAND robotos_core_ingestion_contract_test)
+add_test(NAME robotos_core_contract              COMMAND robotos_core_contract_test)
+add_test(NAME robotos_event_queue_contract       COMMAND robotos_event_queue_contract_test)
+add_test(NAME robotos_event_dispatcher_contract  COMMAND robotos_event_dispatcher_contract_test)
+add_test(NAME robotos_core_ingestion_contract    COMMAND robotos_core_ingestion_contract_test)
+add_test(NAME robotos_core_tick_policy_contract  COMMAND robotos_core_tick_policy_contract_test)

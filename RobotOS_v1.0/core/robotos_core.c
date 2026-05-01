@@ -1,6 +1,6 @@
 /*
  * robotos_core.c
- * RobotOS portable core — Phase 4F: event ingestion API.
+ * RobotOS portable core — Phase 4G: scheduler tick policy stub.
  *
  * Zephyr logging is used in firmware builds. The public API (robotos_core.h)
  * remains free of Zephyr types.
@@ -102,7 +102,15 @@ robotos_core_status_t robotos_core_tick(void)
 		CORE_LOG_INF("core tick count=%u", core_tick_count);
 	}
 
-	return ROBOTOS_CORE_OK;
+	/* Tick policy: dispatch up to ROBOTOS_CORE_MAX_EVENTS_PER_TICK events.
+	 * Empty queue is normal — normalised to OK. */
+	robotos_core_status_t dret = robotos_event_dispatcher_dispatch_all(
+		&s_core_dispatcher, ROBOTOS_CORE_MAX_EVENTS_PER_TICK);
+
+	if (dret == ROBOTOS_CORE_ERR_EMPTY) {
+		return ROBOTOS_CORE_OK;
+	}
+	return dret; /* ROBOTOS_CORE_OK or handler's non-OK status */
 }
 
 robotos_core_state_t robotos_core_state(void)
