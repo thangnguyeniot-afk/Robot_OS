@@ -1,16 +1,17 @@
 /*
  * robotos_core.h
- * RobotOS portable core — Phase 4G scheduler tick policy stub.
+ * RobotOS portable core — Phase 4H handler registration policy.
  *
- * Phase 4G: each tick dispatches up to ROBOTOS_CORE_MAX_EVENTS_PER_TICK events.
- * This is a deterministic tick policy stub, not a scheduler.
- * No task registry, no priority, no threads, no Zephyr types.
+ * Phase 4H: static type-routed handler registration.
+ * One handler per event type. No scheduler, no priority, no threads.
+ * No Zephyr or board-specific types.
  */
 
 #ifndef ROBOTOS_CORE_H
 #define ROBOTOS_CORE_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 /*
  * Status/error codes returned by core API functions.
@@ -22,6 +23,7 @@ typedef enum {
 	ROBOTOS_CORE_ERR_NULL          = -2,
 	ROBOTOS_CORE_ERR_FULL          = -3,
 	ROBOTOS_CORE_ERR_EMPTY         = -4,
+	ROBOTOS_CORE_ERR_INVALID_ARG   = -6,  /* invalid argument (e.g. NONE event type) */
 } robotos_core_status_t;
 
 /*
@@ -63,10 +65,19 @@ typedef struct {
 } robotos_event_t;
 
 /*
+ * Event handler function type for registered handlers.
+ * Must return ROBOTOS_CORE_OK on success; non-OK is a handler error.
+ * event is valid for the duration of the call only.
+ * user_context is the pointer registered alongside the handler; may be NULL.
+ */
+typedef robotos_core_status_t (*robotos_core_event_handler_t)(
+	const robotos_event_t *event,
+	void *user_context
+);
+
+/*
  * Snapshot of core state at a point in time.
  * Populated by robotos_core_snapshot(). Not thread-safe.
- *
- * Event counter fields reflect the internal queue/dispatcher state.
  * All counter fields are 0 before robotos_core_init() is called.
  */
 typedef struct {
@@ -74,16 +85,20 @@ typedef struct {
 	uint32_t             tick_count;
 	uint32_t             init_count;
 	const char          *version;
-	uint32_t             pending_event_count;    /* events currently in queue */
-	uint32_t             dropped_event_count;    /* events dropped (queue full) */
-	uint32_t             dispatched_event_count; /* events dispatched by dispatcher */
-	uint32_t             handler_error_count;    /* handler errors during dispatch */
+	uint32_t             pending_event_count;      /* events in queue */
+	uint32_t             dropped_event_count;      /* events dropped (queue full) */
+	uint32_t             dispatched_event_count;   /* events dispatched */
+	uint32_t             handler_error_count;      /* handler errors */
+	uint32_t             registered_handler_count; /* currently registered handlers */
+	uint32_t             unhandled_event_count;    /* dispatched with no registered handler */
 } robotos_core_snapshot_t;
+
+/* Maximum number of simultaneously registered event handlers. */
+#define ROBOTOS_CORE_MAX_EVENT_HANDLERS  8u
 
 /*
  * Maximum events dispatched from the internal queue on each robotos_core_tick() call.
- * Bounds the dispatch budget per tick. Must be > 0.
- * Phase 4G stub value: 1. Callers may drain remaining events via dispatch_events().
+ * Phase 4G stub value: 1.
  */
 #define ROBOTOS_CORE_MAX_EVENTS_PER_TICK 1u
 
@@ -93,8 +108,8 @@ const char *robotos_core_version(void);
 /*
  * Initialize the RobotOS core. Idempotent — safe to call multiple times.
  *
- * First call: state → READY, tick_count=0, init_count=1, queue+dispatcher init.
- * Subsequent calls: init_count++, NO reset of tick_count or event queue.
+ * First call: state → READY, tick_count=0, init_count=1, queue+dispatcher+handler table init.
+ * Subsequent calls: init_count++; tick_count, queue, dispatcher, and handler table NOT reset.
  *
  * Returns ROBOTOS_CORE_OK on success.
  */
@@ -102,18 +117,8 @@ robotos_core_status_t robotos_core_init(void);
 
 /*
  * Advance the core by one tick. Requires state == READY.
- *
- * On each successful tick:
- *   1. tick_count increments.
- *   2. Up to ROBOTOS_CORE_MAX_EVENTS_PER_TICK events dispatched from internal queue.
- *   3. Empty queue is normal — returns OK (not ERR_EMPTY).
- *   4. Handler errors are returned and reflected in handler_error_count.
- *   5. No automatic CORE_TICK event is generated.
- *   6. State does not transition to ERROR on handler error (Phase 4G stub).
- *
- * Returns ROBOTOS_CORE_ERR_INVALID_STATE before init (warns once, then silent).
- * Returns ROBOTOS_CORE_OK on success.
- * Returns handler's non-OK status if dispatch encounters a handler error.
+ * Increments tick_count, then dispatches up to ROBOTOS_CORE_MAX_EVENTS_PER_TICK events.
+ * Empty queue is normal — returns OK. Handler errors propagate.
  */
 robotos_core_status_t robotos_core_tick(void);
 
@@ -123,48 +128,64 @@ robotos_core_state_t robotos_core_state(void);
 /* Return the current tick count. Returns 0 if not initialized. */
 uint32_t robotos_core_tick_count(void);
 
-/*
- * Copy a snapshot of core state into caller-provided struct.
- * Returns ROBOTOS_CORE_ERR_NULL if out is NULL.
- */
+/* Copy a snapshot of core state. Returns ROBOTOS_CORE_ERR_NULL if out is NULL. */
 robotos_core_status_t robotos_core_snapshot(robotos_core_snapshot_t *out);
 
-/*
- * Post an event into the core-owned event queue.
- *
- * Returns ROBOTOS_CORE_ERR_NULL          if event is NULL.
- * Returns ROBOTOS_CORE_ERR_INVALID_STATE if core is not READY.
- * Returns ROBOTOS_CORE_ERR_FULL          if queue is at capacity (dropped_count++).
- * Returns ROBOTOS_CORE_OK               on success.
- *
- * No automatic dispatch — call robotos_core_dispatch_events() to drain.
- * Single-threaded / non-ISR only. No scheduler semantics.
- */
+/* Post an event into the core-owned queue. Requires READY. Single-threaded. */
 robotos_core_status_t robotos_core_post_event(const robotos_event_t *event);
 
-/*
- * Dispatch up to max_events events from the core-owned queue.
- *
- * Returns ROBOTOS_CORE_ERR_INVALID_STATE if core is not READY.
- * Returns ROBOTOS_CORE_OK               if max_events == 0.
- * Returns ROBOTOS_CORE_ERR_EMPTY         if max_events > 0 and no events pending.
- * Returns ROBOTOS_CORE_OK               if at least one event dispatched.
- * Returns handler's non-OK status        if handler fails.
- *
- * Single-threaded / non-ISR only. No scheduler semantics.
- */
+/* Dispatch up to max_events events. Requires READY. ERR_EMPTY if empty and max>0. */
 robotos_core_status_t robotos_core_dispatch_events(uint32_t max_events);
 
-/* Current number of events in the internal queue. Returns 0 before init. */
+/* Event counter getters — all return 0 before init. */
 uint32_t robotos_core_pending_event_count(void);
-
-/* Cumulative events dropped due to full queue. Returns 0 before init. */
 uint32_t robotos_core_dropped_event_count(void);
-
-/* Cumulative events dispatched by the internal dispatcher. Returns 0 before init. */
 uint32_t robotos_core_dispatched_event_count(void);
-
-/* Cumulative handler errors during dispatch. Returns 0 before init. */
 uint32_t robotos_core_handler_error_count(void);
+
+/*
+ * Register a handler for a specific event type.
+ *
+ * Returns ROBOTOS_CORE_ERR_NULL          if handler is NULL.
+ * Returns ROBOTOS_CORE_ERR_INVALID_STATE if core is not READY.
+ * Returns ROBOTOS_CORE_ERR_INVALID_ARG   if type == ROBOTOS_EVENT_NONE.
+ * Returns ROBOTOS_CORE_ERR_FULL          if handler table is at capacity.
+ * Returns ROBOTOS_CORE_OK               on success.
+ *
+ * Registering the same type again replaces the existing handler/context.
+ * Replacement does NOT increment registered_handler_count.
+ * Single-threaded / non-ISR only. No dynamic allocation.
+ */
+robotos_core_status_t robotos_core_register_event_handler(
+	robotos_event_type_t          type,
+	robotos_core_event_handler_t  handler,
+	void                         *user_context
+);
+
+/*
+ * Unregister the handler for a specific event type.
+ *
+ * Returns ROBOTOS_CORE_ERR_INVALID_STATE if core is not READY.
+ * Returns ROBOTOS_CORE_ERR_INVALID_ARG   if type == ROBOTOS_EVENT_NONE.
+ * Returns ROBOTOS_CORE_ERR_EMPTY         if no handler is registered for type.
+ * Returns ROBOTOS_CORE_OK               on success.
+ */
+robotos_core_status_t robotos_core_unregister_event_handler(robotos_event_type_t type);
+
+/*
+ * Return true if a handler is registered for the given type.
+ * Returns false before init or if no handler registered. NULL-safe.
+ */
+bool robotos_core_has_event_handler(robotos_event_type_t type);
+
+/* Return number of currently registered handlers. Returns 0 before init. */
+uint32_t robotos_core_registered_handler_count(void);
+
+/*
+ * Return cumulative count of events dispatched with no matching registered handler.
+ * These events are consumed and counted but not delivered to any user handler.
+ * Returns 0 before init.
+ */
+uint32_t robotos_core_unhandled_event_count(void);
 
 #endif /* ROBOTOS_CORE_H */

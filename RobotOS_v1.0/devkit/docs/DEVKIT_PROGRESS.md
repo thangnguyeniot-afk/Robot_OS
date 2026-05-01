@@ -1925,3 +1925,171 @@ No `RobotOS_v1.0/src/` legacy file compiled or staged.
 - **Phase 5A Zephyr Adapter Boundary** — formalize the Zephyr/core boundary and begin the adapter layer design.
 
 Do not implement Phase 4H until explicitly assigned.
+
+---
+
+## Phase 4H — Handler Policy / Handler Registration Boundary
+
+**Date:** 2026-05-02
+**Branch:** master
+**Phase 4G baseline commit:** `434392a` — "core: add scheduler tick policy stub"
+
+---
+
+### Phase 4H Purpose
+
+Add static type-routed event handler registration to the RobotOS core.
+Dispatched events are routed to the registered handler for their type.
+Unregistered event types are counted as unhandled but consumed without error.
+This is a registration boundary stub — not a scheduler, not a plugin system.
+
+---
+
+### Phase 4H Files Added
+
+| File | Role |
+| ---- | ---- |
+| `tests/host/test_robotos_core_handler_policy_contract.c` | 50 host contract tests for handler registration/routing |
+
+### Phase 4H Files Modified
+
+| File | Change |
+| ---- | ------ |
+| `core/robotos_core.h` | Added `ERR_INVALID_ARG=-6`, `ROBOTOS_CORE_MAX_EVENT_HANDLERS 8u`, `robotos_core_event_handler_t` typedef; 5 new API declarations; snapshot extended with `registered_handler_count` and `unhandled_event_count` |
+| `core/robotos_core.c` | Added static handler table; replaced no-op default handler with routing handler; implemented register/unregister/has/count APIs; `core_init()` initializes handler table on first call only |
+| `tests/host/CMakeLists.txt` | Added `robotos_core_handler_policy_contract_test` target |
+| `devkit/docs/DEVKIT_PROGRESS.md` | Added Phase 4H section (this file) |
+
+### Phase 4H Files Unchanged
+
+| File | Reason |
+| ---- | ------ |
+| `devkit/CMakeLists.txt` | No new source files |
+| `devkit/src/devkit_runtime.c` | No integration change needed |
+| All other core modules | Queue, dispatcher, ingestion, tick policy unchanged |
+
+---
+
+### Phase 4H Handler Policy Contract Summary
+
+#### Handler Table
+
+Static array of 8 entries: `{type, handler, user_context, in_use}`. No dynamic allocation.
+
+#### Phase 4H API Summary
+
+| Function | Behavior |
+| -------- | -------- |
+| `register(type, NULL, ctx)` | `ERR_NULL` |
+| `register` before init | `ERR_INVALID_STATE` |
+| `register(NONE, ...)` | `ERR_INVALID_ARG` |
+| `register` new type | OK; `registered_handler_count++` |
+| `register` existing type | OK; replaces handler/context; count unchanged |
+| `register` at capacity | `ERR_FULL` |
+| `unregister` before init | `ERR_INVALID_STATE` |
+| `unregister(NONE)` | `ERR_INVALID_ARG` |
+| `unregister` existing | OK; clears slot; count-- |
+| `unregister` missing | `ERR_EMPTY` |
+| `has_handler(type)` | bool; false before init or no handler |
+| `registered_handler_count()` | count; 0 before init |
+| `unhandled_event_count()` | cumulative; 0 before init |
+
+#### Routing Behavior
+
+- Dispatched events routed by `event->type` to matching registered handler.
+- If handler found: called; result propagated (OK or handler error).
+- If no handler: `unhandled_event_count++`; routing handler returns OK.
+- `dispatched_event_count` increments regardless (event consumed by routing handler).
+
+#### Repeated Init
+
+Repeated `robotos_core_init()` does NOT clear handler table. Registered handlers survive.
+
+---
+
+### Phase 4H Host Test Evidence
+
+**Commands (WSL Ubuntu, gcc 13.3.0):**
+
+```bash
+cmake -S RobotOS_v1.0/tests/host -B build-host-core
+cmake --build build-host-core
+ctest --test-dir build-host-core --output-on-failure
+```
+
+**Result:**
+
+```text
+1/6 Test #1: robotos_core_contract .....................   Passed    0.00 sec
+2/6 Test #2: robotos_event_queue_contract ...............   Passed    0.00 sec
+3/6 Test #3: robotos_event_dispatcher_contract ..........   Passed    0.00 sec
+4/6 Test #4: robotos_core_ingestion_contract ............   Passed    0.00 sec
+5/6 Test #5: robotos_core_tick_policy_contract ..........   Passed    0.00 sec
+6/6 Test #6: robotos_core_handler_policy_contract .......   Passed    0.00 sec
+
+100% tests passed, 0 tests failed out of 6
+Total Test time (real) = 0.02 sec
+```
+
+All prior suites preserved. Phase 4H handler policy: **50/50 PASS**.
+
+---
+
+### Phase 4H Zephyr Build Evidence
+
+```text
+Memory region    Used Size   Region Size   %age Used
+FLASH:            26816 B       512 KB       5.11%
+RAM:               9024 B       128 KB       6.88%
+```
+
+Phase 4G baseline: FLASH 26708 B, RAM 8832 B.
+Delta: FLASH +108 B, RAM +192 B (8 handler table entries × ~24 B each).
+
+---
+
+### Phase 4H Runtime Evidence
+
+**Status:** RUNTIME_CONFIRMED
+
+**Validation date:** 2026-05-02
+**Hardware:** STM32F411E-DISCO, ST-LINK/V2 FW V2J47S0
+
+| Gate | Status | Notes |
+| ---- | ------ | ----- |
+| `FLASH_WRITE` | `PASS` | Firmware programmed and verified. |
+| `POST_FLASH_AUTOSTART` | `OPEN` | Manual RESET required per known workaround. |
+| `LED` | `PASS` | GPIOD_ODR toggles `0x00000000` → `0x00002000` — 500ms blink. |
+| `FAULT_STATUS` | `PASS` | DHCSR=`0x00050001` — S_SLEEP=1, S_HALT=0 — firmware in WFI, no fault. |
+| `HANDLER_ROUTING_VISIBLE` | `N/A` | No handlers registered in devkit; unregistered tick events counted as unhandled silently. |
+
+---
+
+### Phase 4H Legacy Isolation Confirmation
+
+No `RobotOS_v1.0/src/` legacy file compiled or staged.
+
+---
+
+### Phase 4H Known Limitations
+
+- Static handler table: max 8 handlers, fixed at compile time.
+- One handler per event type — no multiple handlers or chaining.
+- No wildcard handler for unregistered types.
+- No priority dispatch — FIFO, type-matched only.
+- Unregistered events silently counted as unhandled (no error).
+- No concurrency/ISR-safe access — single-threaded only.
+- No public `clear_all_handlers()` API — unregister individually.
+- Handler errors propagate from tick but do not transition core to ERROR state.
+
+---
+
+### Phase 4I Recommendation
+
+**Phase 4I options (team decision required):**
+
+- **Core System Loop Contract** — define the full tick loop semantics: post → tick → dispatch → route → handle.
+- **Phase 5A Zephyr Adapter Boundary** — formalize Zephyr/core boundary; begin adapter layer design before growing core further.
+- **Phase 4I Scheduler Admission Policy** — define backpressure/admission rules for event posting.
+
+Do not implement Phase 4I until explicitly assigned.
