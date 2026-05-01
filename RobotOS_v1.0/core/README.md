@@ -109,18 +109,68 @@ need a mutex or atomic snapshot mechanism.
 | File | Role |
 | ---- | ---- |
 | `robotos_core.h` | Public portable API — no Zephyr or board types |
-| `robotos_core.c` | Implementation — uses Zephyr logging internally |
+| `robotos_core.c` | Implementation — Zephyr logging in firmware; silent shim in host test mode |
+
+## Host Contract Tests (Phase 4C)
+
+Core contract semantics are validated without Zephyr, hardware, or `west build` via
+a host test binary. This is **Tier 1 validation**: the fastest feedback loop.
+
+### How to Run
+
+```bash
+# From repo root (requires a host C compiler; verified on Linux/WSL)
+cmake -S RobotOS_v1.0/tests/host -B build-host-core
+cmake --build build-host-core
+ctest --test-dir build-host-core --output-on-failure
+```
+
+Expected output:
+
+```text
+100% tests passed, 0 tests failed out of 1
+```
+
+### Host Test Shim
+
+`robotos_core.c` detects host test mode via `ROBOTOS_CORE_HOST_TEST=1` compile
+definition (set by `tests/host/CMakeLists.txt`). In that mode:
+
+- `CORE_LOG_INF/WRN/DBG` macros map to `((void)0)` — no Zephyr headers needed
+- `<stdbool.h>` and `<stddef.h>` are included directly (normally provided transitively by Zephyr)
+- All contract logic runs identically to firmware mode
+
+The shim is local to `robotos_core.c`. `robotos_core.h` has no Zephyr types.
+
+### Contract Cases Covered (35 tests)
+
+- `version()` non-NULL and equals expected string
+- Initial state `UNINITIALIZED`, tick_count `0`
+- `snapshot(NULL)` returns `ERR_NULL`
+- `tick()` before init returns `ERR_INVALID_STATE`, no tick_count increment
+- `snapshot()` before init returns state=UNINITIALIZED, tick_count=0
+- First `init()` → state=READY, tick_count=0, init_count=1
+- Second `init()` → idempotent, init_count=2, tick_count **not** reset
+- `tick()` after init increments monotonically
+- Final `snapshot()` reports READY, correct tick_count=16, init_count=2, version
+
+### Limitations (Phase 4C)
+
+- Tests run in a single sequential process — no reset API needed; tests order-dependent by design
+- No concurrency/thread-safety validation yet
+- Logging behavior (one-shot WRN for tick-before-init) not tested; private static not exposed
+- Zephyr integration still validated through devkit (Phase 3B–4B hardware evidence)
+- Windows native host build blocked: broken MinGW installation on dev machine; WSL Ubuntu used as workaround
 
 ## Limitations
 
 - **Single-threaded assumption**: No mutex or atomic operations. Safe only in single-threaded runtime. Revisit when RTOS threads are introduced.
-- **Zephyr logging dependency**: `robotos_core.c` uses `LOG_MODULE_REGISTER`. Not portable to bare-metal or host-test environments without a logging abstraction layer.
-- **No host-test layer**: Contract semantics cannot be verified outside Zephyr without additional abstraction. Host tests are a future phase concern.
-- **No scheduler or event bus**: Phase 4B scope is lifecycle contract only.
+- **Zephyr logging dependency**: `robotos_core.c` uses `LOG_MODULE_REGISTER` in firmware mode. Host tests use the `ROBOTOS_CORE_HOST_TEST` shim to avoid Zephyr dependency.
+- **No scheduler or event bus**: Phase 4B/4C scope is lifecycle contract only.
 
 ## Next Phase
 
-Phase 4C — options for team decision:
+Phase 4D — options for team decision:
 
-- Host/Core Contract Tests (verify init idempotency, tick-before-init, snapshot semantics without hardware)
-- Event Queue Stub (first async primitive inside `core/`)
+- **Event Queue Contract Stub** — first async primitive inside `core/`; Phase 4C host test framework is the foundation
+- **Core Concurrency/Host Test Expansion** — add thread-safety validation before introducing RTOS threads

@@ -1043,3 +1043,200 @@ src/devkit_fault.c
 - **Event Queue Stub** — introduce the first async primitive inside `core/`. Requires Phase 4B contract as foundation.
 
 Do not implement Phase 4C until explicitly assigned.
+
+---
+
+## Phase 4C — Host/Core Contract Tests
+
+**Date:** 2026-05-01
+**Branch:** master
+**Phase 4B baseline commit:** `08dadcc` — "core: harden bootstrap lifecycle contract"
+
+---
+
+### Phase 4C Purpose
+
+Lock the `robotos_core` API contract via host-side tests that run without Zephyr,
+without `west build`, and without hardware. Establishes Tier 1 validation: fastest
+feedback loop for core contract regressions.
+
+---
+
+### Phase 4C Files Added
+
+| File | Role |
+| ---- | ---- |
+| `tests/host/test_robotos_core_contract.c` | 35 sequential contract tests in plain C |
+| `tests/host/CMakeLists.txt` | Isolated host build — no dependency on legacy root CMake or `src/` |
+
+### Phase 4C Files Modified
+
+| File | Change |
+| ---- | ------ |
+| `core/robotos_core.c` | Added `ROBOTOS_CORE_HOST_TEST` logging shim; added `<stdbool.h>` and `<stddef.h>` explicit includes for host-build portability |
+| `core/README.md` | Added Host Contract Tests section with shim explanation, test cases, and run instructions |
+| `devkit/docs/DEVKIT_PROGRESS.md` | Added Phase 4C section (this file) |
+
+### Phase 4C Files Unchanged
+
+| File | Reason |
+| ---- | ------ |
+| `core/robotos_core.h` | No changes needed — already free of Zephyr types; only `<stdint.h>` included |
+| `devkit/CMakeLists.txt` | Not affected by host test infrastructure |
+| `devkit/src/devkit_runtime.c` | No changes needed |
+
+---
+
+### Phase 4C Host Test Strategy
+
+**Shim approach:** `robotos_core.c` detects host test mode via `ROBOTOS_CORE_HOST_TEST=1`
+compile definition. In that mode, internal logging macros (`CORE_LOG_INF/WRN/DBG`) are
+no-ops and Zephyr headers are not included. Standard headers `<stdbool.h>` and `<stddef.h>`
+are included explicitly (normally provided transitively by Zephyr).
+
+The shim is confined to the top of `robotos_core.c`. The public header `robotos_core.h`
+is unchanged.
+
+**Test layout:** `tests/host/CMakeLists.txt` is standalone — it does not include or depend
+on the legacy root `CMakeLists.txt` or `src/` files. Build produces one executable:
+`robotos_core_contract_test`.
+
+**Execution environment:** Windows native host build blocked by broken MinGW64 installation
+on dev machine. Tests compiled and run via WSL Ubuntu (gcc 13.3.0) as equivalent host.
+
+---
+
+### Phase 4C Contract Cases (35 tests)
+
+| Group | Test Cases |
+| ----- | ---------- |
+| Pre-init | TC01–TC12: version, state=UNINITIALIZED, tick_count=0, snapshot(NULL)=ERR_NULL, tick before init=ERR_INVALID_STATE, snapshot before init |
+| First init | TC13–TC17: init() returns OK, state=READY, tick_count=0, init_count=1 |
+| Ticks after init | TC18–TC22: tick returns OK, tick_count increments, 10 ticks monotonic |
+| Second init (idempotency) | TC23–TC27: init again=OK, state still READY, tick_count NOT reset, init_count=2 |
+| Ticks after re-init | TC28–TC30: tick continues monotonically after re-init |
+| Final snapshot | TC31–TC35: state=READY, tick_count=16, init_count=2, version="4B-contract" |
+
+---
+
+### Phase 4C Build and Test Commands
+
+```bash
+# Host build (WSL Ubuntu / Linux)
+cmake -S RobotOS_v1.0/tests/host -B build-host-core
+cmake --build build-host-core
+ctest --test-dir build-host-core --output-on-failure
+```
+
+### Phase 4C Host Test Evidence
+
+```text
+=== robotos_core contract tests (Phase 4C) ===
+
+[ Pre-init ]
+  PASS  TC01: version() != NULL
+  PASS  TC02: version() == "4B-contract"
+  PASS  TC03: initial state == UNINITIALIZED
+  PASS  TC04: initial tick_count() == 0
+  PASS  TC05: snapshot(NULL) returns ERR_NULL
+  PASS  TC06: tick() before init returns ERR_INVALID_STATE
+  PASS  TC07: tick_count() unchanged after invalid tick
+  PASS  TC08: snapshot() before init returns OK
+  PASS  TC09: snapshot.state == UNINITIALIZED before init
+  PASS  TC10: snapshot.tick_count == 0 before init
+  PASS  TC11: snapshot.init_count == 0 before init
+  PASS  TC12: snapshot.version == current version string
+
+[ First init ]
+  PASS  TC13: first init() returns OK
+  PASS  TC14: state == READY after init
+  PASS  TC15: tick_count() == 0 after first init
+  PASS  TC16: snapshot.init_count == 1 after first init
+  PASS  TC17: snapshot.state == READY after first init
+
+[ Ticks after init ]
+  PASS  TC18: first tick() returns OK
+  PASS  TC19: tick_count() == 1 after first tick
+  PASS  TC20: second tick() returns OK
+  PASS  TC21: tick_count() == 2 after second tick
+  PASS  TC22: tick_count() == 10 after 10 total ticks
+
+[ Second init (idempotency) ]
+  PASS  TC23: second init() returns OK
+  PASS  TC24: state still READY after second init
+  PASS  TC25: tick_count() unchanged after second init (== 10)
+  PASS  TC26: snapshot.init_count == 2 after second init
+  PASS  TC27: snapshot.tick_count unchanged == 10
+
+[ Ticks after re-init ]
+  PASS  TC28: tick() after second init returns OK
+  PASS  TC29: tick_count() == 11 — monotonic after re-init
+  PASS  TC30: tick_count() increments monotonically over 5 ticks
+
+[ Final snapshot ]
+  PASS  TC31: final snapshot() returns OK
+  PASS  TC32: final snapshot.state == READY
+  PASS  TC33: final snapshot.tick_count == 16
+  PASS  TC34: final snapshot.init_count == 2
+  PASS  TC35: final snapshot.version == "4B-contract"
+
+=== Results: 35 passed, 0 failed ===
+```
+
+ctest result:
+
+```text
+100% tests passed, 0 tests failed out of 1
+Total Test time (real) =   0.01 sec
+```
+
+### Phase 4C Zephyr Build Evidence
+
+Zephyr devkit build unchanged after Phase 4C additions (no devkit source changes):
+
+```text
+Memory region    Used Size   Region Size   %age Used
+FLASH:            26288 B       512 KB       5.01%
+RAM:               8576 B       128 KB       6.54%
+```
+
+Identical to Phase 4B — `<stdbool.h>` and `<stddef.h>` inclusions are harmless under Zephyr (provided transitively). No app warnings.
+
+---
+
+### Phase 4C Runtime Evidence
+
+Not run in Phase 4C. Zephyr firmware is unchanged from Phase 4B (no devkit source changes). Runtime evidence from Phase 4B remains valid.
+
+---
+
+### Phase 4C Legacy Isolation Confirmation
+
+Host test build compiles only:
+
+```text
+tests/host/test_robotos_core_contract.c
+core/robotos_core.c
+```
+
+No `RobotOS_v1.0/src/` legacy file compiled or staged.
+
+---
+
+### Phase 4C Known Limitations
+
+- Windows native host build requires a working MinGW/MSVC host toolchain. Broken MinGW64 on this dev machine; WSL Ubuntu used as equivalent.
+- Tests are sequential in a single process — no public reset API; order-dependent by design.
+- No concurrency/thread-safety validation.
+- Log behavior (one-shot WRN for tick-before-init) is tested indirectly via `core_tick_warn_emitted` memory read in devkit but not in host tests (private static).
+
+---
+
+### Phase 4D Recommendation
+
+**Phase 4D — team decision required:**
+
+- **Event Queue Contract Stub** — introduce the first async primitive inside `core/`. Phase 4C host test framework serves as the validation foundation.
+- **Core Concurrency/Host Test Expansion** — extend host tests to cover future thread-safety requirements before introducing RTOS threads.
+
+Do not implement Phase 4D until explicitly assigned.
