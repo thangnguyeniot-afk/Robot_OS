@@ -1,7 +1,7 @@
 # devkit/CMakeLists.txt
-# Phase 4D event queue — STM32F411E-DISCO.
+# Phase 4E event dispatcher — STM32F411E-DISCO.
 # Target: stm32f411e_disco
-# Purpose: runtime skeleton with RobotOS core + event queue integration.
+# Purpose: runtime skeleton with RobotOS core + event queue + dispatcher integration.
 
 cmake_minimum_required(VERSION 3.20.0)
 
@@ -19,4 +19,5 @@ target_sources(app PRIVATE
     src/devkit_fault.c
     ../core/robotos_core.c
     ../core/robotos_event_queue.c
+    ../core/robotos_event_dispatcher.c
 )

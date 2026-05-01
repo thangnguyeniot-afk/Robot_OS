@@ -1436,3 +1436,190 @@ No `RobotOS_v1.0/src/` legacy file compiled or staged.
 Introduce a minimal dispatcher that drains `s_core_event_queue` each tick,
 delivering events to registered handlers. Requires Phase 4D queue contract
 as foundation. Do not implement until explicitly assigned.
+
+---
+
+## Phase 4E — Core Event Dispatch Stub
+
+**Date:** 2026-05-01
+**Branch:** master
+**Phase 4D baseline commit:** `f8634d8` — "core: add event queue contract stub"
+
+---
+
+### Phase 4E Purpose
+
+Add a minimal, deterministic event dispatcher on top of the Phase 4D event queue.
+Dispatcher drains events from a queue to a registered handler in FIFO order.
+Host-tested before Zephyr integration. No scheduler, threads, or ISR semantics.
+
+---
+
+### Phase 4E Files Added
+
+| File | Role |
+| ---- | ---- |
+| `core/robotos_event_dispatcher.h` | Dispatcher type, handler signature, and full API — no Zephyr types |
+| `core/robotos_event_dispatcher.c` | FIFO dispatch implementation — zero Zephyr dependency |
+| `tests/host/test_robotos_event_dispatcher_contract.c` | 55 host contract tests for dispatcher |
+
+### Phase 4E Files Modified
+
+| File | Change |
+| ---- | ------ |
+| `core/robotos_core.c` | Includes `robotos_event_dispatcher.h`; `robotos_core_init()` initializes static `s_core_dispatcher` with private no-op handler; logs "event dispatcher initialized" |
+| `tests/host/CMakeLists.txt` | Added `robotos_event_dispatcher_contract_test` target; updated core contract test to include `robotos_event_dispatcher.c` |
+| `devkit/CMakeLists.txt` | Added `../core/robotos_event_dispatcher.c` to Zephyr target_sources |
+| `devkit/docs/DEVKIT_PROGRESS.md` | Added Phase 4E section (this file) |
+
+### Phase 4E Files Unchanged
+
+| File | Reason |
+| ---- | ------ |
+| `core/robotos_core.h` | No new public API additions |
+| `core/robotos_event_queue.h/.c` | Queue contract unchanged |
+| `devkit/src/devkit_runtime.c` | No devkit-visible integration needed |
+
+---
+
+### Phase 4E Event Dispatcher Contract Summary
+
+#### Handler Signature
+
+```c
+typedef robotos_core_status_t (*robotos_event_handler_t)(
+    const robotos_event_t *event,
+    void *user_context
+);
+```
+
+#### Dispatcher Struct (`robotos_event_dispatcher_t`)
+
+Holds: `*queue`, `handler`, `*user_context`, `initialized`, `dispatched_count`, `handler_error_count`. Caller owns — not heap-allocated.
+
+#### Phase 4E API Contract
+
+| Function | Behavior |
+| -------- | -------- |
+| `init(NULL d/q/handler)` | `ERR_NULL` |
+| `init(d, uninit_q, ...)` | `ERR_INVALID_STATE` |
+| `init(valid)` | OK; initialized=true, counts=0; re-init resets counts |
+| Queries on NULL | `is_initialized=false`, counts=0 |
+| `dispatch_one(NULL)` | `ERR_NULL` |
+| `dispatch_one` before init | `ERR_INVALID_STATE` |
+| `dispatch_one` empty queue | `ERR_EMPTY` |
+| `dispatch_one` success | pop → call handler → `dispatched_count++` → OK |
+| `dispatch_one` handler error | pop → call handler → `handler_error_count++` → return handler's error |
+| `dispatch_all(NULL, n)` | `ERR_NULL` |
+| `dispatch_all` max=0 | OK (nothing dispatched = success) |
+| `dispatch_all` max>0 empty | `ERR_EMPTY` |
+| `dispatch_all` success | dispatch up to max; OK if at least one dispatched before empty |
+| `dispatch_all` handler error | stop, `handler_error_count++`, return handler's error |
+
+Handler errors propagate directly (no wrapping). Failing events are always consumed.
+
+#### Phase 4E Core Integration
+
+`robotos_core_init()` initializes static `s_core_dispatcher` bound to `s_core_event_queue` with a private no-op default handler. No events are pushed in `robotos_core_tick()`. Dispatcher available for future Phase 4F event ingestion.
+
+---
+
+### Phase 4E Host Test Evidence
+
+**Commands (WSL Ubuntu, gcc 13.3.0):**
+
+```bash
+cmake -S RobotOS_v1.0/tests/host -B build-host-core
+cmake --build build-host-core
+ctest --test-dir build-host-core --output-on-failure
+```
+
+**Result:**
+
+```text
+1/3 Test #1: robotos_core_contract ...............   Passed    0.00 sec
+2/3 Test #2: robotos_event_queue_contract ........   Passed    0.00 sec
+3/3 Test #3: robotos_event_dispatcher_contract ...   Passed    0.00 sec
+
+100% tests passed, 0 tests failed out of 3
+Total Test time (real) = 0.01 sec
+```
+
+Phase 4C core contract: **35/35 PASS** (preserved)
+Phase 4D event queue: **58/58 PASS** (preserved)
+Phase 4E dispatcher: **55/55 PASS**
+
+---
+
+### Phase 4E Zephyr Build Evidence
+
+```text
+Memory region    Used Size   Region Size   %age Used
+FLASH:            26520 B       512 KB       5.06%
+RAM:               8832 B       128 KB       6.74%
+```
+
+Phase 4D baseline: FLASH 26392 B, RAM 8832 B.
+Delta: FLASH +128 B, RAM unchanged (dispatcher struct is BSS, fits within prior allocation).
+No app warnings.
+
+---
+
+### Phase 4E Runtime Evidence
+
+**Status:** RUNTIME_CONFIRMED
+
+**Validation date:** 2026-05-01
+**Hardware:** STM32F411E-DISCO, ST-LINK/V2 FW V2J47S0
+
+#### Phase 4E Runtime Validation Status
+
+| Gate | Status | Notes |
+| ---- | ------ | ----- |
+| `FLASH_WRITE` | `PASS` | Firmware programmed, 32768 B verified. |
+| `POST_FLASH_AUTOSTART` | `OPEN` | Manual RESET required per known workaround. |
+| `CORE_STATE_READY` | `PASS` | `core_state` @ `0x20000a11` = `0x01` = READY. |
+| `DISPATCHER_INITIALIZED` | `PASS` | `s_core_dispatcher.initialized` @ `0x200006b4` = `0x01` = true. |
+| `DISPATCHER_COUNT_ZERO` | `PASS` | `dispatched_count` @ `0x200006b8` = `0x00000000` — no events dispatched. |
+| `LED` | `PASS` | GPIOD_ODR toggles `0x00002000` → `0x00000000` — 500ms blink confirmed. |
+| `FAULT_STATUS` | `PASS` | No fault. LED blink confirms clean runtime. |
+
+---
+
+### Phase 4E Legacy Isolation Confirmation
+
+Host test build compiles only:
+
+```text
+tests/host/test_robotos_core_contract.c
+tests/host/test_robotos_event_queue_contract.c
+tests/host/test_robotos_event_dispatcher_contract.c
+core/robotos_core.c
+core/robotos_event_queue.c
+core/robotos_event_dispatcher.c
+```
+
+No `RobotOS_v1.0/src/` legacy file compiled or staged.
+
+---
+
+### Phase 4E Known Limitations
+
+- No event ingestion public API — `s_core_event_queue` can only be filled by future Phase 4F API.
+- No auto-push in `robotos_core_tick()` — avoids fill/spam with no active dispatcher drain.
+- No scheduler — caller decides when and how often to dispatch.
+- No priority or delayed events — strict FIFO.
+- No concurrent/ISR-safe access — single-threaded only.
+- No dynamic allocation.
+- Windows MinGW64 host build broken; WSL Ubuntu used for host tests.
+
+---
+
+### Phase 4F Recommendation
+
+**Phase 4F — Core Event Ingestion API** (Phase 4E runtime confirmed):
+
+Add a public `robotos_core_post_event()` API to allow callers to enqueue events
+into the internal queue. In `robotos_core_tick()`, call `dispatch_all(max=n)` to drain
+the queue. This completes the produce → dispatch → handle cycle without a scheduler.
+Do not implement until explicitly assigned.
