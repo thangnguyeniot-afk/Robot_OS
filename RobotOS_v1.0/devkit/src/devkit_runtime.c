@@ -1,7 +1,7 @@
 /*
  * devkit_runtime.c
  * Boot sequence, periodic tick log, and status LED orchestration.
- * Phase 4A: RobotOS core init and tick integrated.
+ * Phase 4B: Updated to use hardened core API with typed status codes.
  */
 
 #include "devkit_runtime.h"
@@ -18,13 +18,14 @@ LOG_MODULE_REGISTER(devkit_runtime, LOG_LEVEL_INF);
 int devkit_runtime_init(void)
 {
 	int ret;
+	robotos_core_status_t core_ret;
 
 	devkit_fault_init();
 	devkit_build_info_log();
 
-	ret = robotos_core_init();
-	if (ret < 0) {
-		LOG_ERR("Core init failed: %d — continuing", ret);
+	core_ret = robotos_core_init();
+	if (core_ret != ROBOTOS_CORE_OK) {
+		LOG_ERR("Core init failed: %d — continuing", (int)core_ret);
 	}
 
 	LOG_INF("RobotOS devkit starting — board: %s", CONFIG_BOARD);
@@ -43,6 +44,7 @@ int devkit_runtime_init(void)
 void devkit_runtime_run(void)
 {
 	int ret;
+	robotos_core_status_t core_ret;
 	uint32_t tick_count = 0;
 
 	while (1) {
@@ -52,9 +54,9 @@ void devkit_runtime_run(void)
 		}
 		LOG_INF("tick count=%u", tick_count++);
 
-		ret = robotos_core_tick();
-		if (ret < 0) {
-			LOG_ERR("Core tick failed: %d", ret);
+		core_ret = robotos_core_tick();
+		if (core_ret != ROBOTOS_CORE_OK) {
+			LOG_ERR("Core tick failed: %d", (int)core_ret);
 		}
 
 		k_msleep(DEVKIT_TICK_MS);

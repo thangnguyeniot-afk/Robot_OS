@@ -839,3 +839,207 @@ Options for Phase 4B (team decision):
 - Both options require Phase 4A runtime confirmed — which is now the case.
 
 Do not implement Phase 4B until explicitly assigned.
+
+---
+
+## Phase 4B — Core Contract Hardening
+
+**Date:** 2026-05-01
+**Branch:** master
+**Phase 4A baseline commit:** `cfb3641` — "core: add minimal RobotOS bootstrap module"
+
+---
+
+### Phase 4B Purpose
+
+Harden the core API contract before introducing scheduler or event queue primitives.
+Define and enforce explicit lifecycle semantics so future modules do not depend on
+ambiguous or implicit behavior.
+
+---
+
+### Phase 4B Files Modified
+
+| File | Change |
+| ---- | ------ |
+| `core/robotos_core.h` | Added `robotos_core_status_t`, `robotos_core_state_t`, `robotos_core_snapshot_t`; replaced `int` returns with typed status; added `robotos_core_state()`, `robotos_core_tick_count()`, `robotos_core_snapshot()` |
+| `core/robotos_core.c` | Implemented contract semantics: state machine, init idempotency, tick-before-init guard, snapshot; version updated to `4B-contract` |
+| `core/README.md` | Full contract documentation: lifecycle states, API rules, limitations, next phase |
+| `devkit/src/devkit_runtime.c` | Updated core call sites to use `robotos_core_status_t core_ret`; compare against `ROBOTOS_CORE_OK` |
+| `devkit/docs/DEVKIT_PROGRESS.md` | Added Phase 4B section (this file) |
+
+### Phase 4B Files Unchanged
+
+| File | Reason |
+| ---- | ------ |
+| `devkit/CMakeLists.txt` | No new source files added |
+| `devkit/src/devkit_runtime.h` | No interface changes |
+| `devkit/src/main.c` | Thin entry point; unchanged |
+| `devkit/prj.conf` | No new Kconfig requirements |
+
+---
+
+### Phase 4B Core Contract Summary
+
+#### Status Codes (`robotos_core_status_t`)
+
+| Code | Value | Meaning |
+| ---- | ----- | ------- |
+| `ROBOTOS_CORE_OK` | 0 | Success |
+| `ROBOTOS_CORE_ERR_INVALID_STATE` | -1 | Wrong lifecycle state (e.g. tick before init) |
+| `ROBOTOS_CORE_ERR_NULL` | -2 | NULL pointer passed to snapshot |
+
+#### Lifecycle States (`robotos_core_state_t`)
+
+| State | Value | Meaning |
+| ----- | ----- | ------- |
+| `ROBOTOS_CORE_STATE_UNINITIALIZED` | 0 | Power-on default |
+| `ROBOTOS_CORE_STATE_READY` | 1 | Initialized, accepting ticks |
+| `ROBOTOS_CORE_STATE_ERROR` | 2 | Reserved — not yet triggered |
+
+#### Snapshot Struct (`robotos_core_snapshot_t`)
+
+```c
+typedef struct {
+    robotos_core_state_t state;
+    uint32_t             tick_count;
+    uint32_t             init_count;
+    const char          *version;
+} robotos_core_snapshot_t;
+```
+
+No locking — single-threaded contexts only.
+
+#### API
+
+| Function | Contract |
+| -------- | -------- |
+| `robotos_core_version()` | Returns `"4B-contract"`. Never NULL. |
+| `robotos_core_init()` | Idempotent. First: state→READY, tick_count=0, init_count=1, LOG_INF. Repeat: init_count++, LOG_DBG. |
+| `robotos_core_tick()` | Requires READY. Increments tick_count. Logs tick 1 + every 10th. Returns ERR_INVALID_STATE if not READY; warns once only. |
+| `robotos_core_state()` | Returns current state enum. |
+| `robotos_core_tick_count()` | Returns current tick_count. |
+| `robotos_core_snapshot(out)` | Copies {state, tick_count, init_count, version} to `out`. Returns ERR_NULL if out==NULL. |
+
+---
+
+### Phase 4B Build Command
+
+```powershell
+$env:ZEPHYR_TOOLCHAIN_VARIANT = "zephyr"
+$env:ZEPHYR_SDK_INSTALL_DIR   = "C:\zephyr-sdk-0.17.0"
+west build -b stm32f411e_disco RobotOS_v1.0/devkit/ --pristine
+```
+
+### Phase 4B Build Memory Summary
+
+Phase 4B post-build (no app warnings):
+
+```text
+Memory region    Used Size   Region Size   %age Used
+FLASH:            26288 B       512 KB       5.01%
+RAM:               8576 B       128 KB       6.54%
+```
+
+Phase 4A baseline: FLASH 26180 B, RAM 8576 B. Delta: FLASH +108 B, RAM unchanged.
+
+---
+
+### Phase 4B Flash/Runtime Evidence
+
+**Status:** RUNTIME_CONFIRMED
+
+**Validation date:** 2026-05-01
+**Hardware:** STM32F411E-DISCO, ST-LINK/V2 FW V2J47S0, OpenOCD 0.12.0-01025-g662bf274f
+
+**Operational workflow:** `west flash` → press physical RESET → attach RTT + memory reads
+
+#### Phase 4B Validation Status
+
+| Gate | Status | Notes |
+| ---- | ------ | ----- |
+| `FLASH_WRITE` | `PASS` | Firmware programmed and verified. |
+| `POST_FLASH_AUTOSTART` | `OPEN / UNRELIABLE` | Manual RESET required. See Phase 3B Open Issue. |
+| `CORE_STATE_READY` | `PASS` | `core_state` = `0x01` = `ROBOTOS_CORE_STATE_READY` confirmed. |
+| `CORE_INIT_COUNT` | `PASS` | `core_init_count` = `1` — initialized exactly once. |
+| `CORE_TICK` | `PASS` | `core_tick_count`: 86 → 87 in 500ms — exact interval confirmed. |
+| `TICK_WARN_EMITTED` | `PASS` | `core_tick_warn_emitted` = `0x00` — no tick-before-init in normal path. |
+| `RUNTIME_AFTER_MANUAL_RESET` | `PASS` | All Phase 4A features preserved plus contract API active. |
+| `LED` | `PASS` | PD13 blinks 500ms via GPIOD_ODR toggle. |
+| `RTT_LOG` | `PASS` | Boot sequence logged, `version=4B-contract state=READY` confirmed. |
+| `FAULT_STATUS` | `PASS` | DHCSR=`0x00050001` — S_SLEEP=1, S_HALT=0 — firmware in WFI, no fault. |
+
+#### Phase 4B RTT Log (captured via direct memory dump, post-RESET)
+
+```text
+*** Booting Zephyr OS build v3.6.0 ***
+[00:00:00.000,000] <inf> devkit_fault: fault visibility active
+[00:00:00.000,000] <inf> devkit_build_info: RobotOS devkit build info:
+[00:00:00.000,000] <inf> devkit_build_info:   board=stm32f411e_disco
+[00:00:00.000,000] <inf> devkit_build_info:   zephyr=3.6.0
+[00:00:00.000,000] <inf> devkit_build_info:   build=May  1 2026 18:24:53
+[00:00:00.000,000] <inf> devkit_build_info:   tick_ms=500
+[00:00:00.000,000] <inf> devkit_build_info:   log_backend=RTT
+[00:00:00.000,000] <inf> robotos_core: RobotOS core init — version=4B-contract state=READY
+[00:00:00.000,000] <inf> devkit_runtime: RobotOS devkit starting — board: stm32f411e_disco
+[00:00:00.0... ← buffer full (1022/1024 B used by boot sequence)
+```
+
+#### Phase 4B Memory Read Evidence
+
+Symbol addresses from Phase 4B ELF (`arm-zephyr-eabi-nm`):
+
+| Symbol | Address | Value | Decoded |
+| ------ | ------- | ----- | ------- |
+| `core_init_count` | `0x200006a8` | `0x00000001` | init_count = 1 — initialized once |
+| `core_tick_count` (T+2.0s) | `0x200006ac` | `0x00000056` (86) | ticking |
+| `core_tick_count` (T+2.5s) | `0x200006ac` | `0x00000057` (87) | +1 in 500ms — exact interval |
+| `core_state` | `0x200008e5` | `0x01` | `ROBOTOS_CORE_STATE_READY` |
+| `core_tick_warn_emitted` | `0x200008e4` | `0x00` | false — no tick-before-init warning |
+
+#### Phase 4B LED Confirmation (via GPIOD_ODR)
+
+| Read time | GPIOD_ODR (`0x40020C14`) | PD13 state |
+| --------- | ------------------------ | ---------- |
+| T+2.0s | `0x00002000` | HIGH (LED ON) |
+| T+2.5s | `0x00000000` | LOW (LED OFF) |
+
+Bit 13 toggles — PD13 orange LED blinks at 500ms confirmed.
+
+---
+
+### Phase 4B Legacy Isolation Confirmation
+
+Phase 4B modifies only core and devkit harness files. No legacy references added.
+
+CMakeLists.txt source list unchanged from Phase 4A:
+
+```text
+src/main.c
+src/devkit_status_led.c
+src/devkit_runtime.c
+src/devkit_build_info.c
+src/devkit_fault.c
+../core/robotos_core.c
+```
+
+---
+
+### Phase 4B Known Limitations
+
+- Core contract is validated only on-hardware via devkit integration. No host-test layer exists yet.
+- `robotos_core_snapshot()` is not thread-safe — single-threaded assumption documented in `core/README.md`.
+- No scheduler, event bus, or RTOS threads.
+- RTT buffer fills during boot; tick log confirmed via direct memory read.
+- **Manual RESET required after `west flash`** — post-flash auto-start remains OPEN.
+
+---
+
+### Phase 4C Recommendation
+
+**Phase 4C options (team decision required):**
+
+- **Host/Core Contract Tests** — verify init idempotency, tick-before-init, snapshot semantics without hardware. Enables CI-level validation of the core contract.
+- **Event Queue Stub** — introduce the first async primitive inside `core/`. Requires Phase 4B contract as foundation.
+
+Do not implement Phase 4C until explicitly assigned.
