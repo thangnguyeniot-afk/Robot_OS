@@ -1,4 +1,4 @@
-# DEVKIT_PROGRESS.md — RobotOS Devkit Phase Log
+﻿# DEVKIT_PROGRESS.md — RobotOS Devkit Phase Log
 
 ## Phase 3A — Runtime Skeleton
 
@@ -4933,7 +4933,9 @@ Candidates:
 
 ## Phase 6H — ISR / Timer Producer Stress-Lite
 
+**Status:** CLOSED_TIMER_STRESS_LITE_CONFIRMED
 **Date:** 2026-05-02
+**Runtime confirmed:** 2026-05-03
 **Branch:** master
 **Baseline commit:** `335ee29` — Phase 6G timer producer smoke (ISR context confirmed)
 
@@ -5095,17 +5097,32 @@ west flash
 
 ---
 
-### Runtime RTT Evidence
+### Runtime Evidence (Phase 6H-R)
 
-**RTT log:** `devkit/logs/phase_6H_rtt_2026-05-02.txt`
+**Capture date:** 2026-05-03
+**Evidence log:** `devkit/logs/phase_6H_rtt_2026-05-03.txt`
+**Capture method:** GDB batch counter read via OpenOCD GDB server
+**Script:** `tools/runtime/capture_phase6h_runtime.ps1 -Build -Flash`
+**Board:** STM32F411E-DISCO, ST-LINK V2J47S0
+**_SEGGER_RTT address:** 0x20000a1c
 
-**Key log lines:**
+Note: RTT dump_image path had a backslash-escape issue in the OpenOCD
+command string (temp path backslashes interpreted as escape sequences).
+GDB fallback captured all required counter values directly from MCU RAM.
+Harness exit code: 0.
+
+**GDB counter read (observed values from MCU):**
 ```
-[00:00:00.000,000] <inf> devkit_runtime: Phase 6H timer stress-lite producer started count=8 interval=100ms
-[00:00:00.500,000] <inf> devkit_runtime: Phase 6H timer event handled seq=1 count=1
-[00:00:03.500,000] <inf> devkit_runtime: Phase 6H timer event handled seq=4 count=4
-[00:00:07.000,000] <inf> devkit_runtime: Phase 6H timer event handled seq=8 count=8
-[00:00:07.500,000] <inf> devkit_runtime: Phase 6H final summary: attempted=8 ok=8 full=0 invalid=0 other=0 handled=8 unexpected=0 pending=0 dispatched=8 accepted=8 rejected=0 dropped=0 prod_throttled=0 herr=0 unhandled=0 bp=0 th_active=0
+$1 = 8    (s_timer_attempted_count)
+$2 = 8    (s_timer_ok_count)
+$3 = 0    (s_timer_full_count)
+$4 = 0    (s_timer_invalid_count)
+$5 = 0    (s_timer_other_error_count)
+$6 = 8    (s_timer_handled_count)
+$7 = 0    (s_timer_unexpected_count)
+$8 = 1    (s_timer_final_logged)
+0xe000ed28: 0x00000000    (CFSR -- no configurable fault)
+0xe000ed2c: 0x00000000    (HFSR -- no hard fault)
 ```
 
 **Counter verification:**

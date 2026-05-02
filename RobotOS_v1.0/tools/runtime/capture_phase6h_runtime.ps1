@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
     Phase 6H runtime evidence capture harness.
@@ -60,7 +60,7 @@ $LogDate        = Get-Date -Format 'yyyy-MM-dd'
 $LogFile        = "$LogDir\phase_6H_rtt_$LogDate.txt"
 
 $OpenOcdExe     = 'C:\Users\ttpro\AppData\Local\Microsoft\WinGet\Packages\xpack-dev-tools.openocd-xpack_Microsoft.Winget.Source_8wekyb3d8bbwe\xpack-openocd-0.12.0-7\bin\openocd.exe'
-$OpenOcdScripts = 'C:\Program Files\OpenOCD\share\openocd\scripts'
+$OpenOcdScripts = 'C:\Users\ttpro\AppData\Local\Microsoft\WinGet\Packages\xpack-dev-tools.openocd-xpack_Microsoft.Winget.Source_8wekyb3d8bbwe\xpack-openocd-0.12.0-7\openocd\scripts'
 $BoardCfg       = "$RepoRoot\zephyr\boards\arm\stm32f411e_disco\support\openocd.cfg"
 $GdbExe         = 'C:\zephyr-sdk-0.17.0\arm-zephyr-eabi\bin\arm-zephyr-eabi-gdb.exe'
 $NmExe          = 'C:\zephyr-sdk-0.17.0\arm-zephyr-eabi\bin\arm-zephyr-eabi-nm.exe'
@@ -180,7 +180,7 @@ if ($Flash) {
 
 # ---------------------------------------------------------------------------
 # 6. Resolve _SEGGER_RTT address dynamically from ELF via nm
-#    Address shifts each build — must not be hardcoded
+#    Address shifts each build -- must not be hardcoded
 # ---------------------------------------------------------------------------
 Write-Status ''
 Write-Status '--- Resolving _SEGGER_RTT symbol ---'
@@ -195,14 +195,14 @@ if (-not $rttMatch) {
     }
     exit 1
 }
-# nm format: "20000abc D _SEGGER_RTT"  — first field is hex address
+# nm format: "20000abc D _SEGGER_RTT"  -- first field is hex address
 $rttHex     = $rttMatch.ToString().Trim().Split(' ')[0]
 $rttAddress = "0x$rttHex"
 Write-Ok "_SEGGER_RTT = $rttAddress"
 
 # ---------------------------------------------------------------------------
 # 7. PRIMARY: OpenOCD dump_image of RTT ring buffer
-#    Uses "after <ms>" — OpenOCD Tcl built-in that blocks while MCU runs
+#    Uses "after <ms>" -- OpenOCD Tcl built-in that blocks while MCU runs
 # ---------------------------------------------------------------------------
 $captureOk     = $false
 $capturedText  = ''
@@ -229,7 +229,7 @@ if (-not $GdbFallback) {
         -c 'shutdown'
 
     if ($LASTEXITCODE -ne 0) {
-        Write-Warn "OpenOCD exit $LASTEXITCODE — checking for dump file anyway"
+        Write-Warn "OpenOCD exit $LASTEXITCODE -- checking for dump file anyway"
     }
 
     if (Test-Path $RttBinTemp) {
@@ -241,7 +241,7 @@ if (-not $GdbFallback) {
                             -replace '[^\x09\x0A\x0D\x20-\x7E]', ''
             Remove-Item $RttBinTemp -Force -ErrorAction SilentlyContinue
             if ($capturedText -match 'Phase 6H') {
-                Write-Ok 'RTT decode OK — Phase 6H lines present'
+                Write-Ok 'RTT decode OK -- Phase 6H lines present'
                 $captureOk = $true
             } else {
                 Write-Warn 'RTT decoded but no "Phase 6H" lines found'
@@ -249,10 +249,10 @@ if (-not $GdbFallback) {
                 Write-Warn 'Falling through to GDB fallback'
             }
         } else {
-            Write-Warn 'Dump file is 0 bytes — falling through to GDB fallback'
+            Write-Warn 'Dump file is 0 bytes -- falling through to GDB fallback'
         }
     } else {
-        Write-Warn 'No dump file created — falling through to GDB fallback'
+        Write-Warn 'No dump file created -- falling through to GDB fallback'
     }
 }
 
@@ -323,7 +323,7 @@ quit
 # ---------------------------------------------------------------------------
 if (-not $captureOk) {
     Write-Sep
-    Write-Fail 'CAPTURE FAILED — both RTT dump and GDB fallback returned no usable data'
+    Write-Fail 'CAPTURE FAILED -- both RTT dump and GDB fallback returned no usable data'
     Write-Fail 'Do NOT update DEVKIT_PROGRESS.md. Report failure to user.'
     Write-Fail ''
     Write-Fail 'Possible causes:'
@@ -350,7 +350,7 @@ if ($captureMethod -eq 'RTT-dump') {
             $allPassed = $false
         }
     }
-    Write-Warn 'CFSR/HFSR not read via RTT method — use -GdbFallback to read fault registers'
+    Write-Warn 'CFSR/HFSR not read via RTT method -- use -GdbFallback to read fault registers'
 
 } else {
     # GDB path: parse "$N = <value>" lines in print order
@@ -459,3 +459,4 @@ if ($allPassed) {
     Write-Sep
     exit 1
 }
+

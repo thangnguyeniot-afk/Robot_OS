@@ -1,0 +1,28 @@
+﻿Phase 6H -- ISR/Timer Producer Stress-Lite
+RTT Boot Log -- 2026-05-03
+Board: STM32F411E-DISCO
+Capture method: GDB-counter
+_SEGGER_RTT address: 0x20000a1c (4KB buffer)
+Wait: 8s
+Script: capture_phase6h_runtime.ps1
+
+===========================================================================
+z_arm_reset () at D:/Robot_OS/zephyr/arch/arm/core/cortex_m\reset.S:119
+119	    movs.n r0, #_EXC_IRQ_DEFAULT_PRIO
+Ignoring packet error, continuing...
+$1 = 8
+$2 = 8
+$3 = 0
+$4 = 0
+$5 = 0
+$6 = 8
+$7 = 0
+$8 = 1
+0xe000ed28:	0x00000000
+0xe000ed2c:	0x00000000
+A debugging session is active.
+
+	Inferior 1 [Remote target] will be detached.
+
+Quit anyway? (y or n) [answered Y; input not from terminal]
+[Inferior 1 (Remote target) detached]
