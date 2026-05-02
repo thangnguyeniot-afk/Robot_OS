@@ -20,12 +20,6 @@
  * Queue-full through try_post_event still returns ERR_FULL + dropped_count.
  * Invalid events return ERR_INVALID_ARG regardless of throttle state.
  *
- * Phase 4L: scheduler retry/backoff policy stub.
- * robotos_core_post_event_with_retry() — posts with automatic retry on ERR_THROTTLED.
- * robotos_core_set_retry_policy()   — configures retry count and backoff.
- * Retry applies when post_event returns ERR_THROTTLED or ERR_FULL (if enabled).
- * This is a stub implementation (host-only) with no backoff delay yet.
- *
  * No Zephyr or board-specific types.
  */
 
@@ -47,7 +41,6 @@ typedef enum {
 	ROBOTOS_CORE_ERR_EMPTY         = -4,
 	ROBOTOS_CORE_ERR_INVALID_ARG   = -6,  /* invalid argument (e.g. NONE event type) */
 	ROBOTOS_CORE_ERR_THROTTLED     = -7,  /* producer throttled: backlog > budget (try_post_event only) */
-	ROBOTOS_CORE_ERR_RETRY_EXHAUSTED = -8, /* retry attempts exhausted (post_event_with_retry only) */
 } robotos_core_status_t;
 
 /*
@@ -104,7 +97,7 @@ typedef robotos_core_status_t (*robotos_core_event_handler_t)(
  * Populated by robotos_core_snapshot(). Not thread-safe.
  * All counter fields are 0 before robotos_core_init() is called.
  *
- * Counter semantics (Phase 4K/4L):
+ * Counter semantics (Phase 4K):
  *   pending_event_count      events currently in queue (drain reduces this)
  *   dropped_event_count      events dropped because queue was full (ERR_FULL path)
  *   admission_accepted_count events that passed admission AND entered queue
@@ -115,9 +108,6 @@ typedef robotos_core_status_t (*robotos_core_event_handler_t)(
  *   backpressure_active      true when pending > dispatch budget OR queue is full
  *   producer_throttle_active true when pending > budget AND queue NOT full
  *   producer_throttled_count events returned ERR_THROTTLED by try_post_event
- *   retry_attempt_count     total retry attempts made by post_event_with_retry
- *   retry_success_count     retries that eventually succeeded
- *   retry_exhausted_count  retry attempts that exhausted allowed retries
  */
 typedef struct {
 	robotos_core_state_t state;
@@ -135,9 +125,6 @@ typedef struct {
 	bool                 backpressure_active;      /* pending > budget OR queue full */
 	bool                 producer_throttle_active; /* pending > budget AND queue NOT full */
 	uint32_t             producer_throttled_count; /* events throttled by try_post_event */
-	uint32_t             retry_attempt_count;     /* total retry attempts (Phase 4L) */
-	uint32_t             retry_success_count;     /* retries that succeeded (Phase 4L) */
-	uint32_t             retry_exhausted_count;  /* retries exhausted (Phase 4L) */
 } robotos_core_snapshot_t;
 
 /* Maximum number of simultaneously registered event handlers. */
@@ -329,92 +316,5 @@ bool robotos_core_producer_throttle_active(void);
  * Returns 0 before init.
  */
 uint32_t robotos_core_producer_throttled_count(void);
-
-/*
- * Phase 4L: Retry/backoff policy configuration.
- *
- * retry_enabled    — if true, retry on ERR_THROTTLED. If false,arez
- *                    retry_on_full_enabled also ignored.
- * retry_on_full_enabled — if true AND retry_enabled is true,
- *                    also retry on ERR_FULL (queue-full conditions).
- *                    Default false; caller must enable explicitly.
- * max_retry_attempts — maximum number of retry attempts per event.
- *                    0 = immediate one-shot attempt (no retry).
- *                    Default: ROBOTOS_CORE_DEFAULT_RETRY_ATTEMPTS.
- * backoff_delay_ms    — backoff delay between retry attempts in milliseconds.
- *                    Stub implementation (Phase 4L): delay is not actually honored;
- *                    all retries happen immediately without yielding.
- *                    Default: ROBOTOS_CORE_DEFAULT_BACKOFF_DELAY_MS.
- *
- * Returns ROBOTOS_CORE_OK on success.
- * Safe to call before init (policy becomes active on first post with retry).
- */
-robotos_core_status_t robotos_core_set_retry_policy(
-	bool    retry_enabled,
-	bool    retry_on_full_enabled,
-	uint32_t max_retry_attempts,
-	uint32_t backoff_delay_ms
-);
-
-/*
- * Post an event with automatic retry on throttle/full conditions.
- *
- * Behavior (Phase 4L stub):
- *   1. Attempts robotos_core_post_event(event).
- *   2. If retry policy is not enabled, returns result immediately.
- *   3. If result is ERR_THROTTLED (or ERR_FULL if retry_on_full_enabled),
- *      and retry attempts remain, increment retry_attempt_count and retry.
- *   4. Retry loop is tight: no actual backoff delay in stub implementation.
- *   5. If max retry attempts exhausted:
- *      - increment retry_exhausted_count
- *      - return ERR_RETRY_EXHAUSTED
- *   6. If retry eventually succeeds:
- *      - increment retry_success_count
- *      - return OK
- *
- * Retry counters are NOT reset by repeated robotos_core_init().
- * Policy must be set via robotos_core_set_retry_policy() before retry is active.
- *
- * Returns ROBOTOS_CORE_ERR_NULL          if event is NULL.
- * Returns ROBOTOS_CORE_ERR_INVALID_STATE if core not READY.
- * Returns ROBOTOS_CORE_ERR_INVALID_ARG   if event type is rejected.
- * Returns ROBOTOS_CORE_ERR_RETRY_EXHAUSTED if retry attempts exhausted.
- * Returns ROBOTOS_CORE_OK               on success (including after retries).
- */
-robotos_core_status_t robotos_core_post_event_with_retry(const robotos_event_t *event);
-
-/*
- * Return cumulative count of retry attempts made.
- * This counts all loop iterations, regardless of final outcome.
- * Not incremented by post_event or try_post_event.
- * Not reset by repeated init.
- * Returns 0 before init.
- */
-uint32_t robotos_core_retry_attempt_count(void);
-
-/*
- * Return cumulative count of retries that eventually succeeded.
- * A retry "succeeds" if it eventually returned OK after one or more
- * retry loop iterations (not counting the immediate one-shot case).
- * Not incremented by post_event or try_post_event.
- * Not reset by repeated init.
- * Returns 0 before init.
- */
-uint32_t robotos_core_retry_success_count(void);
-
-/*
- * Return cumulative count of retries that exhausted allowed attempts.
- * Incremented when post_event_with_retry returns ERR_RETRY_EXHAUSTED.
- * Not incremented by post_event or try_post_event.
- * Not reset by repeated init.
- * Returns 0 before init.
- */
-uint32_t robotos_core_retry_exhausted_count(void);
-
-/* Default retry attempts if not explicitly configured. */
-#define ROBOTOS_CORE_DEFAULT_RETRY_ATTEMPTS 3u
-
-/* Default backoff delay in milliseconds (stub: not honored). */
-#define ROBOTOS_CORE_DEFAULT_BACKOFF_DELAY_MS 10u
 
 #endif /* ROBOTOS_CORE_H */

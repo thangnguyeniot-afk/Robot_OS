@@ -19,7 +19,6 @@
  *     - handler table register/unregister/has/count reads and mutations
  *     - s_core_dispatch_one_safe Step 1: queue pop into local copy
  *     - s_core_dispatch_one_safe Step 2: handler table lookup, copy fn+ctx to locals
- *     - retry policy state (Phase 4L)
  *
  *   NOT PROTECTED (always outside critical section):
  *     - registered handler callback (hard rule: depth MUST be 0 during invocation)
@@ -33,12 +32,6 @@
  *   Step 3: call handler_fn(&ev, ctx) — NO lock held (depth == 0)
  *   Step 4: update s_core_dispatcher counters directly (no lock needed,
  *           single-threaded devkit assumption; handler has already returned)
- *
- * Phase 4L retry/backoff policy (stub):
- *   robotos_core_post_event_with_retry() retries on ERR_THROTTLED (and optionally
- *   ERR_FULL) according to policy set by robotos_core_set_retry_policy().
- *   Retry loop is tight (no backoff delay) in stub implementation.
- *   Retry counters are not reset by repeated init.
  *
  * Limitation: handler fn+ctx are copied under lock; if unregister occurs
  * between copy and invocation, the callback runs once with the stale copy.
@@ -84,17 +77,6 @@ static uint32_t          s_unhandled_event_count;
 static uint32_t          s_admission_accepted_count;
 static uint32_t          s_admission_rejected_count;
 static uint32_t          s_producer_throttled_count;
-
-/* ---- Retry/backoff policy (Phase 4L stub) --------------------------- */
-
-static bool    s_retry_enabled         = false;
-static bool    s_retry_on_full_enabled = false;
-static uint32_t s_max_retry_attempts  = ROBOTOS_CORE_DEFAULT_RETRY_ATTEMPTS;
-static uint32_t s_backoff_delay_ms    = ROBOTOS_CORE_DEFAULT_BACKOFF_DELAY_MS;
-static uint32_t s_retry_attempt_count   = 0;
-static uint32_t s_retry_success_count   = 0;
-static uint32_t s_retry_exhausted_count = 0;
-/* --------------------------------------------------------------------------- */
 
 /* --------------------------------------------------------------------------- */
 
@@ -329,9 +311,6 @@ robotos_core_status_t robotos_core_snapshot(robotos_core_snapshot_t *out)
 	out->admission_accepted_count = s_admission_accepted_count;
 	out->admission_rejected_count = s_admission_rejected_count;
 	out->producer_throttled_count = s_producer_throttled_count;
-	out->retry_attempt_count      = s_retry_attempt_count;
-	out->retry_success_count      = s_retry_success_count;
-	out->retry_exhausted_count   = s_retry_exhausted_count;
 
 	/* Inline backpressure/throttle calculation to avoid nested lock */
 	bool     full    = robotos_event_queue_is_full(&s_core_event_queue);
@@ -617,120 +596,3 @@ uint32_t robotos_core_producer_throttled_count(void)
 	robotos_platform_critical_exit(tok);
 	return v;
 }
-
-/* ---- Phase 4L: Retry/backoff policy stub ------------------------ */
-
-robotos_core_status_t robotos_core_set_retry_policy(
-	bool    retry_enabled,
-	bool    retry_on_full_enabled,
-	uint32_t max_retry_attempts,
-	uint32_t backoff_delay_ms
-)
-{
-	(void)retry_on_full_enabled; /* Policy stored but not used in stub */
-
-	robotos_platform_critical_token_t tok = robotos_platform_critical_enter();
-	s_retry_enabled         = retry_enabled;
-	s_retry_on_full_enabled = retry_enabled && retry_on_full_enabled;
-	s_max_retry_attempts  = max_retry_attempts;
-	s_backoff_delay_ms    = backoff_delay_ms;
-	robotos_platform_critical_exit(tok);
-	return ROBOTOS_CORE_OK;
-}
-
-robotos_core_status_t robotos_core_post_event_with_retry(const robotos_event_t *event)
-{
-	if (event == NULL) {
-		return ROBOTOS_CORE_ERR_NULL;
-	}
-
-	/* First attempt */
-	robotos_core_status_t ret = robotos_core_post_event(event);
-	if (ret == ROBOTOS_CORE_OK) {
-		/* Immediate success, no retry needed */
-		return ROBOTOS_CORE_OK;
-	}
-
-	/* Check if retry is enabled and condition is retry-eligible */
-	robotos_platform_critical_token_t tok = robotos_platform_critical_enter();
-	bool retry_active = s_retry_enabled;
-	bool retry_on_full = s_retry_on_full_enabled;
-	uint32_t max_attempts = s_max_retry_attempts;
-	robotos_platform_critical_exit(tok);
-
-	if (!retry_active) {
-		/* Retry not enabled, return first attempt result */
-		return ret;
-	}
-
-	bool should_retry = (ret == ROBOTOS_CORE_ERR_THROTTLED);
-	if (retry_on_full) {
-		should_retry = should_retry || (ret == ROBOTOS_CORE_ERR_FULL);
-	}
-
-	if (!should_retry) {
-		/* Not a retry-eligible error condition */
-		return ret;
-	}
-
-	/* Retry loop (stub: no backoff delay) */
-	for (uint32_t attempt = 0; attempt < max_attempts; attempt++) {
-		tok = robotos_platform_critical_enter();
-		s_retry_attempt_count++;
-		robotos_platform_critical_exit(tok);
-
-		/* Stub: no actual backoff delay - tight retry loop */
-		/* Future implementation: robotos_platform_sleep_ms(s_backoff_delay_ms); */
-
-		ret = robotos_core_post_event(event);
-		if (ret == ROBOTOS_CORE_OK) {
-			tok = robotos_platform_critical_enter();
-			s_retry_success_count++;
-			robotos_platform_critical_exit(tok);
-			return ROBOTOS_CORE_OK;
-		}
-
-		/* Check if still retry-eligible */
-		should_retry = (ret == ROBOTOS_CORE_ERR_THROTTLED);
-		if (retry_on_full) {
-			should_retry = should_retry || (ret == ROBOTOS_CORE_ERR_FULL);
-		}
-
-		if (!should_retry) {
-			/* Non-retryable error during retry loop */
-			return ret;
-		}
-	}
-
-	/* All retry attempts exhausted */
-	tok = robotos_platform_critical_enter();
-	s_retry_exhausted_count++;
-	robotos_platform_critical_exit(tok);
-
-	return ROBOTOS_CORE_ERR_RETRY_EXHAUSTED;
-}
-
-uint32_t robotos_core_retry_attempt_count(void)
-{
-	robotos_platform_critical_token_t tok = robotos_platform_critical_enter();
-	uint32_t v = s_retry_attempt_count;
-	robotos_platform_critical_exit(tok);
-	return v;
-}
-
-uint32_t robotos_core_retry_success_count(void)
-{
-	robotos_platform_critical_token_t tok = robotos_platform_critical_enter();
-	uint32_t v = s_retry_success_count;
-	robotos_platform_critical_exit(tok);
-	return v;
-}
-
-uint32_t robotos_core_retry_exhausted_count(void)
-{
-	robotos_platform_critical_token_t tok = robotos_platform_critical_enter();
-	uint32_t v = s_retry_exhausted_count;
-	robotos_platform_critical_exit(tok);
-	return v;
-}
-/* --------------------------------------------------------------------------- */
