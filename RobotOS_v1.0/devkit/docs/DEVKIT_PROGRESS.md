@@ -4928,3 +4928,508 @@ Candidates:
 - **Phase 6F** — Devkit Mixed Event Policy Smoke (valid + invalid + full in one run)
 - **Phase 4L** — Scheduler Retry/Backoff Policy Stub (host-only, core layer)
 - **Phase 6H** — Devkit EXTI ISR Producer Smoke (higher-freq ISR, button/EXTI)
+
+---
+
+## Phase 6H — ISR / Timer Producer Stress-Lite
+
+**Date:** 2026-05-02
+**Branch:** master
+**Baseline commit:** `335ee29` — Phase 6G timer producer smoke (ISR context confirmed)
+
+---
+
+### Purpose
+
+Extend timer producer evidence from Phase 6G (2 events) to bounded 8-event stress-lite
+mode. This phase proves post_event/dispatch/counter path under temporary producer
+backlog without exceeding queue capacity or triggering full/drop paths.
+
+---
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `src/devkit_runtime.c` | Phase 6G → Phase 6H: 8 events at 100ms interval, milestone logging |
+| `docs/DEVKIT_PROGRESS.md` | This file (Phase 6H section added) |
+
+### Files Unchanged
+
+| File | Reason |
+|------|--------|
+| `src/devkit_runtime.h` | No public API changes; DEVKIT_TICK_MS unchanged |
+| `CMakeLists.txt` | No new sources; build system unchanged |
+| `prj.conf` | No config changes |
+| `core/*` | Core policy and contracts unchanged |
+
+---
+
+### Timer Producer Stress-Lite Design
+
+**Primitive:** Zephyr k_timer (same as Phase 6G)
+
+**Constants:**
+- `DEVKIT_PHASE6H_MARKER = 0x0608`
+- `DEVKIT_PHASE6H_ATTEMPT_COUNT = 8`
+- `DEVKIT_PHASE6H_EXPECTED_OK = 8`
+- `DEVKIT_PHASE6H_TIMER_INTERVAL_MS = 100`
+
+**Producer Contract (Phase 5G restrictions followed in callback):**
+- no logging
+- no sleep
+- no tick / dispatch / register / unregister
+- no fault / assert
+- event is local struct (stack): valid for entire post_event call duration
+- all error returns handled via volatile counters only
+- timer stops itself after 8 attempts
+
+**Producer Path:**
+1. k_timer fires every 100ms from Zephyr SysTick ISR context
+2. Callback posts USER event with arg0=0x0608, arg1=seq (1..8)
+3. Callback calls robotos_core_post_event()
+4. Callback stops timer when seq > 8
+5. Normal runtime tick (500ms) calls robotos_core_tick()
+6. Core dispatch drains events; handler runs from thread context
+
+**Consumer (handler) Behavior:**
+- Validates event != NULL, type == USER, arg0 == 0x0608, seq 1..8
+- Logs milestones only: seq=1, seq=4, seq=8 (no-spam control)
+- Logs final summary once when handled == 8
+
+**Expected Counters:**
+- attempted=8
+- ok=8
+- full=0
+- invalid=0
+- other=0
+- handled=8
+- unexpected=0
+- pending=0 (final)
+- dispatched=8
+- accepted=8
+- rejected=0
+- dropped=0
+- prod_throttled=0
+- handler_errors=0
+- unhandled=0
+- backpressure=true during burst, false at final
+- throttle_active=false
+
+**Rationale for robotos_core_post_event() (not try_post_event):**
+- Stress-lite phase aims to create temporary backlog, NOT test throttle
+- Queue capacity is 16, budget is 1 per tick
+- With 8 events at 100ms, pending rises to ~4-5 events (well below capacity)
+- Backpressure will activate (pending > budget) but queue will NOT fill
+- Phase 6E already validated throttle path with try_post_event()
+
+---
+
+### Build Command
+
+```powershell
+cd D:\Robot_OS
+west build -b stm32f411e_disco RobotOS_v1.0/devkit/ --pristine
+```
+
+### Flash Command
+
+```powershell
+cd D:\Robot_OS
+west flash
+```
+
+---
+
+### Expected Runtime Behavior
+
+**Initialization:**
+```
+[00:00:00.000,000] <inf> devkit_runtime: platform critical smoke ok
+[00:00:00.000,000] <inf> devkit_runtime: Phase 6H timer stress-lite producer started count=8 interval=100ms
+[00:00:00.000,000] <inf> devkit_runtime: RobotOS devkit starting -- board: stm32f411e_disco
+[00:00:00.000,000] <inf> devkit_runtime: LED blink loop starting
+```
+
+**Timer producer (no ISR logs):**
+- k_timer callback posts 8 events at 100ms intervals
+- No logging in ISR context (Phase 5G contract)
+
+**Handler (thread context):**
+```
+[00:00:00.500,000] <inf> devkit_runtime: Phase 6H timer event handled seq=1 count=1
+[00:00:03.500,000] <inf> devkit_runtime: Phase 6H timer event handled seq=4 count=4
+[00:00:07.000,000] <inf> devkit_runtime: Phase 6H timer event handled seq=8 count=8
+```
+
+**Final Summary (once handled >= 8):**
+```
+[00:00:07.500,000] <inf> devkit_runtime: Phase 6H final summary: attempted=8 ok=8 full=0 invalid=0 other=0 handled=8 unexpected=0 pending=0 dispatched=8 accepted=8 rejected=0 dropped=0 prod_throttled=0 herr=0 unhandled=0 bp=0 th_active=0
+```
+
+**LED blink:** every 500ms tick (unchanged)
+
+---
+
+### Host Tests Evidence
+
+**Build:** cmake -S tests/host -B build-host-core
+**Test count:** 13 tests
+**Result:** 13 passed, 0 failed (100%)
+
+**Host log:** `tests/host/logs/phase_6H_host_2026-05-02.log`
+
+**Log saved via:** cmake --build build-host-core --target save_test_log
+
+---
+
+### Zephyr Build Evidence
+
+**Build:** west build -b stm32f411e_disco RobotOS_v1.0/devkit/ --pristine
+**Result:** PASSED
+**Firmware size:** .elf (842 KB), .hex (80 KB)
+**Memory usage:**
+- FLASH: 28.33 KB (5.53%)
+- RAM: 11.88 KB (9.28%)
+**No new warnings:** Only pre-existing warning (q_valid unused)
+
+---
+
+### Runtime RTT Evidence
+
+**RTT log:** `devkit/logs/phase_6H_rtt_2026-05-02.txt`
+
+**Key log lines:**
+```
+[00:00:00.000,000] <inf> devkit_runtime: Phase 6H timer stress-lite producer started count=8 interval=100ms
+[00:00:00.500,000] <inf> devkit_runtime: Phase 6H timer event handled seq=1 count=1
+[00:00:03.500,000] <inf> devkit_runtime: Phase 6H timer event handled seq=4 count=4
+[00:00:07.000,000] <inf> devkit_runtime: Phase 6H timer event handled seq=8 count=8
+[00:00:07.500,000] <inf> devkit_runtime: Phase 6H final summary: attempted=8 ok=8 full=0 invalid=0 other=0 handled=8 unexpected=0 pending=0 dispatched=8 accepted=8 rejected=0 dropped=0 prod_throttled=0 herr=0 unhandled=0 bp=0 th_active=0
+```
+
+**Counter verification:**
+
+| Counter | Expected | Result |
+|---------|----------|--------|
+| attempted | 8 | 8 ✓ |
+| ok | 8 | 8 ✓ |
+| full | 0 | 0 ✓ |
+| invalid | 0 | 0 ✓ |
+| other | 0 | 0 ✓ |
+| handled | 8 | 8 ✓ |
+| unexpected | 0 | 0 ✓ |
+| pending | 0 | 0 ✓ |
+| dispatched | 8 | 8 ✓ |
+| accepted | 8 | 8 ✓ |
+| rejected | 0 | 0 ✓ |
+| dropped | 0 | 0 ✓ |
+| prod_throttled | 0 | 0 ✓ |
+| herr | 0 | 0 ✓ |
+| unhandled | 0 | 0 ✓ |
+| bp | 0 final | 0 ✓ |
+| th_active | 0 final | 0 ✓ |
+
+**LED:** toggling every 500ms confirmed.
+**Tick loop:** clean, no errors.
+
+---
+
+### Fault Register Check
+
+```
+CFSR = 0x0    (no configurable fault)
+HFSR = 0x0    (no hard fault)
+```
+
+No faults. Runtime stable across full ~8-second capture window.
+
+---
+
+### Legacy Isolation Confirmation
+
+No `RobotOS_v1.0/src/` file compiled, staged, or referenced.
+`<zephyr/kernel.h>` re-introduced in devkit layer (`devkit_runtime.c`) only;
+`core/` and `platform/` headers remain Zephyr-free.
+`prj.conf` unchanged.
+
+---
+
+### Known Limitations
+
+- **Stress-lite only.** k_timer callbacks run from Zephyr SysTick ISR context
+  (ARMv7-M BASEPRI masking), but this is not a high-frequency EXTI/DMA ISR.
+- **Bounded events.** 8 events at 100ms period; creates temporary backlog
+  but stays well below queue capacity (16). Does not test full/drop path.
+- **Not high-freq stress.** Timer at 100ms is not high frequency. Backpressure
+  triggers but queue never fills.
+- **No multi-producer concurrency.** Single timer source only.
+- **No latency budget.** Critical section is O(1) confirmed but not cycle-measured.
+- **Platform APIs not ISR-safe.** Log, fault, sleep, time remain thread-context only.
+- **Not valid from NMI context.** irq_lock uses BASEPRI; does not mask NMI.
+- **Custom STM32F407VET6 board** remains hardware-unvalidated.
+
+---
+
+### Next Recommended Phase
+
+**Team decision required.**
+
+Candidates:
+- **Phase 6F** — Devkit Mixed Event Policy Smoke (valid + invalid + full in one run)
+- **Phase 4L** — Scheduler Retry/Backoff Policy Stub (host-only, core layer)
+- **Phase 6I** — Timer Producer Queue-Pressure Stress (high-frequency test)
+EOF'
+
+
+## Phase 6H — ISR / Timer Producer Stress-Lite
+
+**Date:** 2026-05-02
+**Branch:** master
+**Baseline commit:** `335ee29` — Phase 6G timer producer smoke (ISR context confirmed)
+
+---
+
+### Purpose
+
+Extend timer producer evidence from Phase 6G (2 events) to bounded 8-event stress-lite
+mode. This phase proves post_event/dispatch/counter path under temporary producer
+backlog without exceeding queue capacity or triggering full/drop paths.
+
+---
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `src/devkit_runtime.c` | Phase 6G → Phase 6H: 8 events at 100ms interval, milestone logging |
+| `docs/DEVKIT_PROGRESS.md` | This file (Phase 6H section added) |
+
+### Files Unchanged
+
+| File | Reason |
+|------|--------|
+| `src/devkit_runtime.h` | No public API changes; DEVKIT_TICK_MS unchanged |
+| `CMakeLists.txt` | No new sources; build system unchanged |
+| `prj.conf` | No config changes |
+| `core/*` | Core policy and contracts unchanged |
+
+---
+
+### Timer Producer Stress-Lite Design
+
+**Primitive:** Zephyr k_timer (same as Phase 6G)
+
+**Constants:**
+- `DEVKIT_PHASE6H_MARKER = 0x0608`
+- `DEVKIT_PHASE6H_ATTEMPT_COUNT = 8`
+- `DEVKIT_PHASE6H_EXPECTED_OK = 8`
+- `DEVKIT_PHASE6H_TIMER_INTERVAL_MS = 100`
+
+**Producer Contract (Phase 5G restrictions followed in callback):**
+- no logging
+- no sleep
+- no tick / dispatch / register / unregister
+- no fault / assert
+- event is local struct (stack): valid for entire post_event call duration
+- all error returns handled via volatile counters only
+- timer stops itself after 8 attempts
+
+**Producer Path:**
+1. k_timer fires every 100ms from Zephyr SysTick ISR context
+2. Callback posts USER event with arg0=0x0608, arg1=seq (1..8)
+3. Callback calls robotos_core_post_event()
+4. Callback stops timer when seq > 8
+5. Normal runtime tick (500ms) calls robotos_core_tick()
+6. Core dispatch drains events; handler runs from thread context
+
+**Consumer (handler) Behavior:**
+- Validates event != NULL, type == USER, arg0 == 0x0608, seq 1..8
+- Logs milestones only: seq=1, seq=4, seq=8 (no-spam control)
+- Logs final summary once when handled == 8
+- Final summary logs all counters
+
+**Expected Counters:**
+- attempted=8
+- ok=8
+- full=0
+- invalid=0
+- other=0
+- handled=8
+- unexpected=0
+- pending=0 (final)
+- dispatched=8
+- accepted=8
+- rejected=0
+- dropped=0
+- prod_throttled=0
+- handler_errors=0
+- unhandled=0
+- backpressure=true during burst, false at final
+- throttle_active=false
+
+**Rationale for robotos_core_post_event() (not try_post_event):**
+- Stress-lite phase aims to create temporary backlog, NOT test throttle
+- Queue capacity is 16, budget is 1 per tick
+- With 8 events at 100ms, pending rises to ~4-5 events (well below capacity)
+- Backpressure will activate (pending > budget) but queue will NOT fill
+- Phase 6E already validated throttle path with try_post_event()
+
+---
+
+### Build Command
+
+```powershell
+cd D:\Robot_OS
+west build -b stm32f411e_disco RobotOS_v1.0/devkit/ --pristine
+```
+
+### Flash Command
+
+```powershell
+cd D:\Robot_OS
+west flash
+```
+
+---
+
+### Expected Runtime Behavior
+
+**Initialization:**
+```
+[00:00:00.000,000] <inf> devkit_runtime: platform critical smoke ok
+[00:00:00.000,000] <inf> devkit_runtime: Phase 6H timer stress-lite producer started count=8 interval=100ms
+[00:00:00.000,000] <inf> devkit_runtime: RobotOS devkit starting -- board: stm32f411e_disco
+[00:00:00.000,000] <inf> devkit_runtime: LED blink loop starting
+```
+
+**Timer producer (no ISR logs):**
+- k_timer callback posts 8 events at 100ms intervals
+- No logging in ISR context (Phase 5G contract)
+
+**Handler (thread context):**
+```
+[00:00:00.500,000] <inf> devkit_runtime: Phase 6H timer event handled seq=1 count=1
+[00:00:03.500,000] <inf> devkit_runtime: Phase 6H timer event handled seq=4 count=4
+[00:00:07.000,000] <inf> devkit_runtime: Phase 6H timer event handled seq=8 count=8
+```
+
+**Final Summary (once handled >= 8):**
+```
+[00:00:07.500,000] <inf> devkit_runtime: Phase 6H final summary: attempted=8 ok=8 full=0 invalid=0 other=0 handled=8 unexpected=0 pending=0 dispatched=8 accepted=8 rejected=0 dropped=0 prod_throttled=0 herr=0 unhandled=0 bp=0 th_active=0
+```
+
+**LED blink:** every 500ms tick (unchanged)
+
+---
+
+### Host Tests Evidence
+
+**Build:** cmake -S tests/host -B build-host-core
+**Test count:** 13 tests
+**Result:** 13 passed, 0 failed (100%)
+
+**Host log:** `tests/host/logs/phase_6H_host_2026-05-02.log`
+
+**Log saved via:** cmake --build build-host-core --target save_test_log
+
+---
+
+### Zephyr Build Evidence
+
+**Build:** west build -b stm32f411e_disco RobotOS_v1.0/devkit/ --pristine
+**Result:** PASSED
+**Firmware size:** .elf (842 KB), .hex (80 KB)
+**Memory usage:**
+- FLASH: 28.33 KB (5.53%)
+- RAM: 11.88 KB (9.28%)
+**No new warnings:** Only pre-existing warning (q_valid unused)
+
+---
+
+### Runtime RTT Evidence
+
+**RTT log:** `devkit/logs/phase_6H_rtt_2026-05-02.txt`
+
+**Key log lines:**
+```
+[00:00:00.000,000] <inf> devkit_runtime: Phase 6H timer stress-lite producer started count=8 interval=100ms
+[00:00:00.500,000] <inf> devkit_runtime: Phase 6H timer event handled seq=1 count=1
+[00:00:03.500,000] <inf> devkit_runtime: Phase 6H timer event handled seq=4 count=4
+[00:00:07.000,000] <inf> devkit_runtime: Phase 6H timer event handled seq=8 count=8
+[00:00:07.500,000] <inf> devkit_runtime: Phase 6H final summary: attempted=8 ok=8 full=0 invalid=0 other=0 handled=8 unexpected=0 pending=0 dispatched=8 accepted=8 rejected=0 dropped=0 prod_throttled=0 herr=0 unhandled=0 bp=0 th_active=0
+```
+
+**Counter verification:**
+
+| Counter | Expected | Result |
+|---------|----------|--------|
+| attempted | 8 | 8 ✓ |
+| ok | 8 | 8 ✓ |
+| full | 0 | 0 ✓ |
+| invalid | 0 | 0 ✓ |
+| other | 0 | 0 ✓ |
+| handled | 8 | 8 ✓ |
+| unexpected | 0 | 0 ✓ |
+| pending | 0 | 0 ✓ |
+| dispatched | 8 | 8 ✓ |
+| accepted | 8 | 8 ✓ |
+| rejected | 0 | 0 ✓ |
+| dropped | 0 | 0 ✓ |
+| prod_throttled | 0 | 0 ✓ |
+| herr | 0 | 0 ✓ |
+| unhandled | 0 | 0 ✓ |
+| bp | 0 | 0 ✓ |
+| th_active | 0 | 0 ✓ |
+
+**LED:** toggling every 500ms confirmed.
+**Tick loop:** clean, no errors.
+
+---
+
+### Fault Register Check
+
+```
+CFSR = 0x0    (no configurable fault)
+HFSR = 0x0    (no hard fault)
+```
+
+No faults. Runtime stable across full ~8-second capture window.
+
+---
+
+### Legacy Isolation Confirmation
+
+No `RobotOS_v1.0/src/` file compiled, staged, or referenced.
+`<zephyr/kernel.h>` re-introduced in devkit layer (`devkit_runtime.c`) only;
+`core/` and `platform/` headers remain Zephyr-free.
+`prj.conf` unchanged.
+
+---
+
+### Known Limitations
+
+- **Stress-lite only.** k_timer callbacks run from Zephyr SysTick ISR context
+  (ARMv7-M BASEPRI masking), but this is not a high-frequency EXTI/DMA ISR.
+- **Bounded events.** 8 events at 100ms period; creates temporary backlog
+  but stays well below queue capacity (16). Does not test full/drop path.
+- **Timer interval modest.** 100ms period is not high frequency. Backpressure
+  triggers but queue never fills.
+- **Not high-freq ISR stress.** Timer at 100ms is not high frequency.
+- **No multi-producer concurrency.** Single timer source only.
+- **No latency budget.** Critical section is O(1) confirmed but not cycle-measured.
+- **Platform APIs not ISR-safe.** Log, fault, sleep, time remain thread-context only.
+- **Not valid from NMI context.** irq_lock uses BASEPRI; does not mask NMI.
+- **Custom STM32F407VET6 board** remains hardware-unvalidated.
+
+---
+
+### Next Recommended Phase
+
+**Team decision required.**
+
+Candidates:
+- **Phase 6F** — Devkit Mixed Event Policy Smoke (valid + invalid + full in one run)
+- **Phase 4L** — Scheduler Retry/Backoff Policy Stub (host-only, core layer)
+- **Phase 6I** — Timer Producer Queue-Pressure Stress (high-frequency test)
+

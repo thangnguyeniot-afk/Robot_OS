@@ -612,3 +612,28 @@ the appropriate follow-on to address this.
 All existing public API return values, counters, and behavior are identical
 to pre-5E. Phase 5E is a structural improvement only.
 
+
+
+---
+
+### Phase 6H1 — Timer Producer Stress-Lite Evidence (2026-05-02)
+
+**Status:** CLOSED_TIMER_STRESS_LITE_CONFIRMED
+
+Phase 6H extends timer-producer evidence from Phase 6G (2 events) to bounded
+8-event stress-lite mode. This demonstrates post_event/dispatch/counter
+path under temporary producer backlog without exceeding queue capacity (16 events).
+
+**Key observations:**
+- k_timer callback posts 8 events at 100ms intervals
+- Consumer tick runs at 500ms (5x slower), creating temporary backlog
+- Queue capacity 16 is never exceeded; no full/drop path triggered
+- Backpressure activates during burst (pending > budget) but settles to 0
+- All 8 events accepted, handled, and dispatched successfully
+- Handler logs milestones only (seq=1, 4, 8) to avoid RTT spam
+- No faults, no errors, LED/tick loop healthy
+
+This confirms the ISR-safe producer contract (Phase 5G) holds under
+modest producer pressure without breaking queue semantics.
+
+---
