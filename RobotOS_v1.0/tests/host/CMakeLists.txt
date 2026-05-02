@@ -1,6 +1,7 @@
 # tests/host/CMakeLists.txt
-# Phase 4K: isolated host build — core, queue, dispatcher, ingestion, tick policy, handler policy,
-#           platform fault contract, scheduler admission policy, scheduler backpressure policy,
+# Phase 5D: isolated host build — core, queue, dispatcher, ingestion, tick policy, handler policy,
+#           platform fault contract, platform critical section contract,
+#           scheduler admission policy, scheduler backpressure policy,
 #           scheduler producer throttle policy.
 #
 # Platform logging: each target that compiles robotos_core.c also compiles
@@ -138,6 +139,20 @@ target_include_directories(robotos_platform_fault_contract_test PRIVATE
 )
 
 add_test(NAME robotos_platform_fault_contract COMMAND robotos_platform_fault_contract_test)
+
+# ---- Platform critical section contract test (Phase 5D) ---------------------
+# Tests enter/exit counter semantics via host stub. No Zephyr. No core sources.
+add_executable(robotos_platform_critical_contract_test
+    test_robotos_platform_critical_contract.c
+    robotos_platform_critical_host_stub.c
+)
+
+target_include_directories(robotos_platform_critical_contract_test PRIVATE
+    "${PLATFORM_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+)
+
+add_test(NAME robotos_platform_critical_contract COMMAND robotos_platform_critical_contract_test)
 
 # ---- Scheduler admission policy contract test (Phase 4I) --------------------
 # Tests admission gate in robotos_core_post_event().

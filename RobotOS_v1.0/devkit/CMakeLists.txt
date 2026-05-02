@@ -1,5 +1,5 @@
 # devkit/CMakeLists.txt
-# Phase 5C platform fault boundary — STM32F411E-DISCO.
+# Phase 5D platform critical-section boundary — STM32F411E-DISCO.
 # Target: stm32f411e_disco
 # Purpose: runtime skeleton with RobotOS core + event queue + dispatcher integration.
 #          Zephyr platform log adapter bridges core to Zephyr logging subsystem.
@@ -29,4 +29,5 @@ target_sources(app PRIVATE
     ../platform/zephyr/robotos_platform_log_zephyr.c
     ../platform/zephyr/robotos_platform_time_zephyr.c
     ../platform/zephyr/robotos_platform_fault_zephyr.c
+    ../platform/zephyr/robotos_platform_critical_zephyr.c
 )

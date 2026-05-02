@@ -4108,5 +4108,159 @@ Throttle smoke is devkit-only. No core policy changes.
 
 Candidates:
 - **Phase 4L** — Scheduler Retry/Backoff Policy Stub (host-only, core layer)
-- **Phase 5D** — Platform Critical Section / ISR Lock Boundary
+- **Phase 5D** — Platform Critical Section / ISR Lock Boundary ← **completed**
 - **Phase 6F** — Devkit Mixed Event Policy Smoke (valid + invalid + throttled + full in one sequence)
+
+---
+
+---
+
+## Phase 5D — Platform Critical Section / ISR Lock Boundary
+
+**Date:** 2026-05-02
+**Branch:** master
+**Baseline commit:** `6ae3897` — devkit throttled producer smoke (Phase 6E)
+
+---
+
+### Purpose
+
+Introduce a minimal platform critical-section boundary as the first ISR-lock
+infrastructure in RobotOS. Define a portable `enter`/`exit` API with an opaque
+token, back it with Zephyr `irq_lock`/`irq_unlock`, add a host stub with
+test-inspectable counters, and prove the API with host tests and a one-time
+devkit boot smoke. The boundary is **not wired into core event queue or
+`post_event`** in Phase 5D — core APIs remain single-threaded.
+
+---
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `platform/robotos_platform_critical.h` | New portable API: token type, `enter()`, `exit()` — no Zephyr types |
+| `platform/zephyr/robotos_platform_critical_zephyr.c` | Zephyr backend: `irq_lock`/`irq_unlock` |
+| `platform/README.md` | Phase 5D section: API, Zephyr backend, host backend, limitations |
+| `tests/host/robotos_platform_critical_host_stub.h` | Host inspection helpers (not in public header) |
+| `tests/host/robotos_platform_critical_host_stub.c` | Host stub: counter/depth tracking |
+| `tests/host/test_robotos_platform_critical_contract.c` | 12 test cases for enter/exit contract |
+| `tests/host/CMakeLists.txt` | New `robotos_platform_critical_contract_test` target |
+| `devkit/CMakeLists.txt` | Added `robotos_platform_critical_zephyr.c` to build |
+| `devkit/src/devkit_runtime.c` | One-time `enter`/`exit` smoke at boot; include added |
+| `devkit/logs/phase_5D_rtt_2026-05-02.txt` | RTT evidence |
+| `tests/host/logs/phase_5D_host_2026-05-02.log` | Host evidence |
+
+### Files Unchanged (confirmed)
+
+| File | Reason |
+|------|--------|
+| `core/robotos_core.*` | No core change — API not wired into core queue |
+| `core/robotos_event_queue.*` | No queue change — single-threaded assumption preserved |
+| `devkit/prj.conf` | No config change |
+
+---
+
+### Platform Boundary Summary
+
+**Public API** (`platform/robotos_platform_critical.h`):
+```c
+typedef struct { uintptr_t opaque; } robotos_platform_critical_token_t;
+robotos_platform_critical_token_t robotos_platform_critical_enter(void);
+void robotos_platform_critical_exit(robotos_platform_critical_token_t token);
+```
+No Zephyr types. No board types. C99 compatible.
+
+**Zephyr backend:** `irq_lock()` / `irq_unlock()` — stores unsigned int key in
+`token.opaque`. Nested calls supported on ARMv7-M. Short critical sections only.
+
+**Host backend:** Counter/depth stub. `enter()` assigns monotonically increasing
+opaque id; `exit()` decrements depth (floored at 0). Inspection helpers in stub header.
+
+**Not wired into core:** `post_event`, `tick`, queue — single-threaded, non-ISR-safe.
+
+---
+
+### Host Test Evidence
+
+**Result:** 11/11 suites pass (10 prior + 1 new critical section suite, 12 cases).
+
+**Log:** `tests/host/logs/phase_5D_host_2026-05-02.log`
+
+New suite (`robotos_platform_critical_contract`), 12 test cases:
+- TC01: initial counts zero after reset
+- TC02–TC03: enter increments count/depth, token nonzero
+- TC04: exit increments exit_count, decrements depth
+- TC05–TC06: nested enter/token ordering, max_depth tracking
+- TC07: nested exit restores depth to 0
+- TC08: extra exit at depth=0 does not underflow
+- TC09: repeated reset clears all state
+- TC10: 10× enter/exit leaves depth=0, counts 10/10
+- TC11: token struct size == sizeof(uintptr_t)
+- TC12: max_depth tracks deepest nesting across nested calls
+
+---
+
+### Zephyr Build Evidence
+
+```
+Build: west build -b stm32f411e_disco RobotOS_v1.0/devkit/ --pristine
+Board: stm32f411e_disco
+Zephyr: v3.6.0
+Timestamp: May 2 2026 14:33:21
+
+Memory:
+  FLASH: 29016 / 524288 bytes  (5.53%)
+  RAM:   12096 / 131072 bytes  (9.23%)
+
+Errors: 0
+```
+
+Delta from Phase 6E (28940 B flash): +76 B for `robotos_platform_critical_zephyr.c`
+and one-time smoke call in `devkit_runtime_init`.
+
+---
+
+### Runtime Evidence
+
+**RTT log:** `devkit/logs/phase_5D_rtt_2026-05-02.txt`
+
+**Key evidence line:**
+```
+[00:00:00.000,000] <inf> devkit_runtime: platform critical smoke ok
+```
+
+`irq_lock()` called → `irq_unlock()` called → no fault, no crash, no panic.
+Phase 6E throttle smoke follows normally; LED toggles every 500ms.
+
+**CFSR = 0x0 HFSR = 0x0** — no faults.
+
+---
+
+### Legacy Isolation Confirmation
+
+No `RobotOS_v1.0/src/` file compiled, staged, or referenced.
+Critical section API is platform-only. No core event path changed.
+
+---
+
+### Known Limitations
+
+- Critical boundary **not wired into core** — `post_event`, `tick`, queue remain single-threaded and non-ISR-safe.
+- No ISR-safe posting claim at RobotOS level in Phase 5D.
+- No mutex or thread abstraction; `irq_lock` is not a mutex.
+- No scheduler concurrency; no producer ISR.
+- No nesting enforcement at API level; backend handles nesting.
+- Interrupt latency risk if critical sections held too long.
+- Phase 5E is the appropriate phase to wire this into core queue.
+- Custom STM32F407VET6 board remains hardware-unvalidated.
+
+---
+
+### Next Recommended Phase
+
+**Team decision required.**
+
+Candidates:
+- **Phase 5E** — Apply Critical Boundary to Core Queue (wire `enter`/`exit` into `post_event`/`tick`)
+- **Phase 4L** — Scheduler Retry/Backoff Policy Stub (host-only, core layer)
+- **Phase 6F** — Devkit Mixed Event Policy Smoke

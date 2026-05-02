@@ -3,6 +3,8 @@
  * Boot sequence, periodic tick log, and status LED orchestration.
  * Phase 5B: sleep path routed through platform time boundary.
  *           Direct k_msleep dependency removed from runtime.
+ * Phase 5D: platform critical-section boundary smoke. One enter/exit pair
+ *           proves Zephyr irq_lock/irq_unlock backend links and runs correctly.
  * Phase 6A: smoke event handler registered; one USER event posted.
  * Phase 6B: single smoke replaced with burst of 3 USER events (arg0=0x6B).
  *           Proves burst/backpressure behavior.
@@ -20,6 +22,7 @@
 #include "devkit_fault.h"
 #include "devkit_status_led.h"
 #include "robotos_core.h"
+#include "robotos_platform_critical.h"
 #include "robotos_platform_time.h"
 
 #include <zephyr/logging/log.h>
@@ -94,6 +97,16 @@ int devkit_runtime_init(void)
 
 	devkit_fault_init();
 	devkit_build_info_log();
+
+	/* Phase 5D: one-time critical-section boundary smoke.
+	 * Proves Zephyr irq_lock/irq_unlock backend links and executes.
+	 * Not wired into core queue — single-threaded assumption unchanged. */
+	{
+		robotos_platform_critical_token_t cs_tok =
+			robotos_platform_critical_enter();
+		robotos_platform_critical_exit(cs_tok);
+		LOG_INF("platform critical smoke ok");
+	}
 
 	core_ret = robotos_core_init();
 	if (core_ret != ROBOTOS_CORE_OK) {

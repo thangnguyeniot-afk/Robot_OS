@@ -1,4 +1,4 @@
-# RobotOS Platform Layer — Phase 5C
+# RobotOS Platform Layer — Phase 5D
 
 ## Purpose
 
@@ -198,10 +198,77 @@ Do not add these here without an approved phase task.
 
 ---
 
+---
+
+## Phase 5D — Platform Critical Section / ISR Lock Boundary
+
+### Purpose
+
+Provides a minimal portable critical-section API as the first ISR-lock
+boundary in RobotOS. This is an **infrastructure boundary only** in Phase 5D:
+the API is defined, backed by Zephyr `irq_lock`/`irq_unlock`, and host-tested,
+but is **not yet wired into any core event API**.
+
+### API
+
+```c
+// Platform-portable token returned by enter, consumed by exit.
+typedef struct { uintptr_t opaque; } robotos_platform_critical_token_t;
+
+// Enter critical section; returns token required for exit.
+robotos_platform_critical_token_t robotos_platform_critical_enter(void);
+
+// Exit critical section using matching token.
+void robotos_platform_critical_exit(robotos_platform_critical_token_t token);
+```
+
+**Token semantics:** `enter()` returns an opaque token that must be passed
+verbatim to `exit()`. The token carries backend state (e.g. IRQ key).
+
+### Zephyr Backend
+
+File: `platform/zephyr/robotos_platform_critical_zephyr.c`
+
+Uses `irq_lock()` / `irq_unlock()` — global IRQ masking on ARMv7-M via
+BASEPRI register. The unsigned int key returned by `irq_lock()` is stored
+in `token.opaque` (cast to `uintptr_t`); `irq_unlock()` restores BASEPRI.
+
+Nesting is supported on ARMv7-M (each `irq_lock()` is idempotent when already
+locked; each `irq_unlock()` with the original key restores correctly).
+
+**Use for short critical sections only.** Holding long degrades interrupt latency.
+
+### Host Backend
+
+Files:
+- `tests/host/robotos_platform_critical_host_stub.c` — implementation
+- `tests/host/robotos_platform_critical_host_stub.h` — inspection helpers
+
+The host stub tracks `enter_count`, `exit_count`, `current_depth`, `max_depth`.
+`enter()` assigns a monotonically increasing `opaque` id; `exit()` decrements
+depth (floored at 0 to prevent underflow). No Zephyr. No output.
+
+Inspection helpers (`robotos_platform_critical_host_*`) are NOT in the public
+platform header — they exist only in the host test environment.
+
+### Phase 5D Limitations
+
+- **Not wired into core.** `robotos_core_post_event()`, `robotos_core_tick()`,
+  and the event queue remain single-threaded. No ISR-safe posting.
+- **No ISR-safe posting claim** at RobotOS level in Phase 5D.
+- **No mutex or thread abstraction.** `irq_lock` is not a mutex.
+- **No scheduler concurrency.** Core event path is single-threaded.
+- **No nesting policy enforcement** at RobotOS API level; backend handles nesting.
+- **Interrupt latency risk** if enter/exit holds interrupts long.
+- **Phase 5E** is the appropriate phase to wire this boundary into core queue.
+
+---
+
 ## Invariants
 
 - `robotos_platform_log.h` must remain free of Zephyr, k_*, GPIO, DTS,
   and board-specific types.
 - `LOG_MODULE_REGISTER` must live in the Zephyr backend, not in core.
+- `robotos_platform_critical.h` must not expose Zephyr types.
 - Host tests must compile and pass without Zephyr SDK or `ZEPHYR_BASE`.
 - Legacy `RobotOS_v1.0/src/` must never be compiled or included.
