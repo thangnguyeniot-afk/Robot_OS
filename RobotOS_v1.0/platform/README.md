@@ -1,4 +1,4 @@
-# RobotOS Platform Layer — Phase 5A
+# RobotOS Platform Layer — Phase 5C
 
 ## Purpose
 
@@ -102,6 +102,74 @@ void     robotos_platform_sleep_ms(uint32_t duration_ms);
 
 ---
 
+## Phase 5C Scope: Assert/Fault Boundary
+
+Phase 5C introduces the minimal platform fault/assert interface: severity-graded
+fault reporting and a non-panicking assert.
+
+### Boundary rule
+
+| Where | May include |
+|-------|-------------|
+| `devkit/` | `platform/robotos_platform_fault.h` |
+| `platform/robotos_platform_fault.h` | `<stdbool.h>` only |
+| `platform/zephyr/robotos_platform_fault_zephyr.c` | `robotos_platform_log.h` + optional `<zephyr/kernel.h>` |
+| `tests/host/robotos_platform_fault_host_stub.c` | Platform interface + stub header — no Zephyr |
+| `core/` | Must NOT include `robotos_platform_fault.h` — core uses return codes |
+
+### File structure
+
+```
+platform/
+├── robotos_platform_fault.h            ← portable interface (Phase 5C)
+├── zephyr/
+│   ├── robotos_platform_log_zephyr.c   ← log backend
+│   ├── robotos_platform_time_zephyr.c  ← time backend
+│   └── robotos_platform_fault_zephyr.c ← fault backend (Phase 5C)
+└── README.md
+
+tests/host/
+├── robotos_platform_log_host_stub.c    ← log no-op
+├── robotos_platform_time_host_stub.c   ← time fake stub (not yet wired)
+├── robotos_platform_fault_host_stub.h  ← test-inspection API (Phase 5C)
+├── robotos_platform_fault_host_stub.c  ← fault tracking stub (Phase 5C)
+└── test_robotos_platform_fault_contract.c ← 12 contract tests (Phase 5C)
+```
+
+### API summary
+
+```c
+typedef enum {
+    ROBOTOS_FAULT_INFO    = 0,
+    ROBOTOS_FAULT_WARNING = 1,
+    ROBOTOS_FAULT_ERROR   = 2,
+    ROBOTOS_FAULT_FATAL   = 3,
+} robotos_fault_severity_t;
+
+void robotos_platform_fault_report(robotos_fault_severity_t severity,
+                                   const char *module,
+                                   const char *message);
+
+bool robotos_platform_assert(bool condition,
+                              const char *module,
+                              const char *message);
+
+#define ROBOTOS_PLATFORM_ASSERT(cond, module, msg) ...
+```
+
+### Design rules
+
+- Core must NOT call fault APIs. Core errors are returned as status codes.
+- `ROBOTOS_PLATFORM_ASSERT(cond, ...)` reports ERROR severity and returns `false`
+  when `cond` is false. It does NOT panic.
+- `fault_report(FATAL, ...)` logs but does NOT panic unless
+  `ROBOTOS_PLATFORM_FAULT_PANIC_ON_FATAL` is defined at build time (default OFF).
+- Severity → log level: INFO→INFO, WARNING→WARN, ERROR→ERROR, FATAL→ERROR.
+- `devkit_fault.c` is a devkit-layer component and uses Zephyr logging directly.
+  It was not wired to the platform fault API (devkit is not portable core).
+
+---
+
 ## Backend Selection
 
 The backend is selected at build time by compiling the appropriate source:
@@ -120,7 +188,7 @@ The following platform services are candidates for future phases but are
 
 | Service | Candidate phase |
 |---|---|
-| Assert / fault handler | Phase 5C |
+| Assert / fault handler | Phase 5C — **done** |
 | Critical section / ISR lock | Future |
 | Memory policy | Future |
 | Thread / mutex | Future |

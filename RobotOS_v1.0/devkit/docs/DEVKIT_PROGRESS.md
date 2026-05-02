@@ -2525,9 +2525,218 @@ All new files are in `platform/` or `tests/host/`.
 
 ---
 
+---
+
+## Phase 5C — Platform Assert/Fault Boundary
+
+**Date:** 2026-05-02
+**Branch:** master
+**Baseline commit:** `4fd1a98` — "platform: add time boundary"
+
+---
+
+### Purpose
+
+Introduce the platform assert/fault boundary so that future modules can
+report fault conditions through a portable, backend-agnostic interface
+without calling Zephyr APIs directly.
+
+Pattern established in Phases 5A (logging) and 5B (time/sleep) is extended
+to fault reporting:
+
+- `platform/robotos_platform_fault.h` — portable interface, no Zephyr types
+- `platform/zephyr/robotos_platform_fault_zephyr.c` — routes via `robotos_platform_logf()`
+- `tests/host/robotos_platform_fault_host_stub.c` — tracking stub for contract tests
+- `tests/host/test_robotos_platform_fault_contract.c` — 12 contract tests
+
+`devkit_fault.c` was intentionally NOT wired to the platform fault API.
+It is a devkit-layer file that legitimately uses Zephyr logging directly
+(same reasoning as `devkit_runtime.c` owning its own `LOG_MODULE_REGISTER`).
+
+---
+
+### Files Added
+
+| File | Role |
+|------|------|
+| `platform/robotos_platform_fault.h` | Portable fault interface — `<stdbool.h>` only |
+| `platform/zephyr/robotos_platform_fault_zephyr.c` | Zephyr backend — routes via `robotos_platform_logf()`; optional `k_panic` on FATAL |
+| `tests/host/robotos_platform_fault_host_stub.h` | Test-inspection API for the host stub |
+| `tests/host/robotos_platform_fault_host_stub.c` | Host stub — tracks report_count, assert_fail_count, last_severity |
+| `tests/host/test_robotos_platform_fault_contract.c` | 12 contract tests for the host stub |
+
+### Files Modified
+
+| File | Change |
+|------|--------|
+| `devkit/CMakeLists.txt` | Added `robotos_platform_fault_zephyr.c` to target_sources |
+| `tests/host/CMakeLists.txt` | Added `robotos_platform_fault_contract_test` target + CTest entry |
+| `platform/README.md` | Added Phase 5C assert/fault boundary section |
+| `devkit/docs/DEVKIT_PROGRESS.md` | Added Phase 5C section (this file) |
+
+### Files Unchanged
+
+| File | Reason |
+|------|--------|
+| `devkit/src/devkit_fault.c` | Devkit-layer, legitimately owns Zephyr logging; not ported to platform API |
+| `devkit/src/devkit_runtime.c` | No fault calls needed in Phase 5C runtime |
+| `core/robotos_core.c` | Core must NOT call platform fault API — uses return codes |
+
+---
+
+### API
+
+```c
+typedef enum {
+    ROBOTOS_FAULT_INFO    = 0,
+    ROBOTOS_FAULT_WARNING = 1,
+    ROBOTOS_FAULT_ERROR   = 2,
+    ROBOTOS_FAULT_FATAL   = 3,
+} robotos_fault_severity_t;
+
+void robotos_platform_fault_report(robotos_fault_severity_t severity,
+                                   const char *module,
+                                   const char *message);
+
+bool robotos_platform_assert(bool condition,
+                              const char *module,
+                              const char *message);
+
+#define ROBOTOS_PLATFORM_ASSERT(cond, module, msg) ...
+```
+
+Assert behavior:
+- `cond == true`: returns true, no side effects.
+- `cond == false`: calls `fault_report(ERROR, module, msg)`, returns false. Never panics.
+
+Fault severity → log level: INFO→INFO, WARNING→WARN, ERROR/FATAL→ERROR.
+
+`ROBOTOS_PLATFORM_FAULT_PANIC_ON_FATAL` (compile switch, default OFF):
+When defined, `fault_report(FATAL, ...)` calls `k_panic()` after logging in
+the Zephyr backend. Assert never calls `k_panic()` regardless of this switch.
+
+---
+
+### Host Test Evidence
+
+**Commands (WSL Ubuntu, gcc 13.3.0):**
+
+```bash
+rm -rf build-host-core
+cmake -S RobotOS_v1.0/tests/host -B build-host-core
+cmake --build build-host-core
+ctest --test-dir build-host-core --output-on-failure
+```
+
+**Result:**
+
+```
+Test project /mnt/d/Robot_OS/build-host-core
+    Start 1: robotos_core_contract
+1/7 Test #1: robotos_core_contract ..................   Passed    0.01 sec
+    Start 2: robotos_event_queue_contract
+2/7 Test #2: robotos_event_queue_contract ...........   Passed    0.01 sec
+    Start 3: robotos_event_dispatcher_contract
+3/7 Test #3: robotos_event_dispatcher_contract ......   Passed    0.01 sec
+    Start 4: robotos_core_ingestion_contract
+4/7 Test #4: robotos_core_ingestion_contract ........   Passed    0.01 sec
+    Start 5: robotos_core_tick_policy_contract
+5/7 Test #5: robotos_core_tick_policy_contract ......   Passed    0.01 sec
+    Start 6: robotos_core_handler_policy_contract
+6/7 Test #6: robotos_core_handler_policy_contract ...   Passed    0.01 sec
+    Start 7: robotos_platform_fault_contract
+7/7 Test #7: robotos_platform_fault_contract ........   Passed    0.01 sec
+
+100% tests passed, 0 tests failed out of 7
+```
+
+7/7 pass. 12 fault contract test cases confirmed. All 6 prior tests unaffected.
+
+---
+
+### Zephyr Build Evidence
+
+**Command:** `west build -b stm32f411e_disco --pristine` (Zephyr v3.6.0, SDK 0.17.0)
+
+```
+Memory region         Used Size  Region Size  %age Used
+           FLASH:       27132 B       512 KB      5.18%
+             RAM:        9024 B       128 KB      6.88%
+```
+
+Build: **PASS** (142 objects, no warnings, no errors).
+
+FLASH unchanged vs Phase 5B: fault backend functions are dead code (nothing
+calls them yet); linker strips them. They will appear in FLASH once called
+by production devkit code.
+
+---
+
+### Runtime Evidence
+
+**Status: RUNTIME_PASS — hardware validated 2026-05-02.**
+
+#### Method
+
+`west flash` → soft reset via OpenOCD `reset run` → RTT buffer dumped via
+`dump_image` at `0x20000abf` (1024 B) → CFSR/HFSR/ODR read via `mrw`.
+
+#### RTT Boot Log (captured from ring buffer)
+
+```
+*** Booting Zephyr OS build v3.6.0 ***
+[00:00:00.000,000] <inf> devkit_fault: fault visibility active
+[00:00:00.000,000] <inf> devkit_build_info: RobotOS devkit build info:
+[00:00:00.000,000] <inf> devkit_build_info:   board=stm32f411e_disco
+[00:00:00.000,000] <inf> devkit_build_info:   zephyr=3.6.0
+[00:00:00.000,000] <inf> devkit_build_info:   build=May  2 2026 08:03:50
+[00:00:00.000,000] <inf> devkit_build_info:   tick_ms=500
+[00:00:00.000,000] <inf> devkit_build_info:   log_backend=RTT
+[00:00:00.000,000] <inf> robotos_platform: [robotos_core] RobotOS core init — version=4B-contract state=READY
+```
+
+- Build timestamp `May 2 2026 08:03:50` confirms Phase 5C binary running.
+- `devkit_fault: fault visibility active` — `devkit_fault_init()` runs correctly.
+- `robotos_platform: [robotos_core]` — platform log routing confirmed.
+- Buffer fills at boot (same pre-existing behavior as Phases 5A/5B).
+
+#### Fault Registers
+
+| Register | Address | Value | Interpretation |
+|----------|---------|-------|----------------|
+| CFSR | 0xE000ED28 | 0x0 | No configurable fault active |
+| HFSR | 0xE000ED2C | 0x0 | No hard fault active |
+| GPIOD_ODR | 0x40020C14 | 0x0 | LED in OFF state at sample time (normal toggle) |
+
+CFSR=0x0, HFSR=0x0 — no faults. Runtime behavior identical to Phase 5B.
+
+---
+
+### Legacy Isolation Confirmation
+
+No `RobotOS_v1.0/src/` file compiled, staged, or referenced.
+All new files are in `platform/` or `tests/host/`.
+
+---
+
+### Known Limitations
+
+- Fault API is present in devkit build but unused by production code.
+  No devkit module currently calls `robotos_platform_fault_report()` or
+  `ROBOTOS_PLATFORM_ASSERT()` in normal execution.
+- `ROBOTOS_PLATFORM_FAULT_PANIC_ON_FATAL` is not validated on hardware
+  (default OFF; calling k_panic deliberately is out of Phase 5C scope).
+- No fault injection test at runtime — stub inspection via host tests only.
+- Host time stub still not wired to any existing host test target.
+- Custom STM32F407VET6 board remains hardware-unvalidated.
+
+---
+
 ### Next Recommended Phase
 
-**Phase 5C — Platform Assert/Fault Boundary**
+**Phase 5D or Phase 6 — team decision required.**
 
-Introduce a portable `robotos_platform_assert()` / fault hook interface,
-following the same boundary pattern established in Phases 5A and 5B.
+Candidates:
+- Phase 5D: Platform critical section / ISR lock boundary
+- Phase 6A: First portable module using the platform boundary (e.g., a
+  diagnostics or watchdog module that calls fault_report/assert)

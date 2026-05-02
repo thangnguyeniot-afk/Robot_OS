@@ -1,5 +1,6 @@
 # tests/host/CMakeLists.txt
-# Phase 5A: isolated host build — core, queue, dispatcher, ingestion, tick policy, handler policy.
+# Phase 5C: isolated host build — core, queue, dispatcher, ingestion, tick policy, handler policy,
+#           platform fault contract.
 #
 # Platform logging: each target that compiles robotos_core.c also compiles
 # the no-op host stub (robotos_platform_log_host_stub.c) and adds the
@@ -117,3 +118,18 @@ add_test(NAME robotos_event_dispatcher_contract   COMMAND robotos_event_dispatch
 add_test(NAME robotos_core_ingestion_contract     COMMAND robotos_core_ingestion_contract_test)
 add_test(NAME robotos_core_tick_policy_contract   COMMAND robotos_core_tick_policy_contract_test)
 add_test(NAME robotos_core_handler_policy_contract COMMAND robotos_core_handler_policy_contract_test)
+
+# ---- Platform fault contract test (Phase 5C) --------------------------------
+# Tests the host stub inspection API. No core sources needed.
+# Includes tests/host/ for robotos_platform_fault_host_stub.h.
+add_executable(robotos_platform_fault_contract_test
+    test_robotos_platform_fault_contract.c
+    robotos_platform_fault_host_stub.c
+)
+
+target_include_directories(robotos_platform_fault_contract_test PRIVATE
+    "${PLATFORM_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+)
+
+add_test(NAME robotos_platform_fault_contract COMMAND robotos_platform_fault_contract_test)
