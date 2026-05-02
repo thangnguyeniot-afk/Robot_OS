@@ -264,6 +264,20 @@ platform header — they exist only in the host test environment.
 
 ---
 
+---
+
+## Phase 5E — Critical Boundary Applied to Core
+
+Phase 5E begins using `robotos_platform_critical_enter`/`exit` from within
+`robotos_core.c` for short state transitions (post, init, tick count, snapshot,
+getters, handler table). Handler callbacks execute outside any critical section.
+
+Platform critical remains a low-level IRQ-masking primitive. Misuse (holding
+long, nesting deep, logging inside) will affect interrupt latency. See
+`core/README.md Phase 5E` for the full protected/unprotected breakdown.
+
+---
+
 ## Invariants
 
 - `robotos_platform_log.h` must remain free of Zephyr, k_*, GPIO, DTS,

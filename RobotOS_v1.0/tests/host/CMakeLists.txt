@@ -1,6 +1,7 @@
 # tests/host/CMakeLists.txt
-# Phase 5D: isolated host build — core, queue, dispatcher, ingestion, tick policy, handler policy,
+# Phase 5E: isolated host build — core, queue, dispatcher, ingestion, tick policy, handler policy,
 #           platform fault contract, platform critical section contract,
+#           core critical boundary contract,
 #           scheduler admission policy, scheduler backpressure policy,
 #           scheduler producer throttle policy.
 #
@@ -35,8 +36,13 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CORE_DIR    "${CMAKE_CURRENT_SOURCE_DIR}/../../core")
 set(PLATFORM_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../platform")
 
-# Host no-op platform log backend — compiled into any target that includes core.
-set(PLATFORM_HOST_STUB "${CMAKE_CURRENT_SOURCE_DIR}/robotos_platform_log_host_stub.c")
+# Host platform stubs — compiled into any target that includes robotos_core.c.
+# Phase 5E: robotos_core.c now calls robotos_platform_critical_enter/exit,
+# so the critical stub must be linked alongside the log stub for all core tests.
+set(PLATFORM_HOST_STUB
+    "${CMAKE_CURRENT_SOURCE_DIR}/robotos_platform_log_host_stub.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/robotos_platform_critical_host_stub.c"
+)
 
 # Common core sources shared across tests that include robotos_core.h dependency chain.
 set(CORE_SRCS
@@ -57,6 +63,7 @@ add_executable(robotos_core_contract_test
 target_include_directories(robotos_core_contract_test PRIVATE
     "${CORE_DIR}"
     "${PLATFORM_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
 # ---- Event queue contract test (Phase 4D) -----------------------------------
@@ -91,6 +98,7 @@ add_executable(robotos_core_ingestion_contract_test
 target_include_directories(robotos_core_ingestion_contract_test PRIVATE
     "${CORE_DIR}"
     "${PLATFORM_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
 # ---- Tick policy contract test (Phase 4G) -----------------------------------
@@ -103,6 +111,7 @@ add_executable(robotos_core_tick_policy_contract_test
 target_include_directories(robotos_core_tick_policy_contract_test PRIVATE
     "${CORE_DIR}"
     "${PLATFORM_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
 # ---- Handler policy contract test (Phase 4H) --------------------------------
@@ -115,6 +124,7 @@ add_executable(robotos_core_handler_policy_contract_test
 target_include_directories(robotos_core_handler_policy_contract_test PRIVATE
     "${CORE_DIR}"
     "${PLATFORM_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
 enable_testing()
@@ -154,6 +164,24 @@ target_include_directories(robotos_platform_critical_contract_test PRIVATE
 
 add_test(NAME robotos_platform_critical_contract COMMAND robotos_platform_critical_contract_test)
 
+# ---- Core critical boundary contract test (Phase 5E) -----------------------
+# Tests that core state transitions are balanced enter/exit and that
+# handler callbacks run with depth == 0 (no critical section held).
+# Needs all three core sources + platform log stub + platform critical stub.
+add_executable(robotos_core_critical_boundary_contract_test
+    test_robotos_core_critical_boundary_contract.c
+    ${CORE_SRCS}
+    ${PLATFORM_HOST_STUB}
+)
+
+target_include_directories(robotos_core_critical_boundary_contract_test PRIVATE
+    "${CORE_DIR}"
+    "${PLATFORM_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+)
+
+add_test(NAME robotos_core_critical_boundary_contract COMMAND robotos_core_critical_boundary_contract_test)
+
 # ---- Scheduler admission policy contract test (Phase 4I) --------------------
 # Tests admission gate in robotos_core_post_event().
 # Needs all three core sources + platform log stub.
@@ -166,6 +194,7 @@ add_executable(robotos_scheduler_admission_contract_test
 target_include_directories(robotos_scheduler_admission_contract_test PRIVATE
     "${CORE_DIR}"
     "${PLATFORM_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
 add_test(NAME robotos_scheduler_admission_contract COMMAND robotos_scheduler_admission_contract_test)
@@ -182,6 +211,7 @@ add_executable(robotos_scheduler_backpressure_contract_test
 target_include_directories(robotos_scheduler_backpressure_contract_test PRIVATE
     "${CORE_DIR}"
     "${PLATFORM_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
 add_test(NAME robotos_scheduler_backpressure_contract COMMAND robotos_scheduler_backpressure_contract_test)
@@ -198,6 +228,7 @@ add_executable(robotos_scheduler_throttle_contract_test
 target_include_directories(robotos_scheduler_throttle_contract_test PRIVATE
     "${CORE_DIR}"
     "${PLATFORM_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
 add_test(NAME robotos_scheduler_throttle_contract COMMAND robotos_scheduler_throttle_contract_test)

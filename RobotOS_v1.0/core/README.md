@@ -269,7 +269,7 @@ at the time of the call.
 - **No dynamic budget.** Budget is a compile-time constant.
 - **No priority or fairness.** Strict FIFO from queue.
 - **No concurrency/ISR safety.** Single-threaded only.
-- **No platform critical section.** Revisit when RTOS threads are introduced.
+- **Platform critical section added in Phase 5E** — see Phase 5E section below.
 - **No timer/deadline integration.** Time-based scheduling is out of scope.
 
 ---
@@ -348,8 +348,60 @@ consistent with `admission_accepted_count` and `admission_rejected_count`.
 - **No priority or fairness.** All producers are throttled equally.
 - **No dynamic budget.** Throttle threshold is `ROBOTOS_CORE_MAX_EVENTS_PER_TICK`.
 - **No producer registry.** No per-producer accounting.
-- **No concurrency/ISR safety.** Single-threaded only.
+- **No concurrency/ISR safety.** Single-threaded only in Phase 4K.
 - **No hardware runtime required.** Policy proven by host tests only.
 - **post_event unchanged.** Raw ingestion path still allows queue-full/drop for
   producers that do not need throttle protection.
+
+---
+
+## Phase 5E — Apply Critical Boundary to Core Queue State
+
+Phase 5E wires `robotos_platform_critical_enter`/`exit` into selected short
+core state transitions. This is the first step toward a concurrent-safe core;
+it does NOT claim full thread-safety or ISR-safe posting.
+
+### What is Protected
+
+Short state transitions held under a single critical section per operation:
+
+| API | Protected state |
+|-----|----------------|
+| `post_event_internal()` | state check, admission, throttle check, queue push, all counters |
+| `robotos_core_init()` | core_state, core_tick_count, core_init_count, handler table clear |
+| `robotos_core_tick()` | state check and tick_count increment only |
+| `robotos_core_dispatch_events()` | state check only |
+| `robotos_core_snapshot()` | all counter/state reads as one coherent snapshot |
+| All individual getters | brief lock around each read |
+| Handler registration/unregistration/has/count | table search and mutation |
+
+### What is NOT Protected
+
+| Item | Reason |
+|------|--------|
+| Registered handler callback | Must run outside lock — Phase 5E hard rule |
+| `robotos_platform_logf` / `CORE_LOG_*` | Must run outside lock |
+| `robotos_event_dispatcher_dispatch_all` | Calls handler internally; cannot lock whole dispatch |
+| Dispatcher counters (dispatched_count, handler_error_count) | Updated by dispatcher outside lock — Phase 5F scope |
+| Routing handler's handler table read | Lock not held during dispatch — Phase 5F scope |
+
+### Critical Rule
+
+**No critical section is held while a registered event handler callback executes.**
+
+Proven by Phase 5E host test TC10: handler observes
+`robotos_platform_critical_host_current_depth() == 0` during invocation.
+
+### Current Limitation
+
+This is NOT a full thread-safe or ISR-safe guarantee. The dispatcher pops
+from the queue and calls the handler in the same unlocked region. A producer
+posting concurrently with a tick dispatch could still observe a race on queue
+state and dispatcher counters. Phase 5F (Dispatcher Pop/Handler Split) is
+the appropriate follow-on to address this.
+
+### Semantics Unchanged
+
+All existing public API return values, counters, and behavior are identical
+to pre-5E. Phase 5E is a structural improvement only.
 

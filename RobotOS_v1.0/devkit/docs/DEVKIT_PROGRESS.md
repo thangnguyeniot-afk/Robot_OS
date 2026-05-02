@@ -4261,6 +4261,159 @@ Critical section API is platform-only. No core event path changed.
 **Team decision required.**
 
 Candidates:
-- **Phase 5E** — Apply Critical Boundary to Core Queue (wire `enter`/`exit` into `post_event`/`tick`)
+- **Phase 5E** — Apply Critical Boundary to Core Queue State ← **completed**
 - **Phase 4L** — Scheduler Retry/Backoff Policy Stub (host-only, core layer)
+- **Phase 6F** — Devkit Mixed Event Policy Smoke
+
+---
+
+---
+
+## Phase 5E — Apply Critical Boundary to Core Queue State
+
+**Date:** 2026-05-02
+**Branch:** master
+**Baseline commit:** `4187bb3` — platform critical section boundary (Phase 5D)
+
+---
+
+### Purpose
+
+Wire `robotos_platform_critical_enter`/`exit` into short core state transitions
+to protect queue/counter/handler-table mutations and reads. Handler callbacks
+continue to execute outside any critical section. This is the first step toward
+a concurrent-safe core, but does NOT claim full thread-safety or ISR-safe posting.
+
+Option A chosen for tick dispatch: `robotos_core_tick()` locks only
+`tick_count` increment; the dispatcher dispatch path (which calls handlers) is
+left outside the lock. The dispatcher/handler pop-split is Phase 5F scope.
+
+---
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `core/robotos_core.c` | Add `#include "robotos_platform_critical.h"`; apply enter/exit to post_event_internal, init, tick, dispatch_events, snapshot, all getters, handler table ops |
+| `core/README.md` | Phase 5E section: protected/unprotected table, critical rule, limitations |
+| `platform/README.md` | Short note: Phase 5E begins using platform critical from core |
+| `tests/host/CMakeLists.txt` | `PLATFORM_HOST_STUB` extended to include critical stub; all CORE_SRCS targets get `CMAKE_CURRENT_SOURCE_DIR`; new `robotos_core_critical_boundary_contract_test` |
+| `tests/host/test_robotos_core_critical_boundary_contract.c` | 13 contract test cases |
+| `devkit/logs/phase_5E_rtt_2026-05-02.txt` | RTT evidence |
+| `tests/host/logs/phase_5E_host_2026-05-02.log` | Host evidence |
+
+### Files Unchanged (confirmed)
+
+| File | Reason |
+|------|--------|
+| `core/robotos_core.h` | No API change — behavior unchanged |
+| `core/robotos_event_queue.*` | No queue change |
+| `core/robotos_event_dispatcher.*` | No dispatcher change |
+| `devkit/src/devkit_runtime.c` | No runtime change |
+| `platform/robotos_platform_critical.h` | No API change |
+
+---
+
+### Lock Boundary Summary
+
+**Protected (short critical section per operation):**
+- `post_event_internal()` — state check, admission, throttle, queue push, counter updates
+- `robotos_core_init()` — core_state, tick_count, init_count, handler table clear
+- `robotos_core_tick()` — state check and tick_count increment only
+- `robotos_core_dispatch_events()` — state check only
+- `robotos_core_snapshot()` — all counter/state reads (coherent)
+- All individual getters — brief lock per read
+- Handler register/unregister/has/count — table search and mutation
+
+**NOT protected (single-threaded assumption remains):**
+- Registered handler callback — hard rule: no lock held
+- `CORE_LOG_*` / `robotos_platform_logf` — must be outside lock
+- `robotos_event_dispatcher_dispatch_all` — calls handler internally
+- Dispatcher internal counters (dispatched_count, handler_error_count)
+- Routing handler's handler table read during dispatch
+
+**Critical rule proved by TC10:**
+Handler sees `robotos_platform_critical_host_current_depth() == 0` during invocation.
+
+---
+
+### Host Test Evidence
+
+**Result:** 12/12 suites pass (11 prior + 1 new, 13 cases).
+
+**Log:** `tests/host/logs/phase_5E_host_2026-05-02.log`
+
+New suite (`robotos_core_critical_boundary_contract`), 13 test cases:
+- TC01: initial counts zero
+- TC02: snapshot(NULL) before lock
+- TC03: init balanced enter/exit
+- TC04–TC05: post_event/try_post_event balanced
+- TC06: invalid post balanced
+- TC07: throttled try_post balanced
+- TC08: snapshot balanced
+- TC09: register/unregister balanced
+- **TC10: CRITICAL — handler sees depth=0** (no lock held during callback)
+- TC11: dispatch_events — handler sees depth=0
+- TC12: 5x post+tick stress, depth always 0
+- TC13: repeated init balanced, does not reset event counters
+
+---
+
+### Zephyr Build Evidence
+
+```
+Build: west build -b stm32f411e_disco RobotOS_v1.0/devkit/ --pristine
+Board: stm32f411e_disco
+Zephyr: v3.6.0
+
+Memory:
+  FLASH: 29080 / 524288 bytes  (5.55%)
+  RAM:   12096 / 131072 bytes  (9.23%)
+
+Errors: 0
+```
+
+Delta from Phase 5D (29016 B flash): +64 B for additional enter/exit call sites.
+
+---
+
+### Runtime Evidence
+
+**RTT log:** `devkit/logs/phase_5E_rtt_2026-05-02.txt`
+
+`irq_lock`/`irq_unlock` now called from core on every post/tick/snapshot.
+No MemManage fault. No hard fault. No panic. Phase 6E throttle behavior unchanged.
+
+```
+CFSR = 0x0    (no configurable fault)
+HFSR = 0x0    (no hard fault)
+```
+
+---
+
+### Legacy Isolation Confirmation
+
+No `RobotOS_v1.0/src/` file compiled, staged, or referenced.
+Core changes are structural; no semantic change to event policy.
+
+---
+
+### Known Limitations
+
+- **Not full thread-safe.** Dispatcher pop and handler execution are in the same unlocked region.
+- **No ISR-safe posting claim.** `post_event` is now shorter under lock but concurrent ISR posting is not proven.
+- **Dispatcher counters not protected.** `dispatched_count` and `handler_error_count` updated by dispatcher outside lock.
+- **Routing handler reads table without lock.** Safe under single-threaded devkit assumption; Phase 5F scope.
+- **No scheduler concurrency.** Devkit loop remains single-threaded.
+- **No custom board validation.** STM32F407VET6 remains unvalidated.
+
+---
+
+### Next Recommended Phase
+
+**Team decision required.**
+
+Candidates:
+- **Phase 5F** — Dispatcher Pop/Handler Split (pop event under lock, call handler outside lock)
+- **Phase 4L** — Scheduler Retry/Backoff Policy Stub (host-only)
 - **Phase 6F** — Devkit Mixed Event Policy Smoke
