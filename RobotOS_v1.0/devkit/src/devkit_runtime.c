@@ -8,10 +8,11 @@
  *           Proves burst/backpressure behavior.
  * Phase 6C: burst replaced with queue-full/drop smoke (arg0=0x6C, 17 events).
  *           Proves ERR_FULL path and dropped_count semantics.
- * Phase 6D: replaced with invalid/rejection smoke (arg0=0x6D, 2 invalid events).
- *           Posts ROBOTOS_EVENT_NONE and a reserved type (99).
- *           Proves ERR_INVALID_ARG + admission_rejected_count, NOT dropped_count.
- *           Handler registered for USER but never called (no valid events posted).
+ * Phase 6D: invalid/rejection smoke (arg0=0x6D, NONE + type=99).
+ *           Proves ERR_INVALID_ARG + admission_rejected, not dropped_count.
+ * Phase 6E: throttle smoke (arg0=0x6E, 3 valid USER events via try_post_event).
+ *           seq=1 OK, seq=2 OK (creates throttle condition), seq=3 ERR_THROTTLED.
+ *           Proves throttle path: pending > budget, queue not full, no drop.
  */
 
 #include "devkit_runtime.h"
@@ -26,46 +27,62 @@
 LOG_MODULE_REGISTER(devkit_runtime, LOG_LEVEL_INF);
 
 /* --------------------------------------------------------------------------
- * Phase 6D: invalid / rejection smoke
+ * Phase 6E: throttled producer smoke
  *
- * Post 2 invalid events once at init:
- *   1. ROBOTOS_EVENT_NONE  (type=0)         -> ERR_INVALID_ARG
- *   2. reserved type 99                     -> ERR_INVALID_ARG
- * Both are rejected at admission gate before touching the queue.
- * Expected after posts:
- *   invalid_arg_count = 2
- *   rejected          = 2   (admission_rejected_count)
- *   pending           = 0
- *   accepted          = 0
- *   dropped           = 0
- *   dispatched        = 0
- *   handler_called    = 0   (USER handler registered but never invoked)
- *   unhandled         = 0
- *   backpressure      = false
- * Final summary logged once after tick 2.
+ * Use robotos_core_try_post_event() for all three attempts:
+ *   seq=1: OK  -> pending=1, budget=1, throttle=false
+ *   seq=2: OK  -> pending=2 > budget=1, throttle=true (but not full)
+ *   seq=3: ERR_THROTTLED -> pending stays 2, producer_throttled_count++
+ *
+ * Handler sees seq=1 and seq=2 only (seq=3 never enters queue).
+ * One event per tick drained; after 2 ticks: pending=0, throttle=false.
+ * Final summary logged once after handler_called_count == 2.
  * -------------------------------------------------------------------------- */
 
-#define DEVKIT_PHASE6D_MARKER         0x6Du
-#define DEVKIT_PHASE6D_ATTEMPT_COUNT  2u
-#define DEVKIT_PHASE6D_RESERVED_TYPE  ((robotos_event_type_t)99)
-#define DEVKIT_PHASE6D_SUMMARY_TICK   2u
+#define DEVKIT_PHASE6E_MARKER         0x6Eu
+#define DEVKIT_PHASE6E_ATTEMPT_COUNT  3u
+#define DEVKIT_PHASE6E_EXPECTED_OK    2u
 
-static uint32_t s_rejection_attempted_count;
-static uint32_t s_rejection_invalid_arg_count;
-static uint32_t s_rejection_other_error_count;
-static uint32_t s_rejection_handler_called_count;
-static bool     s_rejection_summary_logged;
+static uint32_t s_throttle_attempted_count;
+static uint32_t s_throttle_ok_count;
+static uint32_t s_throttle_throttled_count;
+static uint32_t s_throttle_full_count;
+static uint32_t s_throttle_other_error_count;
+static uint32_t s_throttle_handler_called_count;
+static uint32_t s_throttle_unexpected_seq_count;
+static bool     s_throttle_summary_logged;
 
-static robotos_core_status_t devkit_rejection_handler(
+static robotos_core_status_t devkit_throttle_handler(
 	const robotos_event_t *event, void *user_context)
 {
-	/* This handler should NEVER be called in Phase 6D — no valid events posted */
 	(void)user_context;
-	s_rejection_handler_called_count++;
-	LOG_ERR("Phase 6D: handler unexpectedly called! type=%d arg0=0x%x",
-		event ? (int)event->type : -1,
-		event ? (unsigned)event->arg0 : 0u);
-	return ROBOTOS_CORE_ERR_INVALID_STATE;
+	if (event == NULL) {
+		return ROBOTOS_CORE_ERR_NULL;
+	}
+	if (event->type != ROBOTOS_EVENT_USER) {
+		LOG_ERR("Phase 6E: unexpected type=%d", (int)event->type);
+		s_throttle_unexpected_seq_count++;
+		return ROBOTOS_CORE_ERR_INVALID_ARG;
+	}
+	if (event->arg0 != DEVKIT_PHASE6E_MARKER) {
+		LOG_ERR("Phase 6E: unexpected arg0=0x%x", (unsigned)event->arg0);
+		s_throttle_unexpected_seq_count++;
+		return ROBOTOS_CORE_ERR_INVALID_ARG;
+	}
+
+	uint32_t seq = (uint32_t)event->arg1;
+
+	/* seq=3 should never reach handler — it was throttled before enqueue */
+	if (seq == 3u) {
+		LOG_ERR("Phase 6E: seq=3 reached handler (should have been throttled)");
+		s_throttle_unexpected_seq_count++;
+		return ROBOTOS_CORE_ERR_INVALID_STATE;
+	}
+
+	s_throttle_handler_called_count++;
+	LOG_INF("Phase 6E: handled seq=%u count=%u",
+		seq, s_throttle_handler_called_count);
+	return ROBOTOS_CORE_OK;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -83,40 +100,35 @@ int devkit_runtime_init(void)
 		LOG_ERR("Core init failed: %d -- continuing", (int)core_ret);
 	}
 
-	/* Phase 6D: register USER handler — should never be called this phase */
+	/* Phase 6E: register USER handler */
 	core_ret = robotos_core_register_event_handler(ROBOTOS_EVENT_USER,
-						       devkit_rejection_handler,
+						       devkit_throttle_handler,
 						       NULL);
 	if (core_ret != ROBOTOS_CORE_OK) {
-		LOG_ERR("Phase 6D handler registration failed: %d",
+		LOG_ERR("Phase 6E handler registration failed: %d",
 			(int)core_ret);
 	}
 
-	/* Phase 6D: post 2 invalid events */
-	const struct {
-		robotos_event_type_t type;
-		uint32_t             arg1;
-		const char          *label;
-	} invalid_events[DEVKIT_PHASE6D_ATTEMPT_COUNT] = {
-		{ ROBOTOS_EVENT_NONE,              1u, "NONE"     },
-		{ DEVKIT_PHASE6D_RESERVED_TYPE,    2u, "type=99"  },
-	};
-
-	for (uint32_t i = 0u; i < DEVKIT_PHASE6D_ATTEMPT_COUNT; i++) {
+	/* Phase 6E: post 3 valid USER events via try_post_event */
+	for (uint32_t i = 0u; i < DEVKIT_PHASE6E_ATTEMPT_COUNT; i++) {
 		robotos_event_t ev = {
-			.type           = invalid_events[i].type,
+			.type           = ROBOTOS_EVENT_USER,
 			.timestamp_tick = 0u,
-			.arg0           = DEVKIT_PHASE6D_MARKER,
-			.arg1           = invalid_events[i].arg1,
+			.arg0           = DEVKIT_PHASE6E_MARKER,
+			.arg1           = (uint32_t)(i + 1u),
 		};
-		s_rejection_attempted_count++;
-		core_ret = robotos_core_post_event(&ev);
-		if (core_ret == ROBOTOS_CORE_ERR_INVALID_ARG) {
-			s_rejection_invalid_arg_count++;
+		s_throttle_attempted_count++;
+		core_ret = robotos_core_try_post_event(&ev);
+		if (core_ret == ROBOTOS_CORE_OK) {
+			s_throttle_ok_count++;
+		} else if (core_ret == ROBOTOS_CORE_ERR_THROTTLED) {
+			s_throttle_throttled_count++;
+		} else if (core_ret == ROBOTOS_CORE_ERR_FULL) {
+			s_throttle_full_count++;
 		} else {
-			s_rejection_other_error_count++;
-			LOG_ERR("Phase 6D: post[%s] unexpected result=%d",
-				invalid_events[i].label, (int)core_ret);
+			s_throttle_other_error_count++;
+			LOG_ERR("Phase 6E: try_post[%u] unexpected err=%d",
+				i + 1u, (int)core_ret);
 		}
 	}
 
@@ -124,23 +136,22 @@ int devkit_runtime_init(void)
 	{
 		robotos_core_snapshot_t snap;
 		robotos_core_snapshot(&snap);
-		LOG_INF("Phase 6D post summary: "
-			"attempted=%u inv_arg=%u other_err=%u "
-			"pending=%u accepted=%u rejected=%u "
-			"dropped=%u dispatched=%u herr=%u "
-			"unhandled=%u bp=%d handler_called=%u",
-			s_rejection_attempted_count,
-			s_rejection_invalid_arg_count,
-			s_rejection_other_error_count,
+		LOG_INF("Phase 6E post summary: "
+			"attempted=%u ok=%u throttled=%u full=%u other=%u "
+			"pending=%u accepted=%u rejected=%u dropped=%u "
+			"prod_throttled=%u bp=%d th_active=%d",
+			s_throttle_attempted_count,
+			s_throttle_ok_count,
+			s_throttle_throttled_count,
+			s_throttle_full_count,
+			s_throttle_other_error_count,
 			snap.pending_event_count,
 			snap.admission_accepted_count,
 			snap.admission_rejected_count,
 			snap.dropped_event_count,
-			snap.dispatched_event_count,
-			snap.handler_error_count,
-			snap.unhandled_event_count,
+			snap.producer_throttled_count,
 			(int)snap.backpressure_active,
-			s_rejection_handler_called_count);
+			(int)snap.producer_throttle_active);
 	}
 
 	LOG_INF("RobotOS devkit starting -- board: %s", CONFIG_BOARD);
@@ -174,29 +185,29 @@ void devkit_runtime_run(void)
 			LOG_ERR("Core tick failed: %d", (int)core_ret);
 		}
 
-		/* Phase 6D: log final summary once after DEVKIT_PHASE6D_SUMMARY_TICK */
-		if (tick_count >= DEVKIT_PHASE6D_SUMMARY_TICK &&
-		    !s_rejection_summary_logged) {
+		/* Phase 6E: log final summary once after both accepted events handled */
+		if (s_throttle_handler_called_count >= DEVKIT_PHASE6E_EXPECTED_OK &&
+		    !s_throttle_summary_logged) {
 			robotos_core_snapshot_t snap;
 			robotos_core_snapshot(&snap);
-			LOG_INF("Phase 6D final summary: "
-				"attempted=%u inv_arg=%u other_err=%u "
-				"pending=%u accepted=%u rejected=%u "
-				"dropped=%u dispatched=%u herr=%u "
-				"unhandled=%u bp=%d handler_called=%u",
-				s_rejection_attempted_count,
-				s_rejection_invalid_arg_count,
-				s_rejection_other_error_count,
+			LOG_INF("Phase 6E final summary: "
+				"handled=%u pending=%u dispatched=%u "
+				"accepted=%u rejected=%u dropped=%u "
+				"prod_throttled=%u herr=%u unhandled=%u "
+				"bp=%d th_active=%d unexpected=%u",
+				s_throttle_handler_called_count,
 				snap.pending_event_count,
+				snap.dispatched_event_count,
 				snap.admission_accepted_count,
 				snap.admission_rejected_count,
 				snap.dropped_event_count,
-				snap.dispatched_event_count,
+				snap.producer_throttled_count,
 				snap.handler_error_count,
 				snap.unhandled_event_count,
 				(int)snap.backpressure_active,
-				s_rejection_handler_called_count);
-			s_rejection_summary_logged = true;
+				(int)snap.producer_throttle_active,
+				s_throttle_unexpected_seq_count);
+			s_throttle_summary_logged = true;
 		}
 
 		robotos_platform_sleep_ms(DEVKIT_TICK_MS);

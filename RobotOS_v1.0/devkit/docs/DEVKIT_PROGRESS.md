@@ -3933,6 +3933,180 @@ Core changes are additive (new API + counter). Existing `post_event` semantics u
 **Team decision required.**
 
 Candidates:
-- **Phase 6E** — Devkit Throttled Producer Smoke (exercise `try_post_event` on hardware)
+- **Phase 6E** — Devkit Throttled Producer Smoke ← **completed**
 - **Phase 5D** — Platform Critical Section / ISR Lock Boundary
 - **Phase 4L** — Scheduler Retry/Backoff Policy Stub
+
+---
+
+---
+
+## Phase 6E — Devkit Throttled Producer Smoke
+
+**Date:** 2026-05-02
+**Branch:** master
+**Baseline commit:** `5240fae` — core scheduler producer throttle policy (Phase 4K)
+
+---
+
+### Purpose
+
+Exercise `robotos_core_try_post_event()` on real hardware to prove the
+Phase 4K throttle contract on the devkit. Post 3 valid USER events using
+`try_post_event`: seq=1 and seq=2 are accepted; seq=3 is returned
+`ERR_THROTTLED` because pending=2 exceeds the per-tick budget of 1 and the
+queue is not full. Seq=3 never enters the queue and is never dispatched to
+the handler. Tick budget drains seq=1 and seq=2 over two ticks.
+
+No core policy changes. No platform changes. Devkit-only modification.
+
+---
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `devkit/src/devkit_runtime.c` | Replaced Phase 6D rejection smoke with Phase 6E throttle smoke: 3 valid USER events via `try_post_event` (arg0=0x6E, seq 1..3); handler validates arg0/seq; post summary; final summary after 2 handled |
+
+### Files Unchanged (confirmed)
+
+| File | Reason |
+|------|--------|
+| `core/robotos_core.h` | No core change |
+| `core/robotos_core.c` | No core change |
+| `platform/` | No platform change |
+| `devkit/prj.conf` | RTT buffer 4096 B sufficient |
+
+---
+
+### Throttle Event Design
+
+```
+DEVKIT_PHASE6E_ATTEMPT_COUNT = 3
+DEVKIT_PHASE6E_MARKER        = 0x6E
+DEVKIT_PHASE6E_EXPECTED_OK   = 2   (seq=1 and seq=2)
+
+All 3 posts use robotos_core_try_post_event() — throttle-aware path.
+
+seq=1: pending=0 -> 1, (1 == budget=1) -> throttle=false -> OK
+seq=2: pending=1 -> 2, (2 > budget=1) -> throttle activates  -> OK (event accepted, transition INTO throttle)
+seq=3: pending=2 > budget=1, queue not full -> ERR_THROTTLED  -> prod_throttled_count++
+
+Handler sees seq=1 and seq=2 only. seq=3 never entered queue.
+```
+
+---
+
+### Expected Policy
+
+- `try_post_event` applies throttle after admission, before queue push
+- Throttle condition: pending > ROBOTOS_CORE_MAX_EVENTS_PER_TICK AND NOT queue_is_full
+- seq=1 accepted: pending was 0 <= budget=1 -> no throttle
+- seq=2 accepted: pending was 1 == budget=1 -> not strictly > budget -> accepted; post-accept pending=2 > budget
+- seq=3 throttled: pending=2 > budget=1, queue not full -> ERR_THROTTLED
+- `dropped_count=0`, `admission_rejected_count=0` — throttle is distinct from both
+- Tick drains one event per tick: seq=1 at tick 0, seq=2 at tick 1
+- After tick 1: pending=0, throttle_active=false, bp=false
+
+---
+
+### Host Test Evidence
+
+**Result:** 10/10 suites pass — no regression.
+
+**Log:** `tests/host/logs/phase_6E_host_2026-05-02.log`
+
+Suites: 4C Core Init, 4D Queue, 4E Dispatcher, 4F Ingestion, 4G Tick Policy,
+4H Handler Policy, 5C Platform Fault, 4I Admission, 4J Backpressure, 4K Throttle.
+
+---
+
+### Zephyr Build Evidence
+
+```
+Build: west build -b stm32f411e_disco RobotOS_v1.0/devkit/ --pristine
+Board: stm32f411e_disco
+Zephyr: v3.6.0
+Timestamp: May 2 2026 14:20:14
+
+Memory:
+  FLASH: 28940 / 524288 bytes  (5.52%)
+  RAM:   12096 / 131072 bytes  (9.23%)
+
+Errors: 0
+```
+
+Delta from Phase 4K Zephyr build (28848 B): +92 B for throttle smoke handler and counters.
+
+---
+
+### Runtime RTT Evidence
+
+**RTT log:** `devkit/logs/phase_6E_rtt_2026-05-02.txt`
+
+**Capture:** `openocd reset run -> sleep 3000 -> halt -> dump_image 0x200009c8 4096`
+
+**Post summary (at init):**
+```
+Phase 6E post summary: attempted=3 ok=2 throttled=1 full=0 other=0
+                       pending=2 accepted=2 rejected=0 dropped=0
+                       prod_throttled=1 bp=1 th_active=1
+```
+
+**Handler evidence:**
+```
+[00:00:00.000] Phase 6E: handled seq=1 count=1   (tick 0)
+[00:00:00.500] Phase 6E: handled seq=2 count=2   (tick 1)
+```
+seq=3 not handled — throttled before entering queue.
+
+**Final summary (logged at tick 1, after count==2):**
+```
+Phase 6E final summary: handled=2 pending=0 dispatched=2
+                        accepted=2 rejected=0 dropped=0
+                        prod_throttled=1 herr=0 unhandled=0
+                        bp=0 th_active=0 unexpected=0
+```
+
+Post-drain ticks (2..6): clean, no throttle events, no errors.
+
+---
+
+### Fault Register Check
+
+```
+CFSR = 0x0    (no configurable fault)
+HFSR = 0x0    (no hard fault)
+```
+
+No faults. Runtime stable across full 3-second capture window.
+
+---
+
+### Legacy Isolation Confirmation
+
+No `RobotOS_v1.0/src/` file compiled, staged, or referenced.
+Throttle smoke is devkit-only. No core policy changes.
+`prj.conf` unchanged from Phase 6A (`CONFIG_SEGGER_RTT_BUFFER_SIZE_UP=4096`).
+
+---
+
+### Known Limitations
+
+- Throttle smoke only; queue-full/drop (6C) and invalid/rejection (6D) are separate phases.
+- No retry/backoff for throttled events; caller handles `ERR_THROTTLED`.
+- No producer registry; all `try_post_event` callers throttled equally.
+- No periodic producer; 3 events posted once at init.
+- No real scheduler.
+- Custom STM32F407VET6 board remains hardware-unvalidated.
+
+---
+
+### Next Recommended Phase
+
+**Team decision required.**
+
+Candidates:
+- **Phase 4L** — Scheduler Retry/Backoff Policy Stub (host-only, core layer)
+- **Phase 5D** — Platform Critical Section / ISR Lock Boundary
+- **Phase 6F** — Devkit Mixed Event Policy Smoke (valid + invalid + throttled + full in one sequence)
