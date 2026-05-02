@@ -611,3 +611,93 @@ the appropriate follow-on to address this.
 
 All existing public API return values, counters, and behavior are identical
 to pre-5E. Phase 5E is a structural improvement only.
+
+---
+
+## Phase 4L — Scheduler Retry/Backoff Policy Stub
+
+Phase 4L adds a scheduler retry/backoff policy stub as an opt-in API.
+This is a **host-only stub phase** — retry loop is tight (no actual backoff delay)
+and policy is proven by host tests alone. No devkit runtime is required.
+
+### New API: Retry Policy Configuration
+
+\`\`\`c
+robotos_core_status_t robotos_core_set_retry_policy(
+    bool    retry_enabled,
+    bool    retry_on_full_enabled,
+    uint32_t max_retry_attempts,
+    uint32_t backoff_delay_ms
+);
+\`\`\`
+
+Configures retry behavior for \`robotos_core_post_event_with_retry()\`:
+
+| Parameter | Meaning | Default |
+|-----------|---------|----------|
+| \`retry_enabled\` | If true, retry on ERR_THROTTLED. If false, \`retry_on_full_enabled\` is also ignored. | \`false\` |
+| \`retry_on_full_enabled\` | If true AND \`\retry_enabled\` is true, also retry on ERR_FULL (queue-full). Must be enabled explicitly. | \`false\` |
+| \`max_retry_attempts\` | Maximum retry attempts per event. 0 = immediate one-shot attempt (no retry). | \`ROBOTOS_CORE_DEFAULT_RETRY_ATTEMPTS\` (3) |
+| \`backoff_delay_ms\` | Backoff delay between attempts in milliseconds. Stub: not actually honored. | \`ROBOTOS_CORE_DEFAULT_BACKOFF_DELAY_MS\` (10) |
+
+### New API: Post with Retry
+
+\`\`\`c
+robotos_core_status_t robotos_core_post_event_with_retry(const robotos_event_t *event);
+\`\`\`
+
+Behavior (Phase 4L stub):
+
+1. Attempts \`robotos_core_post_event(event)\` once.
+2. If retry policy is not enabled, returns result immediately.
+3. If result is ERR_THROTTLED (or ERR_FULL if \`retry_on_full_enabled\`):
+   - And retry attempts remain: increment \`retry_attempt_count\` and retry immediately.
+   - Stub: no actual backoff delay (tight retry loop).
+4. If max retry attempts exhausted:
+   - Increment \`retry_exhausted_count\`
+   - Return \`ERR_RETRY_EXHAUSTED\`
+5. If retry eventually succeeds:
+   - Increment \`retry_success_count\`
+   - Return \`OK\`
+
+### New Status Code
+
+\`\`\`c
+ROBOTOS_CORE_ERR_RETRY_EXHAUSTED = -8
+\`\`\`
+
+### New Counters
+
+| Counter | Incremented by | Meaning |
+|---------|---------------|---------|
+| \`retry_attempt_count\` | Every retry loop iteration, regardless of outcome |
+| \`retry_success_count\` | Retries that eventually returned OK (not immediate one-shot) |
+| \`retry_exhausted_count\` | Retries that exhausted allowed attempts (returned ERR_RETRY_EXHAUSTED) |
+
+### Counter Reset Behavior
+
+Retry counters are **not reset** by repeated \`robotos_core_init()\`, consistent with
+\`producer_throttled_count\`, \`admission_accepted_count\` and \`admission_rejected_count\`.
+
+### Snapshot Extension
+
+\`robotos_core_snapshot_t\` gains:
+- \`uint32_t retry_attempt_count\`
+- \`uint32_t retry_success_count\`
+- \`uint32_t retry_exhausted_count\`
+
+### Phase 4L Limitations
+
+- **Stub implementation only.** No actual backoff delay is honored. All retries happen
+  immediately without yielding.
+- **No retry on ERR_FULL by default.** \`retry_on_full_enabled\` must be explicitly
+  enabled to retry on queue-full conditions.
+- **No exponential backoff.** Linear delay only (stub: no delay at all).
+- **No priority or fairness.** All retries are handled equally.
+- **No per-producer accounting.** No producer registry or per-producer counters.
+- **No concurrency/ISR safety.** Single-threaded only in Phase 4L.
+- **No hardware runtime required.** Policy proven by host tests only.
+- **post_event/try_post_event unchanged.** Raw ingestion paths bypass retry entirely.
+
+---
+

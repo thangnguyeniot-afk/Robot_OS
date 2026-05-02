@@ -1,9 +1,9 @@
 # tests/host/CMakeLists.txt
-# Phase 5E: isolated host build — core, queue, dispatcher, ingestion, tick policy, handler policy,
+# Phase 4L: isolated host build — core, queue, dispatcher, ingestion, tick policy, handler policy,
 #           platform fault contract, platform critical section contract,
 #           core critical boundary contract,
 #           scheduler admission policy, scheduler backpressure policy,
-#           scheduler producer throttle policy.
+#           scheduler producer throttle policy, scheduler retry/backoff policy stub.
 #
 # Platform logging: each target that compiles robotos_core.c also compiles
 # the no-op host stub (robotos_platform_log_host_stub.c) and adds the
@@ -232,6 +232,23 @@ target_include_directories(robotos_scheduler_throttle_contract_test PRIVATE
 )
 
 add_test(NAME robotos_scheduler_throttle_contract COMMAND robotos_scheduler_throttle_contract_test)
+
+# ---- Scheduler retry/backoff policy contract test (Phase 4L) ---------------
+# Tests retry/backoff stub behavior in robotos_core.
+# Needs all three core sources + platform log stub.
+add_executable(robotos_scheduler_retry_contract_test
+    test_robotos_scheduler_retry_contract.c
+    ${CORE_SRCS}
+    ${PLATFORM_HOST_STUB}
+)
+
+target_include_directories(robotos_scheduler_retry_contract_test PRIVATE
+    "${CORE_DIR}"
+    "${PLATFORM_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+)
+
+add_test(NAME robotos_scheduler_retry_contract COMMAND robotos_scheduler_retry_contract_test)
 
 # ---- Core dispatch critical split contract test (Phase 5F) ------------------
 # Tests that pop/handler-lookup/handler-invoke are split correctly and that
