@@ -355,6 +355,82 @@ consistent with `admission_accepted_count` and `admission_rejected_count`.
 
 ---
 
+## Phase 5F — Dispatcher Pop / Handler Split
+
+Phase 5F refactors `robotos_core.c` to explicitly split the dispatch path
+into three distinct regions so that no critical section is ever held when a
+registered handler executes, and the separation is structural (not relying on
+the dispatcher's internal behavior).
+
+### Dispatch Path (s_core_dispatch_one_safe)
+
+```
+Step 1: [lock] queue pop into local ev   [unlock]
+Step 2: [lock] handler table lookup →    [unlock]
+             copy fn + ctx to locals
+Step 3: invoke handler_fn(&ev, ctx)      // depth MUST be 0 here
+Step 4: update dispatcher counters       // no lock needed (same TU)
+```
+
+### What Changed
+
+| Item | Phase 5E | Phase 5F |
+|------|----------|----------|
+| `s_core_routing_handler` | present (registered with dispatcher) | **removed** |
+| `s_core_noop_handler` | absent | **added** (init-only, never dispatched) |
+| `s_core_dispatch_one_safe` | absent | **added** (core dispatch primitive) |
+| `tick()` dispatch path | called `dispatcher_dispatch_all` | loops `s_core_dispatch_one_safe` |
+| `dispatch_events()` dispatch path | called `dispatcher_dispatch_all` | loops `s_core_dispatch_one_safe` |
+| Dispatcher counters | updated by dispatcher | updated directly by `s_core_dispatch_one_safe` |
+
+### What is Protected
+
+| API | Protected state |
+|-----|----------------|
+| `post_event_internal()` | state check, admission, throttle check, queue push, all counters |
+| `robotos_core_init()` | core_state, core_tick_count, core_init_count, handler table clear |
+| `robotos_core_tick()` | state check and tick_count increment only |
+| `robotos_core_dispatch_events()` | state check only |
+| `robotos_core_snapshot()` | all counter/state reads as one coherent snapshot |
+| All individual getters | brief lock around each read |
+| Handler registration/unregistration/has/count | table search and mutation |
+| `s_core_dispatch_one_safe` Step 1 | queue pop |
+| `s_core_dispatch_one_safe` Step 2 | handler table lookup and local copy |
+
+### What is NOT Protected
+
+| Item | Reason |
+|------|--------|
+| Registered handler callback (Step 3) | Hard rule — no lock held during invocation |
+| `robotos_platform_logf` / `CORE_LOG_*` | Must run outside lock |
+| Dispatcher counter update (Step 4) | Same translation unit, single-threaded devkit assumption |
+
+### Critical Rule
+
+**No critical section is held while a registered event handler callback executes.**
+
+Proven by Phase 5F host test (TC01, TC02, TC13):
+- `tick()` path: handler sees `robotos_platform_critical_host_current_depth() == 0`
+- `dispatch_events()` path: same
+- 5× stress loop: `enter_count == exit_count` at all points
+
+### Known Limitation
+
+If a handler is **unregistered** between Step 2 (local copy) and Step 3
+(invocation), the handler will execute once with the stale copy. This is
+acceptable under the current single-threaded devkit assumption. A production
+multi-threaded build would need a reference-count or epoch-based invalidation
+mechanism.
+
+### Semantics Unchanged
+
+All existing public API return values, counters, and behavior are identical
+to Phase 5E. `dispatched_count` is incremented for every event consumed from
+the queue regardless of whether a handler was registered (matching pre-5F
+semantics).
+
+---
+
 ## Phase 5E — Apply Critical Boundary to Core Queue State
 
 Phase 5E wires `robotos_platform_critical_enter`/`exit` into selected short

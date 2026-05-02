@@ -4411,9 +4411,128 @@ Core changes are structural; no semantic change to event policy.
 
 ### Next Recommended Phase
 
+**Phase 5F completed.** See Phase 5F section below.
+
+---
+
+---
+
+## Phase 5F — Dispatcher Pop / Handler Split
+
+**Date:** 2026-05-02
+**Branch:** master
+**Baseline commit:** `ff24147` — critical boundary contract (Phase 5E)
+
+---
+
+### Purpose
+
+Split the dispatch path so that:
+1. Queue pop is performed under a critical section.
+2. Handler table lookup is performed under a separate critical section with local copies made.
+3. Handler callback is invoked entirely outside any critical section.
+
+This removes the structural reliance on `robotos_event_dispatcher_dispatch_all`
+for core event routing, and makes the "no lock held during handler" rule a
+structural guarantee within `robotos_core.c` itself.
+
+---
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `core/robotos_core.c` | Remove `s_core_routing_handler`; add `s_core_noop_handler` and `s_core_dispatch_one_safe()`; update `tick()` and `dispatch_events()` to call `s_core_dispatch_one_safe` loop |
+| `core/README.md` | Phase 5F section: dispatch path table, what changed, critical rule, known limitation |
+| `tests/host/CMakeLists.txt` | New `robotos_core_dispatch_critical_contract_test` target |
+| `tests/host/test_robotos_core_dispatch_critical_contract.c` | 13 contract test cases (TC01–TC13) |
+| `tests/host/logs/phase_5F_host_2026-05-02.log` | Host evidence |
+
+### Files Unchanged (confirmed)
+
+| File | Reason |
+|------|--------|
+| `core/robotos_core.h` | No API change |
+| `core/robotos_event_dispatcher.*` | No new API added; dispatcher still used for its own unit tests |
+| `core/robotos_event_queue.*` | No change |
+| `platform/robotos_platform_critical.h` | No change |
+| `devkit/src/devkit_runtime.c` | No change |
+
+---
+
+### Dispatch Path (s_core_dispatch_one_safe)
+
+```
+Step 1: [lock] queue pop into local ev   [unlock]
+Step 2: [lock] handler table lookup →    [unlock]
+             copy fn + ctx to locals
+Step 3: invoke handler_fn(&ev, ctx)      // depth MUST be 0
+Step 4: update dispatcher counters       // no lock needed (same TU)
+```
+
+---
+
+### Host Test Evidence
+
+**Result:** 13/13 suites pass (12 prior + 1 new, 13 cases in new suite).
+
+**Log:** `tests/host/logs/phase_5F_host_2026-05-02.log`
+
+New suite (`robotos_core_dispatch_critical_contract`), 13 test cases:
+- TC01: `tick()` → handler sees depth == 0
+- TC02: `dispatch_events()` → handler sees depth == 0
+- TC03: FIFO preserved (3 events, correct arg0 order)
+- TC04: unregistered event → unhandled_count++, depth == 0
+- TC05: handler error → handler_error_count++, returns error, depth == 0
+- TC06: `tick()` on empty → OK, depth == 0
+- TC07: `dispatch_events()` on empty → ERR_EMPTY, depth == 0
+- TC08: `dispatch_events(0)` → OK, no dispatch
+- TC09: `dispatch_events(2)` → exactly 2 dispatched, 1 pending
+- TC10: unregister before dispatch → event becomes unhandled (lookup at dispatch time)
+- TC11: handler self-unregisters in callback → no deadlock, depth == 0
+- TC12: register then replace handler → latest used, not prior
+- TC13: 5× post+tick stress → depth always 0, enter_count == exit_count
+
+All prior 12 suites continue to pass (no regressions).
+
+---
+
+### Zephyr Build Evidence
+
+```
+Build: west build -b stm32f411e_disco RobotOS_v1.0/devkit/ --pristine
+Board: stm32f411e_disco
+Zephyr: v3.6.0
+
+Memory:
+  FLASH: 29060 / 524288 bytes  (5.54%)
+  RAM:   12096 / 131072 bytes  (9.23%)
+
+Errors: 0
+```
+
+Delta from Phase 5E (29080 B flash): -20 B (routing handler path removed).
+
+---
+
+### Known Limitations
+
+- **Stale-copy on concurrent unregister.** If a handler is unregistered between
+  Step 2 and Step 3, the copied fn/ctx still executes once. Acceptable under
+  single-threaded devkit assumption. Multi-threaded builds would need epoch or
+  reference-count invalidation.
+- **Not full ISR-safe.** `post_event` is lock-protected but concurrent ISR
+  posting is not stress-proven.
+- **No scheduler concurrency.** Devkit loop remains single-threaded.
+- **No custom board validation.** STM32F407VET6 remains unvalidated.
+
+---
+
+### Next Recommended Phase
+
 **Team decision required.**
 
 Candidates:
-- **Phase 5F** — Dispatcher Pop/Handler Split (pop event under lock, call handler outside lock)
-- **Phase 4L** — Scheduler Retry/Backoff Policy Stub (host-only)
+- **Phase 4L** — Scheduler Retry/Backoff Policy Stub (host-only, core layer)
 - **Phase 6F** — Devkit Mixed Event Policy Smoke
+- **Phase 5G** — ISR-safe post_event stress test (concurrent producer simulation)

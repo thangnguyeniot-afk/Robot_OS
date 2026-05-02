@@ -1,6 +1,6 @@
 /*
  * robotos_core.c
- * RobotOS portable core — Phase 5E: critical boundary applied to queue state.
+ * RobotOS portable core — Phase 5F: dispatcher pop / handler split.
  *
  * Logging is routed through robotos_platform_log.h — a portable interface.
  * The Zephyr backend (platform/zephyr/robotos_platform_log_zephyr.c) is
@@ -9,24 +9,35 @@
  * robotos_core.c no longer includes <zephyr/logging/log.h> directly.
  * The public API (robotos_core.h) remains free of Zephyr types.
  *
- * Phase 5E critical-section application:
- *   PROTECTED (short state transitions under robotos_platform_critical_enter/exit):
+ * Phase 5F critical-section application:
+ *   PROTECTED (short critical sections via robotos_platform_critical_enter/exit):
  *     - post_event_internal: state check, admission, throttle, queue push, counters
  *     - robotos_core_init: state/counter/handler-table mutations
  *     - robotos_core_tick: tick_count increment and state check only
  *     - robotos_core_snapshot: all counter/state reads
  *     - all individual getters: each read locked briefly
  *     - handler table register/unregister/has/count reads and mutations
+ *     - s_core_dispatch_one_safe Step 1: queue pop into local copy
+ *     - s_core_dispatch_one_safe Step 2: handler table lookup, copy fn+ctx to locals
  *
- *   NOT PROTECTED (remain single-threaded):
- *     - registered handler callback execution (s_core_routing_handler invoked by dispatcher)
- *     - logging (CORE_LOG_* calls)
- *     - robotos_event_dispatcher_dispatch_all (calls handler internally)
- *     - whole robotos_core_tick loop
+ *   NOT PROTECTED (always outside critical section):
+ *     - registered handler callback (hard rule: depth MUST be 0 during invocation)
+ *     - CORE_LOG_* calls
+ *     - dispatcher counter updates (written after handler returns, no lock)
  *
- * This is NOT a full ISR-safe or thread-safe guarantee. Dispatcher pop and
- * handler execution are not separated in Phase 5E. See Phase 5F.
+ * Phase 5F dispatch split (s_core_dispatch_one_safe):
+ *   Step 1: [lock] queue pop into local robotos_event_t [unlock]
+ *   Step 2: [lock] handler table search; copy fn+ctx to locals;
+ *           if not found: s_unhandled_event_count++ [unlock]
+ *   Step 3: call handler_fn(&ev, ctx) — NO lock held (depth == 0)
+ *   Step 4: update s_core_dispatcher counters directly (no lock needed,
+ *           single-threaded devkit assumption; handler has already returned)
  *
+ * Limitation: handler fn+ctx are copied under lock; if unregister occurs
+ * between copy and invocation, the callback runs once with the stale copy.
+ * Acceptable under static/no-dynamic-handler model; caller owns context lifetime.
+ *
+ * This is NOT a full ISR-safe guarantee. No ISR producer stress tested yet.
  * Single-threaded devkit runtime continues to work correctly.
  */
 
@@ -77,28 +88,86 @@ static robotos_event_queue_t     s_core_event_queue;
 static robotos_event_dispatcher_t s_core_dispatcher;
 
 /*
- * Routing handler: looks up registered handler by event type.
- * Unregistered types: unhandled_event_count++, returns OK.
- * NOT called under critical section — handler callback must be lock-free.
+ * No-op dispatcher handler stub.
+ * Registered with s_core_dispatcher at init for API validity only.
+ * The core dispatch path (tick / dispatch_events) uses s_core_dispatch_one_safe()
+ * directly after Phase 5F; this handler is never invoked by the core.
  */
-static robotos_core_status_t s_core_routing_handler(const robotos_event_t *event,
-                                                      void *ctx)
+static robotos_core_status_t s_core_noop_handler(const robotos_event_t *ev, void *ctx)
 {
-	(void)ctx;
-	if (event == NULL) {
-		return ROBOTOS_CORE_ERR_NULL;
+	(void)ev; (void)ctx;
+	return ROBOTOS_CORE_OK;
+}
+
+/*
+ * Phase 5F: safe single-event dispatch helper.
+ *
+ * Separates queue pop, handler lookup, and handler invocation into three
+ * distinct regions with minimal critical-section exposure:
+ *
+ *   Step 1: [lock] pop one event from queue into local copy [unlock]
+ *   Step 2: [lock] search handler table; copy fn+ctx to locals;
+ *           if not found: s_unhandled_event_count++ [unlock]
+ *   Step 3: call local handler_fn outside lock — depth MUST be 0
+ *   Step 4: update dispatcher counters after handler returns (no lock)
+ *
+ * Critical-section invariant: handler callback NEVER runs while lock is held.
+ * No logging under lock. Counter updates are direct struct field writes
+ * (single-threaded devkit assumption preserved).
+ *
+ * If unregister occurs between Step 2 copy and Step 3 invocation, the
+ * callback runs once using the stale copied pointer. Acceptable under the
+ * static/no-dynamic-handler model; caller owns context lifetime.
+ */
+static robotos_core_status_t s_core_dispatch_one_safe(void)
+{
+	/* Step 1: pop under lock into local event copy */
+	robotos_platform_critical_token_t tok = robotos_platform_critical_enter();
+	robotos_event_t ev;
+	robotos_core_status_t pop_ret = robotos_event_queue_pop(&s_core_event_queue, &ev);
+	robotos_platform_critical_exit(tok);
+
+	if (pop_ret != ROBOTOS_CORE_OK) {
+		return pop_ret; /* ERR_EMPTY or other queue error */
 	}
-	/* Handler table read without lock: Phase 5E limitation.
-	 * Table mutations are locked; dispatch is not concurrent with mutation
-	 * under single-threaded devkit assumption. */
+
+	/* Step 2: handler lookup under lock — copy fn+ctx to locals */
+	robotos_core_event_handler_t handler_fn  = NULL;
+	void                        *handler_ctx = NULL;
+	bool                         found       = false;
+
+	tok = robotos_platform_critical_enter();
 	for (uint32_t i = 0; i < ROBOTOS_CORE_MAX_EVENT_HANDLERS; i++) {
 		if (s_handler_table[i].in_use &&
-		    s_handler_table[i].type == event->type) {
-			return s_handler_table[i].handler(event,
-			                                  s_handler_table[i].user_context);
+		    s_handler_table[i].type == ev.type) {
+			handler_fn  = s_handler_table[i].handler;
+			handler_ctx = s_handler_table[i].user_context;
+			found       = true;
+			break;
 		}
 	}
-	s_unhandled_event_count++;
+	if (!found) {
+		s_unhandled_event_count++;
+	}
+	robotos_platform_critical_exit(tok);
+
+	if (!found) {
+		/* Event consumed from queue; no registered handler matched.
+		 * Preserve Phase 5E dispatched_count semantics: any event consumed
+		 * and processed without a handler error increments dispatched_count. */
+		s_core_dispatcher.dispatched_count++;
+		return ROBOTOS_CORE_OK;
+	}
+
+	/* Step 3: invoke handler outside critical section — depth MUST be 0 */
+	robotos_core_status_t handler_ret = handler_fn(&ev, handler_ctx);
+
+	/* Step 4: update dispatcher counters (no lock; single-threaded assumption) */
+	if (handler_ret != ROBOTOS_CORE_OK) {
+		s_core_dispatcher.handler_error_count++;
+		return handler_ret;
+	}
+	s_core_dispatcher.dispatched_count++;
 	return ROBOTOS_CORE_OK;
 }
 
@@ -156,7 +225,7 @@ robotos_core_status_t robotos_core_init(void)
 	/* Queue/dispatcher init and logging outside lock */
 	robotos_event_queue_init(&s_core_event_queue);
 	robotos_event_dispatcher_init(&s_core_dispatcher, &s_core_event_queue,
-	                              s_core_routing_handler, NULL);
+	                              s_core_noop_handler, NULL);
 
 	CORE_LOG_INF("RobotOS core init -- version=%s state=READY", CORE_VERSION);
 	CORE_LOG_INF("event queue initialized capacity=%u",
@@ -185,19 +254,23 @@ robotos_core_status_t robotos_core_tick(void)
 	uint32_t tick = core_tick_count;
 	robotos_platform_critical_exit(tok);
 
-	/* Logging and dispatch outside lock — dispatch calls handler internally */
+	/* Logging outside lock */
 	if (tick == 1 ||
 	    (tick % CORE_TICK_LOG_INTERVAL) == 0) {
 		CORE_LOG_INF("core tick count=%u", tick);
 	}
 
-	robotos_core_status_t dret = robotos_event_dispatcher_dispatch_all(
-		&s_core_dispatcher, ROBOTOS_CORE_MAX_EVENTS_PER_TICK);
-
-	if (dret == ROBOTOS_CORE_ERR_EMPTY) {
-		return ROBOTOS_CORE_OK;
+	/* Phase 5F: dispatch via safe helper — pop under lock, handler outside lock */
+	for (uint32_t i = 0; i < ROBOTOS_CORE_MAX_EVENTS_PER_TICK; i++) {
+		robotos_core_status_t dret = s_core_dispatch_one_safe();
+		if (dret == ROBOTOS_CORE_ERR_EMPTY) {
+			return ROBOTOS_CORE_OK;
+		}
+		if (dret != ROBOTOS_CORE_OK) {
+			return dret;
+		}
 	}
-	return dret;
+	return ROBOTOS_CORE_OK;
 }
 
 robotos_core_state_t robotos_core_state(void)
@@ -303,7 +376,7 @@ robotos_core_status_t robotos_core_try_post_event(const robotos_event_t *event)
 
 robotos_core_status_t robotos_core_dispatch_events(uint32_t max_events)
 {
-	/* State check under lock; dispatch outside lock (calls handler) */
+	/* State check under lock; dispatch outside lock */
 	robotos_platform_critical_token_t tok = robotos_platform_critical_enter();
 	bool ready = (core_state == ROBOTOS_CORE_STATE_READY);
 	robotos_platform_critical_exit(tok);
@@ -314,7 +387,20 @@ robotos_core_status_t robotos_core_dispatch_events(uint32_t max_events)
 	if (max_events == 0u) {
 		return ROBOTOS_CORE_OK;
 	}
-	return robotos_event_dispatcher_dispatch_all(&s_core_dispatcher, max_events);
+
+	/* Phase 5F: per-event safe dispatch — pop under lock, handler outside lock */
+	uint32_t dispatched = 0;
+	for (uint32_t i = 0; i < max_events; i++) {
+		robotos_core_status_t dret = s_core_dispatch_one_safe();
+		if (dret == ROBOTOS_CORE_ERR_EMPTY) {
+			return (dispatched > 0u) ? ROBOTOS_CORE_OK : ROBOTOS_CORE_ERR_EMPTY;
+		}
+		if (dret != ROBOTOS_CORE_OK) {
+			return dret;
+		}
+		dispatched++;
+	}
+	return ROBOTOS_CORE_OK;
 }
 
 uint32_t robotos_core_pending_event_count(void)
