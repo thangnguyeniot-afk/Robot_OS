@@ -1,4 +1,4 @@
-# RobotOS Core — Phase 4J Scheduler Budget/Backpressure Policy
+# RobotOS Core — Phase 4K Scheduler Producer Throttle Policy
 
 This directory contains the portable RobotOS core module.
 
@@ -265,10 +265,91 @@ at the time of the call.
 
 ### Phase 4J Limitations
 
-- **Observability only.** No producer throttle.
+- **Observability only.** No producer throttle in `post_event`.
 - **No dynamic budget.** Budget is a compile-time constant.
 - **No priority or fairness.** Strict FIFO from queue.
 - **No concurrency/ISR safety.** Single-threaded only.
 - **No platform critical section.** Revisit when RTOS threads are introduced.
 - **No timer/deadline integration.** Time-based scheduling is out of scope.
+
+---
+
+## Phase 4K — Scheduler Producer Throttle Policy
+
+Phase 4K adds a producer-side throttle as a new opt-in API while preserving
+all existing `robotos_core_post_event()` semantics unchanged.
+
+Phase 6C (devkit) proves `post_event` queue-full/drop semantics.
+Phase 4K adds `try_post_event` as the throttle-aware path for producers that
+should self-limit before the queue fills.
+
+### New API: `robotos_core_try_post_event()`
+
+```c
+robotos_core_status_t robotos_core_try_post_event(const robotos_event_t *event);
+```
+
+Same admission and queue semantics as `post_event`, plus a throttle check:
+
+**Throttle rule:**
+- After admission passes, if queue is **not full** and
+  `pending_event_count > ROBOTOS_CORE_MAX_EVENTS_PER_TICK`:
+  - Returns `ROBOTOS_CORE_ERR_THROTTLED`
+  - Increments `producer_throttled_count`
+  - Does **not** push into queue
+  - Does **not** increment `admission_accepted_count`
+  - Does **not** increment `admission_rejected_count`
+  - Does **not** increment `dropped_count`
+
+**Full queue behavior in `try_post_event`:**
+- If queue **is** full, throttle does not apply — push proceeds and returns
+  `ROBOTOS_CORE_ERR_FULL` + `dropped_count++` (same as `post_event`).
+- This preserves the full/drop distinction proven in Phase 6C.
+
+### Three Distinct Ingestion Outcomes
+
+| Condition | Return | Counter incremented |
+|-----------|--------|---------------------|
+| Invalid type | `ERR_INVALID_ARG` | `admission_rejected_count` |
+| Valid, queue full | `ERR_FULL` | `dropped_count` |
+| Valid, queue not full, pending > budget (try_post only) | `ERR_THROTTLED` | `producer_throttled_count` |
+| Valid, queue not full, no throttle | `OK` | `admission_accepted_count` |
+
+### New Status Code
+
+```c
+ROBOTOS_CORE_ERR_THROTTLED = -7
+```
+
+### New Getters
+
+```c
+bool     robotos_core_producer_throttle_active(void);
+uint32_t robotos_core_producer_throttled_count(void);
+```
+
+`producer_throttle_active` is true when `pending > budget AND queue NOT full`.
+This is a strict subset of `backpressure_active`.
+
+### Snapshot Extension
+
+`robotos_core_snapshot_t` gains:
+- `bool     producer_throttle_active`
+- `uint32_t producer_throttled_count`
+
+### Repeated Init Behavior
+
+`producer_throttled_count` is **not reset** by repeated `robotos_core_init()`,
+consistent with `admission_accepted_count` and `admission_rejected_count`.
+
+### Phase 4K Limitations
+
+- **No automatic retry.** Throttled producers must handle `ERR_THROTTLED` explicitly.
+- **No priority or fairness.** All producers are throttled equally.
+- **No dynamic budget.** Throttle threshold is `ROBOTOS_CORE_MAX_EVENTS_PER_TICK`.
+- **No producer registry.** No per-producer accounting.
+- **No concurrency/ISR safety.** Single-threaded only.
+- **No hardware runtime required.** Policy proven by host tests only.
+- **post_event unchanged.** Raw ingestion path still allows queue-full/drop for
+  producers that do not need throttle protection.
 

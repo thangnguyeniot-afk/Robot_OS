@@ -1,6 +1,6 @@
 /*
  * robotos_core.c
- * RobotOS portable core — Phase 4J: scheduler budget/backpressure policy.
+ * RobotOS portable core — Phase 4K: scheduler producer throttle policy.
  *
  * Logging is routed through robotos_platform_log.h — a portable interface.
  * The Zephyr backend (platform/zephyr/robotos_platform_log_zephyr.c) is
@@ -50,6 +50,7 @@ static uint32_t          s_handler_count;
 static uint32_t          s_unhandled_event_count;
 static uint32_t          s_admission_accepted_count;
 static uint32_t          s_admission_rejected_count;
+static uint32_t          s_producer_throttled_count;
 
 /* -------------------------------------------------------------------------- */
 
@@ -195,11 +196,18 @@ robotos_core_status_t robotos_core_snapshot(robotos_core_snapshot_t *out)
 	out->admission_accepted_count = s_admission_accepted_count;
 	out->admission_rejected_count = s_admission_rejected_count;
 	out->backpressure_active      = robotos_core_backpressure_active();
+	out->producer_throttle_active = robotos_core_producer_throttle_active();
+	out->producer_throttled_count = s_producer_throttled_count;
 
 	return ROBOTOS_CORE_OK;
 }
 
-robotos_core_status_t robotos_core_post_event(const robotos_event_t *event)
+/*
+ * Internal post helper shared by post_event and try_post_event.
+ * apply_throttle=true enables the Phase 4K producer throttle check.
+ */
+static robotos_core_status_t post_event_internal(const robotos_event_t *event,
+                                                  bool apply_throttle)
 {
 	if (event == NULL) {
 		return ROBOTOS_CORE_ERR_NULL;
@@ -211,11 +219,30 @@ robotos_core_status_t robotos_core_post_event(const robotos_event_t *event)
 		s_admission_rejected_count++;
 		return ROBOTOS_CORE_ERR_INVALID_ARG;
 	}
+	if (apply_throttle) {
+		bool     full    = robotos_event_queue_is_full(&s_core_event_queue);
+		uint32_t pending = robotos_event_queue_count(&s_core_event_queue);
+		if (!full && pending > ROBOTOS_CORE_MAX_EVENTS_PER_TICK) {
+			s_producer_throttled_count++;
+			return ROBOTOS_CORE_ERR_THROTTLED;
+		}
+		/* If full: fall through — queue push returns ERR_FULL + dropped_count */
+	}
 	robotos_core_status_t push_ret = robotos_event_queue_push(&s_core_event_queue, event);
 	if (push_ret == ROBOTOS_CORE_OK) {
 		s_admission_accepted_count++;
 	}
 	return push_ret;
+}
+
+robotos_core_status_t robotos_core_post_event(const robotos_event_t *event)
+{
+	return post_event_internal(event, false);
+}
+
+robotos_core_status_t robotos_core_try_post_event(const robotos_event_t *event)
+{
+	return post_event_internal(event, true);
 }
 
 robotos_core_status_t robotos_core_dispatch_events(uint32_t max_events)
@@ -359,4 +386,16 @@ bool robotos_core_backpressure_active(void)
 	uint32_t pending = robotos_event_queue_count(&s_core_event_queue);
 	bool     full    = robotos_event_queue_is_full(&s_core_event_queue);
 	return (pending > ROBOTOS_CORE_MAX_EVENTS_PER_TICK) || full;
+}
+
+bool robotos_core_producer_throttle_active(void)
+{
+	bool     full    = robotos_event_queue_is_full(&s_core_event_queue);
+	uint32_t pending = robotos_event_queue_count(&s_core_event_queue);
+	return !full && (pending > ROBOTOS_CORE_MAX_EVENTS_PER_TICK);
+}
+
+uint32_t robotos_core_producer_throttled_count(void)
+{
+	return s_producer_throttled_count;
 }

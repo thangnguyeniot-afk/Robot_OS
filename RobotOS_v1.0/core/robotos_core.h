@@ -1,6 +1,6 @@
 /*
  * robotos_core.h
- * RobotOS portable core — Phase 4J scheduler budget/backpressure policy.
+ * RobotOS portable core — Phase 4K scheduler producer throttle policy.
  *
  * Phase 4I: admission gate in robotos_core_post_event().
  * NONE and reserved types (2–99) are rejected before enqueue.
@@ -9,8 +9,16 @@
  * Phase 4J: budget/backpressure observability.
  * dispatch budget = ROBOTOS_CORE_MAX_EVENTS_PER_TICK events drained per tick.
  * backpressure_active = pending_event_count > budget OR queue is full.
- * Backpressure is observability only in Phase 4J — it does not throttle
- * producers, adjust priority, or alter scheduler fairness.
+ *
+ * Phase 4K: producer throttle policy.
+ * robotos_core_post_event()     — raw ingestion; preserves full/drop semantics.
+ * robotos_core_try_post_event() — throttle-aware producer API.
+ * Throttle applies in try_post_event when:
+ *   event is valid, core READY, queue NOT full,
+ *   pending_event_count > ROBOTOS_CORE_MAX_EVENTS_PER_TICK.
+ * Throttled events return ERR_THROTTLED + producer_throttled_count++.
+ * Queue-full through try_post_event still returns ERR_FULL + dropped_count.
+ * Invalid events return ERR_INVALID_ARG regardless of throttle state.
  *
  * No Zephyr or board-specific types.
  */
@@ -32,6 +40,7 @@ typedef enum {
 	ROBOTOS_CORE_ERR_FULL          = -3,
 	ROBOTOS_CORE_ERR_EMPTY         = -4,
 	ROBOTOS_CORE_ERR_INVALID_ARG   = -6,  /* invalid argument (e.g. NONE event type) */
+	ROBOTOS_CORE_ERR_THROTTLED     = -7,  /* producer throttled: backlog > budget (try_post_event only) */
 } robotos_core_status_t;
 
 /*
@@ -88,7 +97,7 @@ typedef robotos_core_status_t (*robotos_core_event_handler_t)(
  * Populated by robotos_core_snapshot(). Not thread-safe.
  * All counter fields are 0 before robotos_core_init() is called.
  *
- * Counter semantics (Phase 4J):
+ * Counter semantics (Phase 4K):
  *   pending_event_count      events currently in queue (drain reduces this)
  *   dropped_event_count      events dropped because queue was full (ERR_FULL path)
  *   admission_accepted_count events that passed admission AND entered queue
@@ -97,6 +106,8 @@ typedef robotos_core_status_t (*robotos_core_event_handler_t)(
  *   unhandled_event_count    dispatched events with no matching registered handler
  *   handler_error_count      dispatched events where handler returned non-OK
  *   backpressure_active      true when pending > dispatch budget OR queue is full
+ *   producer_throttle_active true when pending > budget AND queue NOT full
+ *   producer_throttled_count events returned ERR_THROTTLED by try_post_event
  */
 typedef struct {
 	robotos_core_state_t state;
@@ -112,6 +123,8 @@ typedef struct {
 	uint32_t             admission_accepted_count; /* events accepted by admission gate */
 	uint32_t             admission_rejected_count; /* events rejected by admission gate */
 	bool                 backpressure_active;      /* pending > budget OR queue full */
+	bool                 producer_throttle_active; /* pending > budget AND queue NOT full */
+	uint32_t             producer_throttled_count; /* events throttled by try_post_event */
 } robotos_core_snapshot_t;
 
 /* Maximum number of simultaneously registered event handlers. */
@@ -154,6 +167,9 @@ robotos_core_status_t robotos_core_snapshot(robotos_core_snapshot_t *out);
 
 /*
  * Post an event into the core-owned queue. Requires READY.
+ * Raw ingestion path — no producer throttle. Preserves Phase 6C full/drop semantics.
+ *
+ * Order: NULL check -> state check -> admission -> queue push.
  *
  * Admission policy (Phase 4I):
  *   Accepted:  ROBOTOS_EVENT_CORE_TICK and any type >= ROBOTOS_EVENT_USER.
@@ -168,6 +184,33 @@ robotos_core_status_t robotos_core_snapshot(robotos_core_snapshot_t *out);
  * Returns ROBOTOS_CORE_OK               on success.
  */
 robotos_core_status_t robotos_core_post_event(const robotos_event_t *event);
+
+/*
+ * Throttle-aware producer post. Same admission and queue semantics as
+ * robotos_core_post_event(), with an additional throttle check applied
+ * before queue push:
+ *
+ * Throttle rule (Phase 4K):
+ *   After admission passes, if queue is NOT full and
+ *   pending_event_count > ROBOTOS_CORE_MAX_EVENTS_PER_TICK:
+ *     -> return ROBOTOS_CORE_ERR_THROTTLED
+ *     -> increment producer_throttled_count
+ *     -> do NOT push into queue
+ *     -> do NOT increment admission_accepted_count
+ *     -> do NOT increment admission_rejected_count
+ *     -> do NOT increment dropped_count
+ *
+ * If queue IS full at throttle check time, queue push proceeds and returns
+ * ROBOTOS_CORE_ERR_FULL + dropped_count++ (same as post_event).
+ *
+ * Returns ROBOTOS_CORE_ERR_NULL          if event is NULL.
+ * Returns ROBOTOS_CORE_ERR_INVALID_STATE if core not READY.
+ * Returns ROBOTOS_CORE_ERR_INVALID_ARG   if event type is rejected.
+ * Returns ROBOTOS_CORE_ERR_THROTTLED     if producer backlog exceeds budget.
+ * Returns ROBOTOS_CORE_ERR_FULL          if queue is full (backlog not checked).
+ * Returns ROBOTOS_CORE_OK               on success.
+ */
+robotos_core_status_t robotos_core_try_post_event(const robotos_event_t *event);
 
 /* Dispatch up to max_events events. Requires READY. ERR_EMPTY if empty and max>0. */
 robotos_core_status_t robotos_core_dispatch_events(uint32_t max_events);
@@ -252,11 +295,26 @@ uint32_t robotos_core_dispatch_budget_per_tick(void);
  *   backpressure_active = (pending_event_count > ROBOTOS_CORE_MAX_EVENTS_PER_TICK)
  *                         || queue_is_full
  *
- * Observability only: does NOT throttle producers, adjust priority, or change
- * scheduler fairness. Queue-full posts still return ERR_FULL; invalid events
- * still return ERR_INVALID_ARG regardless of backpressure state.
+ * Observability only: does NOT throttle post_event. See try_post_event for the
+ * throttle-aware producer API (Phase 4K).
  * Safe to call before init (returns false when queue is uninitialized/empty).
  */
 bool robotos_core_backpressure_active(void);
+
+/*
+ * Return true when the producer throttle would block a try_post_event call.
+ * Throttle is active when pending > budget AND queue is NOT full.
+ * When queue is full, backpressure is active but throttle is NOT — queue push
+ * proceeds and returns ERR_FULL to preserve full/drop distinction.
+ * Safe to call before init (returns false).
+ */
+bool robotos_core_producer_throttle_active(void);
+
+/*
+ * Return cumulative count of events returned ERR_THROTTLED by try_post_event.
+ * Not incremented by post_event. Not reset by repeated init.
+ * Returns 0 before init.
+ */
+uint32_t robotos_core_producer_throttled_count(void);
 
 #endif /* ROBOTOS_CORE_H */

@@ -3769,6 +3769,170 @@ Rejection smoke is devkit-only. No core policy changes.
 **Team decision required.**
 
 Candidates:
-- **Phase 4K** — Scheduler Producer Throttle Policy (host-only, core layer)
+- **Phase 4K** — Scheduler Producer Throttle Policy ← **completed**
 - **Phase 5D** — Platform Critical Section / ISR Lock Boundary
 - **Phase 6E** — Devkit Mixed Policy Smoke (valid + invalid + full in one sequence)
+
+---
+
+---
+
+## Phase 4K — Scheduler Producer Throttle Policy
+
+**Date:** 2026-05-02
+**Branch:** master
+**Baseline commit:** `51e531e` — devkit invalid/rejection smoke (Phase 6D)
+
+---
+
+### Purpose
+
+Add an explicit, observable producer-side throttle policy to core event
+ingestion via a new `robotos_core_try_post_event()` API. The existing
+`robotos_core_post_event()` semantics are unchanged — it remains the raw
+ingestion path and preserves the Phase 6C queue-full/drop behavior.
+
+Throttle applies only in `try_post_event` when the pending backlog exceeds
+the per-tick dispatch budget and the queue is not yet full. Three ingestion
+outcomes remain fully distinguishable: invalid rejection, queue-full drop,
+and producer throttle.
+
+No hardware runtime required. Policy proven by host tests only.
+
+---
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `core/robotos_core.h` | Add `ROBOTOS_CORE_ERR_THROTTLED=-7`; add `robotos_core_try_post_event()`; add `producer_throttle_active`/`producer_throttled_count` to snapshot; add getter declarations |
+| `core/robotos_core.c` | Add `s_producer_throttled_count`; refactor `post_event` into `post_event_internal(apply_throttle)`; add `try_post_event`; add two getters; extend snapshot |
+| `core/README.md` | Add Phase 4K section documenting throttle API, policy, and limitations |
+| `tests/host/CMakeLists.txt` | Add `robotos_scheduler_throttle_contract_test` target and ctest registration |
+| `tests/host/test_robotos_scheduler_throttle_contract.c` | 15 test cases covering all throttle semantics |
+| `devkit/docs/DEVKIT_PROGRESS.md` | This section |
+| `tests/host/logs/phase_4K_host_2026-05-02.log` | Host test evidence |
+
+### Files Unchanged (confirmed)
+
+| File | Reason |
+|------|--------|
+| `devkit/src/devkit_runtime.c` | Phase 6D rejection smoke unchanged; no throttle smoke needed |
+| `platform/` | No platform change |
+| `devkit/prj.conf` | No config change |
+
+---
+
+### Contract Summary
+
+**`robotos_core_post_event()` — unchanged raw ingestion:**
+- NULL → `ERR_NULL`
+- Not READY → `ERR_INVALID_STATE`
+- Invalid type → `ERR_INVALID_ARG` + `admission_rejected_count++`
+- Queue full → `ERR_FULL` + `dropped_count++`
+- OK → `admission_accepted_count++`
+
+**`robotos_core_try_post_event()` — throttle-aware API (Phase 4K):**
+- Same NULL/state/admission checks
+- After admission: if queue NOT full AND `pending > ROBOTOS_CORE_MAX_EVENTS_PER_TICK`:
+  → `ERR_THROTTLED` + `producer_throttled_count++`
+  (queue untouched, accepted/rejected/dropped unchanged)
+- If queue IS full: falls through to push → `ERR_FULL` + `dropped_count++`
+- OK → `admission_accepted_count++`
+
+**Three distinct ingestion outcomes remain separable:**
+
+```
+invalid type   -> ERR_INVALID_ARG  -> admission_rejected_count
+queue full     -> ERR_FULL         -> dropped_count
+throttled      -> ERR_THROTTLED    -> producer_throttled_count
+success        -> OK               -> admission_accepted_count
+```
+
+**New status code:** `ROBOTOS_CORE_ERR_THROTTLED = -7`
+
+**New snapshot fields:**
+```c
+bool     producer_throttle_active;  /* pending > budget AND queue NOT full */
+uint32_t producer_throttled_count;  /* cumulative ERR_THROTTLED count */
+```
+
+**Repeated init:** `producer_throttled_count` not reset (consistent with other counters).
+
+---
+
+### Host Test Evidence
+
+**Result:** 10/10 suites pass — no regression on prior 9, new throttle suite passes.
+
+**Log:** `tests/host/logs/phase_4K_host_2026-05-02.log`
+
+New suite (`robotos_scheduler_throttle_contract`), 15 test cases:
+- TC01–TC03: pre/post-init getter state
+- TC04–TC05: NULL/invalid via try_post_event
+- TC06–TC08: throttle transition (event #1 OK, #2 OK+pressure, #3 throttled)
+- TC09–TC10: tick clears throttle, try_post_event succeeds again
+- TC11–TC12: post_event fills queue to full, ERR_FULL + dropped (not throttled)
+- TC12: try_post_event when full → ERR_FULL (not throttled)
+- TC13: snapshot coherence for throttle fields
+- TC14: repeated init does not reset throttled_count
+- TC15: dispatch_events drains backlog and clears throttle
+
+---
+
+### Zephyr Build Evidence
+
+```
+Build: west build -b stm32f411e_disco RobotOS_v1.0/devkit/ --pristine
+Board: stm32f411e_disco
+Zephyr: v3.6.0
+
+Memory:
+  FLASH: 28848 / 524288 bytes  (5.50%)
+  RAM:   12096 / 131072 bytes  (9.23%)
+
+Errors: 0
+```
+
+Delta from Phase 6D (28744 B flash): +104 B for two new getter functions.
+
+---
+
+### Runtime Requirement
+
+Hardware runtime **not required** for Phase 4K closure. The throttle policy is
+implemented in portable C with no Zephyr or board types. All semantics are
+proven by host tests. Devkit runtime (Phase 6D) remains unchanged.
+
+Phase 6E (Devkit Throttled Producer Smoke) would be the appropriate phase to
+exercise `try_post_event` on real hardware.
+
+---
+
+### Legacy Isolation Confirmation
+
+No `RobotOS_v1.0/src/` file compiled, staged, or referenced.
+Core changes are additive (new API + counter). Existing `post_event` semantics unchanged.
+
+---
+
+### Known Limitations
+
+- No automatic retry on `ERR_THROTTLED`; producers must handle it explicitly.
+- No dynamic budget; throttle threshold fixed at `ROBOTOS_CORE_MAX_EVENTS_PER_TICK`.
+- No priority or fairness; all `try_post_event` callers throttled equally.
+- No producer registry; no per-producer accounting.
+- No concurrency/ISR safety; single-threaded only.
+- `post_event` bypasses throttle; queue-full through raw path still possible.
+- No devkit runtime smoke in this phase.
+
+---
+
+### Next Recommended Phase
+
+**Team decision required.**
+
+Candidates:
+- **Phase 6E** — Devkit Throttled Producer Smoke (exercise `try_post_event` on hardware)
+- **Phase 5D** — Platform Critical Section / ISR Lock Boundary
+- **Phase 4L** — Scheduler Retry/Backoff Policy Stub
