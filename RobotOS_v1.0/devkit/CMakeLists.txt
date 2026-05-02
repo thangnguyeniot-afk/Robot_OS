@@ -1,8 +1,9 @@
 # devkit/CMakeLists.txt
-# Phase 5A platform logging boundary — STM32F411E-DISCO.
+# Phase 5B platform time boundary — STM32F411E-DISCO.
 # Target: stm32f411e_disco
 # Purpose: runtime skeleton with RobotOS core + event queue + dispatcher integration.
 #          Zephyr platform log adapter bridges core to Zephyr logging subsystem.
+#          Zephyr platform time adapter bridges devkit_runtime sleep to k_msleep.
 
 cmake_minimum_required(VERSION 3.20.0)
 
@@ -25,4 +26,5 @@ target_sources(app PRIVATE
     ../core/robotos_event_queue.c
     ../core/robotos_event_dispatcher.c
     ../platform/zephyr/robotos_platform_log_zephyr.c
+    ../platform/zephyr/robotos_platform_time_zephyr.c
 )

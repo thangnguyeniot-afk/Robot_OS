@@ -14,8 +14,7 @@ headers such as `<zephyr/logging/log.h>` directly.
 
 ## Phase 5A Scope: Logging Boundary Only
 
-Phase 5A introduces the minimal platform logging interface. No other
-platform services are abstracted yet.
+Phase 5A introduces the minimal platform logging interface. See Phase 5B for time.
 
 ### Boundary rule
 
@@ -56,6 +55,53 @@ void robotos_platform_logf(robotos_log_level_t level,
 
 ---
 
+## Phase 5B Scope: Time Boundary
+
+Phase 5B introduces the minimal platform time interface: sleep and uptime.
+
+### Boundary rule
+
+| Where | May include |
+|-------|-------------|
+| `devkit/runtime` | `platform/robotos_platform_time.h` |
+| `platform/robotos_platform_time.h` | `<stdint.h>` only |
+| `platform/zephyr/robotos_platform_time_zephyr.c` | `<zephyr/kernel.h>` + platform interface |
+| `tests/host/robotos_platform_time_host_stub.c` | Platform interface only — no Zephyr |
+| `core/` | Must NOT include `robotos_platform_time.h` — core does not sleep |
+
+### File structure
+
+```
+platform/
+├── robotos_platform_time.h             ← portable interface (Phase 5B)
+├── zephyr/
+│   ├── robotos_platform_log_zephyr.c   ← log backend
+│   └── robotos_platform_time_zephyr.c  ← time backend (Phase 5B)
+└── README.md
+
+tests/host/
+├── robotos_platform_log_host_stub.c    ← log no-op
+└── robotos_platform_time_host_stub.c   ← time fake stub (Phase 5B, not yet wired)
+```
+
+### API summary
+
+```c
+uint32_t robotos_platform_uptime_ms(void);
+void     robotos_platform_sleep_ms(uint32_t duration_ms);
+```
+
+### Design rules
+
+- Core tick remains externally driven. `robotos_core_tick()` is called by the
+  devkit runtime loop. Core never calls `robotos_platform_sleep_ms`.
+- `sleep_ms(0)` returns immediately in all backends.
+- `uptime_ms()` wraps at `UINT32_MAX` (~49.7 days). Wraparound not handled.
+- `devkit_runtime.c` uses `robotos_platform_sleep_ms(DEVKIT_TICK_MS)` instead
+  of `k_msleep` directly.
+
+---
+
 ## Backend Selection
 
 The backend is selected at build time by compiling the appropriate source:
@@ -74,11 +120,11 @@ The following platform services are candidates for future phases but are
 
 | Service | Candidate phase |
 |---|---|
-| Time / tick source | Phase 5B |
-| Assert / fault handler | Phase 5B or 5C |
+| Assert / fault handler | Phase 5C |
 | Critical section / ISR lock | Future |
 | Memory policy | Future |
 | Thread / mutex | Future |
+| Monotonic 64-bit time / timers | Future |
 
 Do not add these here without an approved phase task.
 

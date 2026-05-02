@@ -2323,3 +2323,211 @@ Abstract the tick/time source out of the devkit harness into a platform
 interface (`robotos_platform_time.h`), following the same boundary pattern
 established in Phase 5A. This will decouple core tick scheduling from
 `k_msleep` / Zephyr kernel time APIs.
+
+---
+
+## Phase 5B — Platform Time Boundary
+
+**Date:** 2026-05-02
+**Branch:** master
+**Baseline commit:** `7da0ad1` — "platform: confirm logging boundary runtime"
+
+---
+
+### Purpose
+
+Remove the direct `k_msleep` dependency from `devkit_runtime.c` by routing
+sleep through a portable platform time interface.
+
+Before Phase 5B, `devkit_runtime.c` included `<zephyr/kernel.h>` and called
+`k_msleep(DEVKIT_TICK_MS)` directly. This made the runtime loop a direct
+consumer of Zephyr kernel API.
+
+Phase 5B introduces `robotos_platform_time.h` — a portable sleep/uptime
+interface — and a Zephyr backend. `devkit_runtime.c` now calls
+`robotos_platform_sleep_ms(DEVKIT_TICK_MS)` and no longer includes
+`<zephyr/kernel.h>`.
+
+Tick behavior (500ms interval) and LED/core call order are unchanged.
+
+---
+
+### Files Added
+
+| File | Role |
+|------|------|
+| `platform/robotos_platform_time.h` | Platform time interface — portable, `<stdint.h>` only |
+| `platform/zephyr/robotos_platform_time_zephyr.c` | Zephyr backend — `k_uptime_get_32` + `k_msleep` |
+| `tests/host/robotos_platform_time_host_stub.c` | Host fake stub — sleep increments fake uptime; not wired to existing tests |
+
+### Files Modified
+
+| File | Change |
+|------|--------|
+| `devkit/src/devkit_runtime.c` | Removed `<zephyr/kernel.h>`; added `robotos_platform_time.h`; replaced `k_msleep` with `robotos_platform_sleep_ms` |
+| `devkit/CMakeLists.txt` | Added `platform/zephyr/robotos_platform_time_zephyr.c` to `target_sources` |
+| `platform/README.md` | Added Phase 5B time boundary section |
+| `devkit/docs/DEVKIT_PROGRESS.md` | This entry |
+
+---
+
+### Platform Time Boundary Summary
+
+```
+platform/
+├── robotos_platform_time.h             ← portable interface
+├── zephyr/
+│   ├── robotos_platform_log_zephyr.c
+│   └── robotos_platform_time_zephyr.c  ← Zephyr backend (Phase 5B)
+└── README.md
+
+tests/host/
+├── robotos_platform_log_host_stub.c
+└── robotos_platform_time_host_stub.c   ← host fake stub (Phase 5B)
+```
+
+**API:**
+```c
+uint32_t robotos_platform_uptime_ms(void);
+void     robotos_platform_sleep_ms(uint32_t duration_ms);
+```
+
+**Boundary rules enforced:**
+- `devkit_runtime.c` includes `robotos_platform_time.h` — no `<zephyr/kernel.h>`
+- Zephyr backend owns `k_msleep` and `k_uptime_get_32`
+- `sleep_ms(0)` returns immediately in all backends
+- Core does NOT include `robotos_platform_time.h` — core does not sleep
+- Host stub is present but not wired to existing test targets (not needed)
+
+---
+
+### Host Test Evidence
+
+```
+cmake -S RobotOS_v1.0/tests/host -B build-host-core  (WSL Ubuntu, GCC 13.3.0)
+cmake --build build-host-core
+ctest --test-dir build-host-core --output-on-failure
+```
+
+| Test | Result |
+|------|--------|
+| `robotos_core_contract` | PASS |
+| `robotos_event_queue_contract` | PASS |
+| `robotos_event_dispatcher_contract` | PASS |
+| `robotos_core_ingestion_contract` | PASS |
+| `robotos_core_tick_policy_contract` | PASS |
+| `robotos_core_handler_policy_contract` | PASS |
+
+**6/6 tests passed. 0 failed.**
+No Zephyr SDK required. No legacy source compiled.
+Host CMakeLists unchanged — existing targets do not reference time API.
+
+---
+
+### Zephyr Build Evidence
+
+```
+west build -b stm32f411e_disco RobotOS_v1.0/devkit/ --pristine
+```
+
+| Check | Result |
+|-------|--------|
+| Build pass | PASS |
+| Compiler warnings | Pre-existing `q_valid` unused-function only (robotos_event_queue.c) |
+| Platform time adapter compiled | PASS — `platform/zephyr/robotos_platform_time_zephyr.c` |
+| `<zephyr/kernel.h>` removed from devkit_runtime | PASS |
+| k_msleep removed from devkit_runtime | PASS |
+| Legacy src/ compiled | NONE |
+
+Memory (FLASH / RAM):
+
+```
+arm-zephyr-eabi-size build/zephyr/zephyr.elf
+   text    data     bss     dec     hex
+  26264     868    8781   35913    8c49
+```
+
+FLASH used: 26264 + 868 = 27132 B (delta: +16 B vs Phase 5A 27116 B — time backend).
+RAM used: 868 + 8781 = 9649 B.
+
+---
+
+### Runtime Evidence
+
+**Status: RUNTIME_PASS — hardware validated 2026-05-02.**
+
+#### Method
+
+`west flash` → soft reset via OpenOCD `reset run` → RTT buffer dumped via
+`dump_image` at `0x20000abf` → CFSR/HFSR read via `mrw` → GPIOD ODR sampled
+at 700ms intervals.
+
+#### RTT Boot Log (captured from ring buffer)
+
+```
+*** Booting Zephyr OS build v3.6.0 ***
+[00:00:00.000,000] <inf> devkit_fault: fault visibility active
+[00:00:00.000,000] <inf> devkit_build_info: RobotOS devkit build info:
+[00:00:00.000,000] <inf> devkit_build_info:   board=stm32f411e_disco
+[00:00:00.000,000] <inf> devkit_build_info:   zephyr=3.6.0
+[00:00:00.000,000] <inf> devkit_build_info:   build=May  2 2026 07:46:27
+[00:00:00.000,000] <inf> devkit_build_info:   tick_ms=500
+[00:00:00.000,000] <inf> devkit_build_info:   log_backend=RTT
+[00:00:00.000,000] <inf> robotos_platform: [robotos_core] RobotOS core init — version=4B-contract state=READY
+[00:00:00.000,000] <inf> robotos_platform: [robotos_core] event queue initialized capacity=16
+[00:00:00.000,000] <inf> robotos_platform: [robotos_core] event dispatcher initialized
+[00:00:00.000,000] <inf> devkit_runtime: RobotOS devkit starting — board: stm32f411e_disco
+[00:00:00.000,000] <inf> devkit_runtime: [truncated — buffer full]
+```
+
+Boot sequence intact. `tick_ms=500` confirmed in build info.
+Core init messages still route via `robotos_platform` (Phase 5A boundary preserved).
+
+#### Fault Status
+
+| Register | Value | Interpretation |
+|---|---|---|
+| CFSR (`0xE000ED28`) | `0x00000000` | No fault |
+| HFSR (`0xE000ED2C`) | `0x00000000` | No hard fault |
+
+No panic. No MemManage fault. No hard fault.
+
+#### LED Evidence
+
+GPIOD ODR sampled three times at 700ms intervals:
+
+| Sample | ODR value | PD13 (Orange LED) |
+|---|---|---|
+| T+0 ms | `0x00000000` | OFF |
+| T+700 ms | `0x00000000` | OFF |
+| T+1400 ms | `0x00002000` | ON |
+
+LED toggling at ~500ms rate confirmed. Sleep path change (k_msleep → platform
+sleep) did not alter tick rate or LED behavior.
+
+---
+
+### Legacy Isolation Confirmation
+
+No `RobotOS_v1.0/src/` file compiled, staged, or referenced.
+All new files are in `platform/` or `tests/host/`.
+
+---
+
+### Known Limitations
+
+- Sleep and uptime boundary only. No timer abstraction.
+- No scheduler integration beyond the existing single tick call.
+- `robotos_platform_uptime_ms()` not yet called by devkit_runtime — API present, unused by runtime in Phase 5B.
+- `uint32_t` uptime wraps at ~49.7 days. Wraparound not handled.
+- Host time stub not wired to any existing host test target.
+- Custom STM32F407VET6 board remains hardware-unvalidated.
+
+---
+
+### Next Recommended Phase
+
+**Phase 5C — Platform Assert/Fault Boundary**
+
+Introduce a portable `robotos_platform_assert()` / fault hook interface,
+following the same boundary pattern established in Phases 5A and 5B.

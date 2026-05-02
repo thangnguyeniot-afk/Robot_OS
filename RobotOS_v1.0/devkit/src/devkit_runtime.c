@@ -1,7 +1,8 @@
 /*
  * devkit_runtime.c
  * Boot sequence, periodic tick log, and status LED orchestration.
- * Phase 4B: Updated to use hardened core API with typed status codes.
+ * Phase 5B: sleep path routed through platform time boundary.
+ *           Direct k_msleep dependency removed from runtime.
  */
 
 #include "devkit_runtime.h"
@@ -9,8 +10,8 @@
 #include "devkit_fault.h"
 #include "devkit_status_led.h"
 #include "robotos_core.h"
+#include "robotos_platform_time.h"
 
-#include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
 LOG_MODULE_REGISTER(devkit_runtime, LOG_LEVEL_INF);
@@ -59,6 +60,6 @@ void devkit_runtime_run(void)
 			LOG_ERR("Core tick failed: %d", (int)core_ret);
 		}
 
-		k_msleep(DEVKIT_TICK_MS);
+		robotos_platform_sleep_ms(DEVKIT_TICK_MS);
 	}
 }
