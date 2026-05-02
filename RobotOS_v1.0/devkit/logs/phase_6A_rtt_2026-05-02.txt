@@ -1,0 +1,48 @@
+Phase 6A — Devkit Event Smoke Integration
+RTT Boot Log — 2026-05-02
+Board: STM32F411E-DISCO
+Build timestamp: May 2 2026 08:55:25
+Capture method: openocd reset run → sleep 4000 → halt → dump_image 0x200009c8 4096
+_SEGGER_RTT address: 0x200009c8 (post-4KB buffer resize)
+CFSR: 0x0  HFSR: 0x0
+
+===========================================================================
+
+*** Booting Zephyr OS build v3.6.0 ***
+[00:00:00.000,000] <inf> devkit_fault: fault visibility active
+[00:00:00.000,000] <inf> devkit_build_info: RobotOS devkit build info:
+[00:00:00.000,000] <inf> devkit_build_info:   board=stm32f411e_disco
+[00:00:00.000,000] <inf> devkit_build_info:   zephyr=3.6.0
+[00:00:00.000,000] <inf> devkit_build_info:   build=May  2 2026 08:55:25
+[00:00:00.000,000] <inf> devkit_build_info:   tick_ms=500
+[00:00:00.000,000] <inf> devkit_build_info:   log_backend=RTT
+[00:00:00.000,000] <inf> robotos_platform: [robotos_core] RobotOS core init — version=4B-contract state=READY
+[00:00:00.000,000] <inf> robotos_platform: [robotos_core] event queue initialized capacity=16
+[00:00:00.000,000] <inf> robotos_platform: [robotos_core] event dispatcher initialized
+[00:00:00.000,000] <inf> devkit_runtime: RobotOS devkit starting — board: stm32f411e_disco
+[00:00:00.000,000] <inf> devkit_runtime: LED blink loop starting
+[00:00:00.000,000] <inf> devkit_runtime: tick count=0
+[00:00:00.000,000] <inf> robotos_platform: [robotos_core] core tick count=1
+[00:00:00.000,000] <inf> devkit_runtime: smoke event handled type=USER arg0=0x6a arg1=1
+[00:00:00.500,000] <inf> devkit_runtime: tick count=1
+[00:00:01.000,000] <inf> devkit_runtime: tick count=2
+[00:00:01.500,000] <inf> devkit_runtime: tick count=3
+[00:00:02.000,000] <inf> devkit_runtime: tick count=4
+[00:00:02.500,000] <inf> devkit_runtime: tick count=5
+[00:00:03.000,000] <inf> devkit_runtime: tick count=6
+
+===========================================================================
+KEY EVIDENCE:
+  smoke event handled type=USER arg0=0x6a arg1=1
+  — dispatched on tick count=0 (first tick, budget=1)
+  — arg0=0x6a matches s_smoke_event.arg0
+  — arg1=1 matches s_smoke_event.arg1
+  — ticks 1-6: clean, no repeated smoke events, no errors
+
+MEMORY:
+  FLASH: 27732 B (512 KB, 5.29%)
+  RAM:   12096 B (128 KB, 9.23%)
+
+FAULT REGISTERS:
+  CFSR = 0x0  (no configurable fault)
+  HFSR = 0x0  (no hard fault)

@@ -12,10 +12,14 @@
 # Standalone — does not depend on root CMake, west, or legacy src/.
 # Does not require Zephyr SDK or ZEPHYR_BASE.
 #
-# Build:
+# Build and run:
 #   cmake -S RobotOS_v1.0/tests/host -B build-host-core
 #   cmake --build build-host-core
 #   ctest --test-dir build-host-core --output-on-failure
+#
+# Save test log to version-controlled logs/:
+#   cmake --build build-host-core --target save_test_log
+#   (writes tests/host/logs/host_<date>.log — commit this file)
 #
 # Note: Windows MinGW64 may be broken; use WSL Ubuntu or Linux host.
 
@@ -165,3 +169,26 @@ target_include_directories(robotos_scheduler_backpressure_contract_test PRIVATE
 )
 
 add_test(NAME robotos_scheduler_backpressure_contract COMMAND robotos_scheduler_backpressure_contract_test)
+
+# ---- Log persistence target --------------------------------------------------
+# Saves ctest output to a timestamped file in the version-controlled logs/
+# directory alongside this CMakeLists.txt.
+#
+# Usage (from repo root, WSL/Linux):
+#   cmake --build build-host-core --target save_test_log
+#
+# The generated log file should be committed to version control.
+# Naming convention: host_YYYY-MM-DD.log
+# If a file for today already exists it is overwritten (re-run on same day).
+set(LOG_DIR "${CMAKE_CURRENT_SOURCE_DIR}/logs")
+add_custom_target(save_test_log
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${LOG_DIR}"
+    COMMAND ${CMAKE_COMMAND} -E echo "Running tests and saving log to ${LOG_DIR}/"
+    COMMAND ${CMAKE_COMMAND}
+        -DLOG_DIR=${LOG_DIR}
+        -DCTEST_BINARY_DIR=${CMAKE_BINARY_DIR}
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/save_test_log.cmake"
+    WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+    COMMENT "Saving host test log to tests/host/logs/"
+    VERBATIM
+)
