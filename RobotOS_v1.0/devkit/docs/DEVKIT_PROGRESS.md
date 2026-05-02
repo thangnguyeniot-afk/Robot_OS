@@ -2912,6 +2912,203 @@ modification to `devkit/CMakeLists.txt`.
 
 Candidates:
 
-- Phase 4J: Scheduler priority stub — multi-priority event queue layer
+- Phase 4J: Scheduler budget/backpressure policy stub
 - Phase 5D: Platform critical section / ISR lock boundary
 - Phase 6A: First portable module using platform boundaries
+
+---
+
+## Phase 4J — Scheduler Budget / Backpressure Policy
+
+**Date:** 2026-05-02
+**Branch:** master
+**Baseline commit:** `0cda14e` — "core: add scheduler admission policy stub"
+
+---
+
+### Purpose
+
+Define minimal budget/backpressure observability for the core event loop.
+Make backlog/pressure state inspectable without implementing a real scheduler,
+priority queue, or producer throttle.
+
+Two new public APIs added:
+- `robotos_core_dispatch_budget_per_tick()` — returns `ROBOTOS_CORE_MAX_EVENTS_PER_TICK`
+- `robotos_core_backpressure_active()` — true when pending > budget OR queue is full
+
+One new snapshot field:
+- `robotos_core_snapshot_t.backpressure_active` — matches `backpressure_active()` getter
+
+Backpressure rule: `pending_event_count > ROBOTOS_CORE_MAX_EVENTS_PER_TICK || queue_is_full`
+
+With current values (budget=1, capacity=16): backpressure activates when ≥2 events are pending.
+
+Backpressure is observability only — it does not throttle producers, adjust priority,
+or alter scheduler fairness. Queue-full still returns `ERR_FULL`. Invalid events still
+return `ERR_INVALID_ARG`. No behavior change in the tick/dispatch path.
+
+---
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `core/robotos_core.h` | Added `backpressure_active` to snapshot; added `dispatch_budget_per_tick()` and `backpressure_active()` declarations; added Phase 4J counter semantics comments |
+| `core/robotos_core.c` | Implemented both new functions; snapshot fills `backpressure_active`; updated file comment to Phase 4J |
+| `core/README.md` | Added Phase 4J Scheduler Budget/Backpressure Policy section |
+| `tests/host/CMakeLists.txt` | Added `robotos_scheduler_backpressure_contract_test` target |
+| `tests/host/test_robotos_scheduler_backpressure_contract.c` | New — 9 host test targets now (Phase 4J backpressure) |
+| `devkit/docs/DEVKIT_PROGRESS.md` | Added Phase 4J section (this file) |
+
+### Files Unchanged
+
+| File | Reason |
+|------|--------|
+| `core/robotos_event_queue.h/.c` | Existing `is_full()` and `count()` APIs sufficient; no new queue API needed |
+| `core/robotos_event_dispatcher.h/.c` | No dispatcher changes needed |
+| `devkit/CMakeLists.txt` | No Zephyr-build changes (core changes only) |
+| `devkit/src/devkit_runtime.c` | No runtime behavior change |
+
+---
+
+### Policy Summary
+
+| Aspect | Value / Rule |
+|--------|-------------|
+| Dispatch budget | `ROBOTOS_CORE_MAX_EVENTS_PER_TICK` = 1 event per tick |
+| Backpressure rule | `pending > budget` OR `queue_is_full` |
+| Backpressure effect | Observability only — no producer throttle |
+| Queue-full behavior | `ERR_FULL` + `dropped_count++` (unchanged) |
+| Admission reject behavior | `ERR_INVALID_ARG` + `admission_rejected_count++` (unchanged) |
+| Counter independence | `dropped_count` ≠ `admission_rejected_count` ≠ `unhandled_count` ≠ `handler_error_count` |
+
+---
+
+### Host Test Evidence
+
+**Commands (WSL Ubuntu, gcc 13.3.0):**
+
+```bash
+rm -rf build-host-core
+cmake -S RobotOS_v1.0/tests/host -B build-host-core
+cmake --build build-host-core
+ctest --test-dir build-host-core --output-on-failure
+```
+
+**Result:**
+
+```
+Test project /mnt/d/Robot_OS/build-host-core
+    Start 1: robotos_core_contract
+1/9 Test #1: robotos_core_contract .....................   Passed    0.01 sec
+    Start 2: robotos_event_queue_contract
+2/9 Test #2: robotos_event_queue_contract ..............   Passed    0.01 sec
+    Start 3: robotos_event_dispatcher_contract
+3/9 Test #3: robotos_event_dispatcher_contract .........   Passed    0.01 sec
+    Start 4: robotos_core_ingestion_contract
+4/9 Test #4: robotos_core_ingestion_contract ...........   Passed    0.01 sec
+    Start 5: robotos_core_tick_policy_contract
+5/9 Test #5: robotos_core_tick_policy_contract .........   Passed    0.01 sec
+    Start 6: robotos_core_handler_policy_contract
+6/9 Test #6: robotos_core_handler_policy_contract ......   Passed    0.01 sec
+    Start 7: robotos_platform_fault_contract
+7/9 Test #7: robotos_platform_fault_contract ...........   Passed    0.01 sec
+    Start 8: robotos_scheduler_admission_contract
+8/9 Test #8: robotos_scheduler_admission_contract ......   Passed    0.01 sec
+    Start 9: robotos_scheduler_backpressure_contract
+9/9 Test #9: robotos_scheduler_backpressure_contract ...   Passed    0.01 sec
+
+100% tests passed, 0 tests failed out of 9
+```
+
+9/9 pass. All 8 prior tests unaffected. New backpressure test covers:
+- TC01–TC02: pre-init budget constant and backpressure=false
+- TC03–TC04: post-init empty state
+- TC05: 1 event pending (== budget) → backpressure=false
+- TC06: 2 events pending (> budget) → backpressure=true
+- TC07: tick drains 1 event → backpressure=false
+- TC08: queue filled to capacity → backpressure=true
+- TC09: post when full → ERR_FULL, dropped++, admission unchanged
+- TC10: invalid post under pressure → ERR_INVALID_ARG, rejected++, dropped unchanged
+- TC11: dispatch_events drains backlog → pending=0, backpressure=false
+- TC12: unregistered dispatch → unhandled_count++, backpressure tracks pending
+- TC13: handler error → handler_error_count++, event consumed, backpressure updated
+- TC14: repeated init → pending/backpressure NOT cleared
+- TC15: snapshot coherence — all values match getters
+
+---
+
+### Zephyr Build Evidence
+
+**Command:** `west build -b stm32f411e_disco --pristine` (Zephyr v3.6.0, SDK 0.17.0)
+
+```
+Memory region         Used Size  Region Size  %age Used
+           FLASH:       27132 B       512 KB      5.18%
+             RAM:        9024 B       128 KB      6.88%
+```
+
+Build: **PASS** (142 objects, no warnings, no errors).
+
+FLASH unchanged vs Phase 5C: `dispatch_budget_per_tick()` and `backpressure_active()`
+are not called from production devkit code; linker strips them. They activate in FLASH
+once called by future devkit or portable module code.
+
+---
+
+### Runtime Evidence
+
+**Status: RUNTIME_PASS — hardware validated 2026-05-02.**
+
+#### Method
+
+`west flash` → soft reset via OpenOCD `reset run` → RTT buffer dumped via
+`dump_image` at `0x20000abf` (1024 B) → CFSR/HFSR read via `mrw`.
+
+#### RTT Boot Log
+
+```
+*** Booting Zephyr OS build v3.6.0 ***
+[00:00:00.000,000] <inf> devkit_fault: fault visibility active
+[00:00:00.000,000] <inf> devkit_build_info: RobotOS devkit build info:
+[00:00:00.000,000] <inf> devkit_build_info:   board=stm32f411e_disco
+[00:00:00.000,000] <inf> devkit_build_info:   zephyr=3.6.0
+[00:00:00.000,000] <inf> devkit_build_info:   build=May  2 2026 08:36:25
+[00:00:00.000,000] <inf> devkit_build_info:   tick_ms=500
+[00:00:00.000,000] <inf> devkit_build_info:   log_backend=RTT
+[00:00:00.000,000] <inf> robotos_platform: [robotos_core] RobotOS core init — version=4B-contract state=READY
+```
+
+- Build timestamp `May 2 2026 08:36:25` confirms Phase 4J binary running.
+- Platform log routing active. CFSR=0x0, HFSR=0x0. No new faults.
+- Runtime behavior identical to Phase 5C (no tick/dispatch path change).
+
+---
+
+### Legacy Isolation Confirmation
+
+No `RobotOS_v1.0/src/` file compiled, staged, or referenced.
+All changes are in `core/` or `tests/host/`.
+
+---
+
+### Known Limitations
+
+- **Observability only.** `backpressure_active` does not throttle `post_event()` callers.
+- **No dynamic budget.** `ROBOTOS_CORE_MAX_EVENTS_PER_TICK` is compile-time only.
+- **No priority or fairness.** Strict FIFO preserved.
+- **No producer throttle.** Full queue returns `ERR_FULL`; caller decides retry strategy.
+- **No concurrency/ISR safety.** Single-threaded only. No critical section.
+- **No timer/deadline integration.** Time-based scheduling out of scope.
+- Custom STM32F407VET6 board remains hardware-unvalidated.
+
+---
+
+### Next Recommended Phase
+
+**Team decision required.**
+
+Candidates:
+- **Phase 4K** — Scheduler Producer Throttle Policy
+- **Phase 5D** — Platform Critical Section / ISR Lock Boundary
+- **Phase 6A** — Devkit Event Smoke Integration

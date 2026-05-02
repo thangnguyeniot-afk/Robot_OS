@@ -1,6 +1,6 @@
 /*
  * robotos_core.c
- * RobotOS portable core — Phase 4I: scheduler admission policy.
+ * RobotOS portable core — Phase 4J: scheduler budget/backpressure policy.
  *
  * Logging is routed through robotos_platform_log.h — a portable interface.
  * The Zephyr backend (platform/zephyr/robotos_platform_log_zephyr.c) is
@@ -194,6 +194,7 @@ robotos_core_status_t robotos_core_snapshot(robotos_core_snapshot_t *out)
 	out->unhandled_event_count    = s_unhandled_event_count;
 	out->admission_accepted_count = s_admission_accepted_count;
 	out->admission_rejected_count = s_admission_rejected_count;
+	out->backpressure_active      = robotos_core_backpressure_active();
 
 	return ROBOTOS_CORE_OK;
 }
@@ -346,4 +347,16 @@ uint32_t robotos_core_admission_accepted_count(void)
 uint32_t robotos_core_admission_rejected_count(void)
 {
 	return s_admission_rejected_count;
+}
+
+uint32_t robotos_core_dispatch_budget_per_tick(void)
+{
+	return ROBOTOS_CORE_MAX_EVENTS_PER_TICK;
+}
+
+bool robotos_core_backpressure_active(void)
+{
+	uint32_t pending = robotos_event_queue_count(&s_core_event_queue);
+	bool     full    = robotos_event_queue_is_full(&s_core_event_queue);
+	return (pending > ROBOTOS_CORE_MAX_EVENTS_PER_TICK) || full;
 }

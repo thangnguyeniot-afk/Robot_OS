@@ -1,6 +1,6 @@
 # tests/host/CMakeLists.txt
-# Phase 4I: isolated host build — core, queue, dispatcher, ingestion, tick policy, handler policy,
-#           platform fault contract, scheduler admission policy.
+# Phase 4J: isolated host build — core, queue, dispatcher, ingestion, tick policy, handler policy,
+#           platform fault contract, scheduler admission policy, scheduler backpressure policy.
 #
 # Platform logging: each target that compiles robotos_core.c also compiles
 # the no-op host stub (robotos_platform_log_host_stub.c) and adds the
@@ -149,3 +149,19 @@ target_include_directories(robotos_scheduler_admission_contract_test PRIVATE
 )
 
 add_test(NAME robotos_scheduler_admission_contract COMMAND robotos_scheduler_admission_contract_test)
+
+# ---- Scheduler backpressure policy contract test (Phase 4J) -----------------
+# Tests budget/backpressure observability in robotos_core.
+# Needs all three core sources + platform log stub.
+add_executable(robotos_scheduler_backpressure_contract_test
+    test_robotos_scheduler_backpressure_contract.c
+    ${CORE_SRCS}
+    ${PLATFORM_HOST_STUB}
+)
+
+target_include_directories(robotos_scheduler_backpressure_contract_test PRIVATE
+    "${CORE_DIR}"
+    "${PLATFORM_DIR}"
+)
+
+add_test(NAME robotos_scheduler_backpressure_contract COMMAND robotos_scheduler_backpressure_contract_test)

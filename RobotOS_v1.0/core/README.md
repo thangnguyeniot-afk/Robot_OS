@@ -1,4 +1,4 @@
-# RobotOS Core — Phase 5A Platform Logging Boundary
+# RobotOS Core — Phase 4J Scheduler Budget/Backpressure Policy
 
 This directory contains the portable RobotOS core module.
 
@@ -179,7 +179,96 @@ The shim is local to `robotos_core.c`. `robotos_core.h` has no Zephyr types.
 
 ## Next Phase
 
-Phase 4D — options for team decision:
+Candidates for team decision:
 
-- **Event Queue Contract Stub** — first async primitive inside `core/`; Phase 4C host test framework is the foundation
-- **Core Concurrency/Host Test Expansion** — add thread-safety validation before introducing RTOS threads
+- **Phase 4K** — Scheduler Producer Throttle Policy
+- **Phase 5D** — Platform Critical Section Boundary
+- **Phase 6A** — Devkit Event Smoke Integration
+
+Do not implement without explicit assignment.
+
+---
+
+## Scheduler Budget / Backpressure Policy (Phase 4J)
+
+### Dispatch Budget
+
+Each call to `robotos_core_tick()` dispatches at most
+`ROBOTOS_CORE_MAX_EVENTS_PER_TICK` events from the internal queue.
+The budget is a compile-time constant (currently 1).
+
+```c
+uint32_t robotos_core_dispatch_budget_per_tick(void);
+/* Returns ROBOTOS_CORE_MAX_EVENTS_PER_TICK. Does not change at runtime. */
+```
+
+### Backpressure Rule
+
+Backpressure is active when the pending backlog exceeds the per-tick budget
+OR the queue is full:
+
+```
+backpressure_active = (pending_event_count > ROBOTOS_CORE_MAX_EVENTS_PER_TICK)
+                      || queue_is_full
+```
+
+```c
+bool robotos_core_backpressure_active(void);
+/* Safe to call before init (returns false when queue uninitialized/empty). */
+```
+
+Example with budget=1, capacity=16:
+
+| Pending | Full? | backpressure_active |
+|---------|-------|---------------------|
+| 0       | no    | false               |
+| 1       | no    | false (== budget)   |
+| 2       | no    | true  (> budget)    |
+| 16      | yes   | true                |
+
+### Counter Distinction
+
+| Counter | Incremented by | Notes |
+|---------|---------------|-------|
+| `pending_event_count` | successful `post_event()` | decremented by dispatch |
+| `dropped_event_count` | queue full on push | ERR_FULL path; not admission reject |
+| `admission_accepted_count` | type passed gate AND queue push succeeded | |
+| `admission_rejected_count` | type rejected by gate (NONE / reserved 2–99) | not queue-full |
+| `dispatched_event_count` | event popped and delivered to routing handler | |
+| `unhandled_event_count` | dispatched event with no registered handler | still consumed, returns OK |
+| `handler_error_count` | registered handler returned non-OK | event still consumed |
+
+**Key distinctions:**
+- Queue-full (`ERR_FULL`) increments `dropped_count`, NOT `admission_rejected_count`.
+- Invalid type (`ERR_INVALID_ARG`) increments `admission_rejected_count`, NOT `dropped_count`.
+- A handler error increments `handler_error_count`; the event is still consumed (pending decreases).
+
+### Backpressure Is Observability Only (Phase 4J)
+
+In Phase 4J, `backpressure_active` is a read-only signal. It does NOT:
+
+- throttle producers (`post_event()` behavior is unchanged)
+- change event priority (strict FIFO preserved)
+- alter scheduler fairness
+- affect admission gate decisions
+- affect queue-full error returns
+
+Full queue still returns `ERR_FULL` + increments `dropped_count`.
+Invalid events still return `ERR_INVALID_ARG` + increment `admission_rejected_count`.
+Neither condition is altered by backpressure state.
+
+### Snapshot
+
+`robotos_core_snapshot_t` includes `bool backpressure_active` populated by
+`robotos_core_snapshot()`. This field equals `robotos_core_backpressure_active()`
+at the time of the call.
+
+### Phase 4J Limitations
+
+- **Observability only.** No producer throttle.
+- **No dynamic budget.** Budget is a compile-time constant.
+- **No priority or fairness.** Strict FIFO from queue.
+- **No concurrency/ISR safety.** Single-threaded only.
+- **No platform critical section.** Revisit when RTOS threads are introduced.
+- **No timer/deadline integration.** Time-based scheduling is out of scope.
+

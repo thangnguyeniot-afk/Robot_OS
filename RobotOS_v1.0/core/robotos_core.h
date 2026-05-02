@@ -1,10 +1,17 @@
 /*
  * robotos_core.h
- * RobotOS portable core — Phase 4I scheduler admission policy.
+ * RobotOS portable core — Phase 4J scheduler budget/backpressure policy.
  *
  * Phase 4I: admission gate in robotos_core_post_event().
  * NONE and reserved types (2–99) are rejected before enqueue.
  * Admission counters track accepted and rejected events.
+ *
+ * Phase 4J: budget/backpressure observability.
+ * dispatch budget = ROBOTOS_CORE_MAX_EVENTS_PER_TICK events drained per tick.
+ * backpressure_active = pending_event_count > budget OR queue is full.
+ * Backpressure is observability only in Phase 4J — it does not throttle
+ * producers, adjust priority, or alter scheduler fairness.
+ *
  * No Zephyr or board-specific types.
  */
 
@@ -80,6 +87,16 @@ typedef robotos_core_status_t (*robotos_core_event_handler_t)(
  * Snapshot of core state at a point in time.
  * Populated by robotos_core_snapshot(). Not thread-safe.
  * All counter fields are 0 before robotos_core_init() is called.
+ *
+ * Counter semantics (Phase 4J):
+ *   pending_event_count      events currently in queue (drain reduces this)
+ *   dropped_event_count      events dropped because queue was full (ERR_FULL path)
+ *   admission_accepted_count events that passed admission AND entered queue
+ *   admission_rejected_count events rejected by admission gate (invalid type)
+ *   dispatched_event_count   events consumed and delivered to routing handler
+ *   unhandled_event_count    dispatched events with no matching registered handler
+ *   handler_error_count      dispatched events where handler returned non-OK
+ *   backpressure_active      true when pending > dispatch budget OR queue is full
  */
 typedef struct {
 	robotos_core_state_t state;
@@ -94,6 +111,7 @@ typedef struct {
 	uint32_t             unhandled_event_count;    /* dispatched with no registered handler */
 	uint32_t             admission_accepted_count; /* events accepted by admission gate */
 	uint32_t             admission_rejected_count; /* events rejected by admission gate */
+	bool                 backpressure_active;      /* pending > budget OR queue full */
 } robotos_core_snapshot_t;
 
 /* Maximum number of simultaneously registered event handlers. */
@@ -218,5 +236,27 @@ uint32_t robotos_core_admission_accepted_count(void);
  * Returns 0 before init.
  */
 uint32_t robotos_core_admission_rejected_count(void);
+
+/*
+ * Return the dispatch budget: maximum events drained from the queue per tick.
+ * Equal to ROBOTOS_CORE_MAX_EVENTS_PER_TICK. Does not change at runtime.
+ * Safe to call before init.
+ */
+uint32_t robotos_core_dispatch_budget_per_tick(void);
+
+/*
+ * Return true when the pending event backlog exceeds the per-tick dispatch budget
+ * OR the event queue is full.
+ *
+ * Backpressure rule (Phase 4J):
+ *   backpressure_active = (pending_event_count > ROBOTOS_CORE_MAX_EVENTS_PER_TICK)
+ *                         || queue_is_full
+ *
+ * Observability only: does NOT throttle producers, adjust priority, or change
+ * scheduler fairness. Queue-full posts still return ERR_FULL; invalid events
+ * still return ERR_INVALID_ARG regardless of backpressure state.
+ * Safe to call before init (returns false when queue is uninitialized/empty).
+ */
+bool robotos_core_backpressure_active(void);
 
 #endif /* ROBOTOS_CORE_H */
