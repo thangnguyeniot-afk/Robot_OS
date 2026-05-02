@@ -1,9 +1,10 @@
 /*
  * robotos_core.h
- * RobotOS portable core — Phase 4H handler registration policy.
+ * RobotOS portable core — Phase 4I scheduler admission policy.
  *
- * Phase 4H: static type-routed handler registration.
- * One handler per event type. No scheduler, no priority, no threads.
+ * Phase 4I: admission gate in robotos_core_post_event().
+ * NONE and reserved types (2–99) are rejected before enqueue.
+ * Admission counters track accepted and rejected events.
  * No Zephyr or board-specific types.
  */
 
@@ -91,6 +92,8 @@ typedef struct {
 	uint32_t             handler_error_count;      /* handler errors */
 	uint32_t             registered_handler_count; /* currently registered handlers */
 	uint32_t             unhandled_event_count;    /* dispatched with no registered handler */
+	uint32_t             admission_accepted_count; /* events accepted by admission gate */
+	uint32_t             admission_rejected_count; /* events rejected by admission gate */
 } robotos_core_snapshot_t;
 
 /* Maximum number of simultaneously registered event handlers. */
@@ -131,7 +134,21 @@ uint32_t robotos_core_tick_count(void);
 /* Copy a snapshot of core state. Returns ROBOTOS_CORE_ERR_NULL if out is NULL. */
 robotos_core_status_t robotos_core_snapshot(robotos_core_snapshot_t *out);
 
-/* Post an event into the core-owned queue. Requires READY. Single-threaded. */
+/*
+ * Post an event into the core-owned queue. Requires READY.
+ *
+ * Admission policy (Phase 4I):
+ *   Accepted:  ROBOTOS_EVENT_CORE_TICK and any type >= ROBOTOS_EVENT_USER.
+ *   Rejected:  ROBOTOS_EVENT_NONE and reserved range (2–99).
+ *   Rejected events increment admission_rejected_count and return ERR_INVALID_ARG.
+ *   Accepted events that pass queue push increment admission_accepted_count.
+ *
+ * Returns ROBOTOS_CORE_ERR_NULL          if event is NULL.
+ * Returns ROBOTOS_CORE_ERR_INVALID_STATE if core not READY.
+ * Returns ROBOTOS_CORE_ERR_INVALID_ARG   if event type is rejected.
+ * Returns ROBOTOS_CORE_ERR_FULL          if queue is full.
+ * Returns ROBOTOS_CORE_OK               on success.
+ */
 robotos_core_status_t robotos_core_post_event(const robotos_event_t *event);
 
 /* Dispatch up to max_events events. Requires READY. ERR_EMPTY if empty and max>0. */
@@ -187,5 +204,19 @@ uint32_t robotos_core_registered_handler_count(void);
  * Returns 0 before init.
  */
 uint32_t robotos_core_unhandled_event_count(void);
+
+/*
+ * Return cumulative count of events accepted by the admission gate.
+ * An event is accepted when its type passes the policy check AND queue push succeeds.
+ * Returns 0 before init.
+ */
+uint32_t robotos_core_admission_accepted_count(void);
+
+/*
+ * Return cumulative count of events rejected by the admission gate.
+ * Rejected types: ROBOTOS_EVENT_NONE and reserved range (2–99).
+ * Returns 0 before init.
+ */
+uint32_t robotos_core_admission_rejected_count(void);
 
 #endif /* ROBOTOS_CORE_H */

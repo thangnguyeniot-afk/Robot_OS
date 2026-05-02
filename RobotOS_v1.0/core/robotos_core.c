@@ -1,6 +1,6 @@
 /*
  * robotos_core.c
- * RobotOS portable core — Phase 5A: platform logging boundary.
+ * RobotOS portable core — Phase 4I: scheduler admission policy.
  *
  * Logging is routed through robotos_platform_log.h — a portable interface.
  * The Zephyr backend (platform/zephyr/robotos_platform_log_zephyr.c) is
@@ -48,6 +48,8 @@ typedef struct {
 static s_handler_entry_t s_handler_table[ROBOTOS_CORE_MAX_EVENT_HANDLERS];
 static uint32_t          s_handler_count;
 static uint32_t          s_unhandled_event_count;
+static uint32_t          s_admission_accepted_count;
+static uint32_t          s_admission_rejected_count;
 
 /* -------------------------------------------------------------------------- */
 
@@ -79,6 +81,23 @@ static robotos_core_status_t s_core_routing_handler(const robotos_event_t *event
 	/* No registered handler for this event type */
 	s_unhandled_event_count++;
 	return ROBOTOS_CORE_OK;
+}
+
+/*
+ * Admission policy: CORE_TICK and USER+ are accepted; NONE and reserved (2–99) rejected.
+ */
+static bool s_event_type_admissible(robotos_event_type_t type)
+{
+	if (type == ROBOTOS_EVENT_NONE) {
+		return false;
+	}
+	if (type == ROBOTOS_EVENT_CORE_TICK) {
+		return true;
+	}
+	if ((uint32_t)type >= (uint32_t)ROBOTOS_EVENT_USER) {
+		return true;
+	}
+	return false; /* reserved range 2–99 */
 }
 
 const char *robotos_core_version(void)
@@ -173,6 +192,8 @@ robotos_core_status_t robotos_core_snapshot(robotos_core_snapshot_t *out)
 	out->handler_error_count      = robotos_event_dispatcher_handler_error_count(&s_core_dispatcher);
 	out->registered_handler_count = s_handler_count;
 	out->unhandled_event_count    = s_unhandled_event_count;
+	out->admission_accepted_count = s_admission_accepted_count;
+	out->admission_rejected_count = s_admission_rejected_count;
 
 	return ROBOTOS_CORE_OK;
 }
@@ -185,7 +206,15 @@ robotos_core_status_t robotos_core_post_event(const robotos_event_t *event)
 	if (core_state != ROBOTOS_CORE_STATE_READY) {
 		return ROBOTOS_CORE_ERR_INVALID_STATE;
 	}
-	return robotos_event_queue_push(&s_core_event_queue, event);
+	if (!s_event_type_admissible(event->type)) {
+		s_admission_rejected_count++;
+		return ROBOTOS_CORE_ERR_INVALID_ARG;
+	}
+	robotos_core_status_t push_ret = robotos_event_queue_push(&s_core_event_queue, event);
+	if (push_ret == ROBOTOS_CORE_OK) {
+		s_admission_accepted_count++;
+	}
+	return push_ret;
 }
 
 robotos_core_status_t robotos_core_dispatch_events(uint32_t max_events)
@@ -307,4 +336,14 @@ uint32_t robotos_core_registered_handler_count(void)
 uint32_t robotos_core_unhandled_event_count(void)
 {
 	return s_unhandled_event_count;
+}
+
+uint32_t robotos_core_admission_accepted_count(void)
+{
+	return s_admission_accepted_count;
+}
+
+uint32_t robotos_core_admission_rejected_count(void)
+{
+	return s_admission_rejected_count;
 }

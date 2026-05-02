@@ -2740,3 +2740,178 @@ Candidates:
 - Phase 5D: Platform critical section / ISR lock boundary
 - Phase 6A: First portable module using the platform boundary (e.g., a
   diagnostics or watchdog module that calls fault_report/assert)
+
+---
+
+## Phase 4I — Scheduler Admission Policy Stub
+
+**Date:** 2026-05-02
+**Branch:** master
+**Baseline commit:** `3a7151b` — platform: add assert fault boundary
+
+---
+
+### Purpose
+
+Add an admission gate inside `robotos_core_post_event()` that enforces
+event type validity before enqueue. Rejected events return
+`ROBOTOS_CORE_ERR_INVALID_ARG` and are counted separately from
+queue-full drops. This separates two distinct failure modes:
+
+- **Admission rejection** — bad event type (programming error); never
+  reaches the queue.
+- **Queue-full drop** — valid event arrived when queue was at capacity
+  (flow-control backpressure); counted by the existing dropped counter.
+
+Admission counters (`admission_accepted_count`, `admission_rejected_count`)
+are visible through snapshot and dedicated getter functions.
+
+---
+
+### Admission Policy
+
+| Event Type | Range | Decision |
+|------------|-------|----------|
+| `ROBOTOS_EVENT_NONE` | 0 | Rejected — always invalid |
+| `ROBOTOS_EVENT_CORE_TICK` | 1 | Accepted |
+| Reserved | 2–99 | Rejected — undefined range |
+| `ROBOTOS_EVENT_USER` and above | ≥ 100 | Accepted |
+
+The gate is implemented as `s_event_type_admissible()` — a private
+static helper in `robotos_core.c`.
+
+---
+
+### Core Files Modified
+
+| File | Change |
+|------|--------|
+| `core/robotos_core.h` | Phase 4I header comment; extended snapshot struct with two new counter fields; expanded `post_event` comment documenting admission policy; two new getter declarations |
+| `core/robotos_core.c` | Phase 4I implementation comment; added `s_admission_accepted_count` / `s_admission_rejected_count` static counters; added `s_event_type_admissible()` helper; updated `post_event()` with gate; updated `snapshot()`; added two getter implementations |
+
+### Test Files Added
+
+| File | Role |
+|------|------|
+| `tests/host/test_robotos_scheduler_admission_contract.c` | Phase 4I host contract test — 32 assertions covering NONE, reserved range, CORE_TICK, USER, USER+, queue-full, second-init invariant, snapshot/getter coherence |
+
+### Build Files Modified
+
+| File | Change |
+|------|--------|
+| `tests/host/CMakeLists.txt` | Added `robotos_scheduler_admission_contract_test` target using `CORE_SRCS` + `PLATFORM_HOST_STUB` pattern; added `robotos_scheduler_admission_contract` ctest entry |
+
+---
+
+### API Changes
+
+#### `robotos_core_snapshot_t` — two new fields
+
+```c
+uint32_t admission_accepted_count; /* events accepted by admission gate */
+uint32_t admission_rejected_count; /* events rejected by admission gate */
+```
+
+#### New getter functions
+
+```c
+uint32_t robotos_core_admission_accepted_count(void);
+uint32_t robotos_core_admission_rejected_count(void);
+```
+
+#### `robotos_core_post_event()` extended contract
+
+- `ERR_INVALID_ARG` returned when type is NONE or reserved (2–99).
+- `admission_rejected_count` incremented on rejection.
+- `admission_accepted_count` incremented only when push succeeds (OK).
+- Queue-full (`ERR_FULL`) does NOT increment `admission_accepted_count`.
+- NULL event check and state check remain before the admission gate.
+
+---
+
+### Admission Counter Invariants
+
+| Scenario | accepted | rejected |
+|----------|----------|----------|
+| NULL event posted | unchanged | unchanged |
+| Pre-init post | unchanged | unchanged |
+| NONE type | unchanged | +1 |
+| Reserved type (2–99) | unchanged | +1 |
+| CORE_TICK, USER, USER+ — queue OK | +1 | unchanged |
+| Valid type, queue full | unchanged | unchanged |
+| Second `init()` call | NOT reset | NOT reset |
+
+Counters start at zero (BSS). Second init returns early before the
+reset block, so accumulated admission history is preserved across
+re-initialisation — same invariant as tick_count.
+
+---
+
+### Host Test Results
+
+```
+cmake -S RobotOS_v1.0/tests/host -B build-host-core
+cmake --build build-host-core
+ctest --test-dir build-host-core --output-on-failure
+```
+
+```
+Test project /mnt/d/Robot_OS/build-host-core
+    Start 1: robotos_core_contract
+1/8 Test #1: robotos_core_contract ..................   Passed    0.01 sec
+    Start 2: robotos_event_queue_contract
+2/8 Test #2: robotos_event_queue_contract ...........   Passed    0.01 sec
+    Start 3: robotos_event_dispatcher_contract
+3/8 Test #3: robotos_event_dispatcher_contract ......   Passed    0.01 sec
+    Start 4: robotos_core_ingestion_contract
+4/8 Test #4: robotos_core_ingestion_contract ........   Passed    0.01 sec
+    Start 5: robotos_core_tick_policy_contract
+5/8 Test #5: robotos_core_tick_policy_contract ......   Passed    0.01 sec
+    Start 6: robotos_core_handler_policy_contract
+6/8 Test #6: robotos_core_handler_policy_contract ...   Passed    0.01 sec
+    Start 7: robotos_platform_fault_contract
+7/8 Test #7: robotos_platform_fault_contract ........   Passed    0.01 sec
+    Start 8: robotos_scheduler_admission_contract
+8/8 Test #8: robotos_scheduler_admission_contract ...   Passed    0.01 sec
+
+100% tests passed, 0 tests failed out of 8
+```
+
+**8 test suites, 100% pass. No regressions.**
+
+---
+
+### Zephyr Build Note
+
+No devkit sources changed in Phase 4I. The two new fields in
+`robotos_core_snapshot_t` are additive (no alignment impact on existing
+fields). Devkit builds compile `robotos_core.c` unchanged in terms of
+Zephyr dependency — the admission gate is pure portable C, no platform
+layer involvement. A `west build` is expected to succeed without
+modification to `devkit/CMakeLists.txt`.
+
+---
+
+### Known Limitations
+
+- Admission counters are not reset on second `init()` — intentional, same
+  reasoning as tick_count: a re-init during operation must not silently
+  discard diagnostic history.
+- No runtime logging of rejected events (silent gate) — LOG_WRN on
+  rejection is a candidate for a future phase if observability is needed.
+- Queue-full events are not double-counted in `admission_rejected_count`
+  — they remain in `dropped_event_count` only. The two counters are
+  orthogonal by design.
+- Single-threaded assumption inherited from prior phases.
+
+---
+
+### Next Recommended Phase
+
+**Team decision required.**
+
+Candidates:
+
+- Phase 4J: Scheduler priority stub — multi-priority event queue layer
+- Phase 5D: Platform critical section / ISR lock boundary
+- Phase 6A: First portable module using platform boundaries

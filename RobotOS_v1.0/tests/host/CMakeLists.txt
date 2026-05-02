@@ -1,6 +1,6 @@
 # tests/host/CMakeLists.txt
-# Phase 5C: isolated host build — core, queue, dispatcher, ingestion, tick policy, handler policy,
-#           platform fault contract.
+# Phase 4I: isolated host build — core, queue, dispatcher, ingestion, tick policy, handler policy,
+#           platform fault contract, scheduler admission policy.
 #
 # Platform logging: each target that compiles robotos_core.c also compiles
 # the no-op host stub (robotos_platform_log_host_stub.c) and adds the
@@ -133,3 +133,19 @@ target_include_directories(robotos_platform_fault_contract_test PRIVATE
 )
 
 add_test(NAME robotos_platform_fault_contract COMMAND robotos_platform_fault_contract_test)
+
+# ---- Scheduler admission policy contract test (Phase 4I) --------------------
+# Tests admission gate in robotos_core_post_event().
+# Needs all three core sources + platform log stub.
+add_executable(robotos_scheduler_admission_contract_test
+    test_robotos_scheduler_admission_contract.c
+    ${CORE_SRCS}
+    ${PLATFORM_HOST_STUB}
+)
+
+target_include_directories(robotos_scheduler_admission_contract_test PRIVATE
+    "${CORE_DIR}"
+    "${PLATFORM_DIR}"
+)
+
+add_test(NAME robotos_scheduler_admission_contract COMMAND robotos_scheduler_admission_contract_test)
