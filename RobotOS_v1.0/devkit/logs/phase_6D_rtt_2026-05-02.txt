@@ -1,0 +1,64 @@
+Phase 6D -- Devkit Invalid / Rejection Smoke
+RTT Boot Log -- 2026-05-02
+Board: STM32F411E-DISCO
+Build timestamp: May 2 2026 13:37:25
+Capture method: openocd reset run -> sleep 3000 -> halt -> dump_image 0x200009c8 4096
+_SEGGER_RTT address: 0x200009c8 (4KB buffer, unchanged from Phase 6A)
+CFSR: 0x0  HFSR: 0x0
+
+===========================================================================
+
+*** Booting Zephyr OS build v3.6.0 ***
+[00:00:00.000,000] <inf> devkit_fault: fault visibility active
+[00:00:00.000,000] <inf> devkit_build_info: RobotOS devkit build info:
+[00:00:00.000,000] <inf> devkit_build_info:   board=stm32f411e_disco
+[00:00:00.000,000] <inf> devkit_build_info:   zephyr=3.6.0
+[00:00:00.000,000] <inf> devkit_build_info:   build=May  2 2026 13:37:25
+[00:00:00.000,000] <inf> devkit_build_info:   tick_ms=500
+[00:00:00.000,000] <inf> devkit_build_info:   log_backend=RTT
+[00:00:00.000,000] <inf> robotos_platform: [robotos_core] RobotOS core init -- version=4B-contract state=READY
+[00:00:00.000,000] <inf> robotos_platform: [robotos_core] event queue initialized capacity=16
+[00:00:00.000,000] <inf> robotos_platform: [robotos_core] event dispatcher initialized
+[00:00:00.000,000] <inf> devkit_runtime: Phase 6D post summary: attempted=2 inv_arg=2 other_err=0 pending=0 accepted=0 rejected=2 dropped=0 dispatched=0 herr=0 unhandled=0 bp=0 handler_called=0
+[00:00:00.000,000] <inf> devkit_runtime: RobotOS devkit starting -- board: stm32f411e_disco
+[00:00:00.000,000] <inf> devkit_runtime: LED blink loop starting
+[00:00:00.000,000] <inf> devkit_runtime: tick count=0
+[00:00:00.000,000] <inf> robotos_platform: [robotos_core] core tick count=1
+[00:00:00.500,000] <inf> devkit_runtime: tick count=1
+[00:00:00.500,000] <inf> devkit_runtime: Phase 6D final summary: attempted=2 inv_arg=2 other_err=0 pending=0 accepted=0 rejected=2 dropped=0 dispatched=0 herr=0 unhandled=0 bp=0 handler_called=0
+[00:00:01.000,000] <inf> devkit_runtime: tick count=2
+[00:00:01.500,000] <inf> devkit_runtime: tick count=3
+[00:00:02.000,000] <inf> devkit_runtime: tick count=4
+[00:00:02.500,000] <inf> devkit_runtime: tick count=5
+[00:00:03.000,000] <inf> devkit_runtime: tick count=6
+
+===========================================================================
+KEY EVIDENCE:
+
+Post summary (at init):
+  attempted=2  inv_arg=2  other_err=0
+  pending=0  accepted=0  rejected=2  dropped=0
+  dispatched=0  herr=0  unhandled=0  bp=0  handler_called=0
+  -> ROBOTOS_EVENT_NONE (type=0): ERR_INVALID_ARG confirmed.
+  -> reserved type 99:            ERR_INVALID_ARG confirmed.
+  -> admission_rejected_count=2: both rejected at admission gate.
+  -> dropped_count=0: queue never touched (rejection != drop).
+  -> pending=0: no events entered queue.
+  -> handler_called=0: USER handler registered but never invoked.
+  -> backpressure=false: no pending events.
+
+Final summary (logged at tick 2):
+  All counters unchanged from post summary.
+  Tick loop dispatched 0 events (nothing in queue).
+  handler_called still 0.
+
+Post-summary ticks (2..6): clean, tick count increments, no events, no errors.
+LED: toggling every 500ms confirmed.
+
+MEMORY:
+  FLASH: 28744 B (512 KB, 5.48%)
+  RAM:   12096 B (128 KB, 9.23%)
+
+FAULT REGISTERS:
+  CFSR = 0x0  (no configurable fault)
+  HFSR = 0x0  (no hard fault)

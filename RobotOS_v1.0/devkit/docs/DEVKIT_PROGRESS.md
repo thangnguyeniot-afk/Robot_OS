@@ -3609,6 +3609,166 @@ Queue-full/drop integration is devkit-only. No core policy changes.
 **Team decision required.**
 
 Candidates:
-- **Phase 6D** — Devkit Invalid/Rejection Smoke (post reserved/NONE type, prove `rejected > 0`)
+- **Phase 6D** — Devkit Invalid/Rejection Smoke ← **completed**
 - **Phase 4K** — Scheduler Producer Throttle Policy (host-only, core layer)
 - **Phase 5D** — Platform Critical Section / ISR Lock Boundary
+
+---
+
+---
+
+## Phase 6D — Devkit Invalid / Rejection Smoke
+
+**Date:** 2026-05-02
+**Branch:** master
+**Baseline commit:** `1cd33dc` — devkit queue full drop smoke (Phase 6C)
+
+---
+
+### Purpose
+
+Post two invalid events at init to prove the admission gate rejects them with
+`ROBOTOS_CORE_ERR_INVALID_ARG` before touching the queue. Confirms the separation
+between admission rejection (`admission_rejected_count`) and queue-full drop
+(`dropped_count`). A USER handler is registered but must never be called because
+no valid events enter the queue.
+
+No core policy changes. Devkit-only modification.
+
+---
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `devkit/src/devkit_runtime.c` | Replaced Phase 6C queue-full smoke with Phase 6D rejection smoke: 2 invalid events (NONE + type=99), marker arg0=0x6D, post summary, final summary at tick 2, USER handler registered to confirm never called |
+
+### Files Unchanged (confirmed)
+
+| File | Reason |
+|------|--------|
+| `core/robotos_core.c` | No core policy change |
+| `platform/` | No platform change |
+| `devkit/prj.conf` | RTT buffer 4096 B sufficient |
+
+---
+
+### Invalid Event Design
+
+```
+DEVKIT_PHASE6D_ATTEMPT_COUNT = 2
+DEVKIT_PHASE6D_MARKER        = 0x6D
+
+Event 1: type=ROBOTOS_EVENT_NONE (0)  arg0=0x6D  arg1=1  label="NONE"
+Event 2: type=99 (reserved)           arg0=0x6D  arg1=2  label="type=99"
+
+Both must return ROBOTOS_CORE_ERR_INVALID_ARG.
+```
+
+---
+
+### Expected Policy
+
+- Both events hit admission gate (`event->type` check in `robotos_core_post_event`)
+- `ROBOTOS_EVENT_NONE` and type 99 are not valid → `ERR_INVALID_ARG`
+- `admission_rejected_count += 2` (one per rejection)
+- Queue never touched → `pending=0`, `dropped=0`, `accepted=0`
+- Tick dispatches nothing → `dispatched=0`, `herr=0`, `unhandled=0`
+- USER handler registered but never called → `handler_called=0`
+- `backpressure_active = false` (no pending events, queue not full)
+
+---
+
+### Host Test Evidence
+
+**Result:** 9/9 suites pass — no regression.
+
+**Log:** `tests/host/logs/phase_6D_host_2026-05-02.log`
+
+Suites: 4C Core Init, 4D Core Version, 4E Event Post, 4F Event Dispatch Budget,
+4G Handler Registration, 4H Core Snapshot, 4I Admission Policy, 4J Backpressure,
+4K Scheduler Admission (stub).
+
+---
+
+### Zephyr Build Evidence
+
+```
+Build: west build -b stm32f411e_disco RobotOS_v1.0/devkit/ --pristine
+Board: stm32f411e_disco
+Zephyr: v3.6.0
+Timestamp: May 2 2026 13:37:25
+
+Memory:
+  FLASH: 28744 / 524288 bytes  (5.48%)
+  RAM:   12096 / 131072 bytes  (9.23%)
+
+Errors: 0
+```
+
+Delta from Phase 6C (28568 B flash): +176 B for rejection handler, compound literal init, label strings.
+
+---
+
+### Runtime RTT Evidence
+
+**RTT log:** `devkit/logs/phase_6D_rtt_2026-05-02.txt`
+
+**Capture:** `openocd reset run -> sleep 3000 -> halt -> dump_image 0x200009c8 4096`
+
+**Post summary (at init):**
+```
+Phase 6D post summary: attempted=2 inv_arg=2 other_err=0
+                       pending=0 accepted=0 rejected=2 dropped=0
+                       dispatched=0 herr=0 unhandled=0 bp=0 handler_called=0
+```
+
+**Final summary (at tick 2):**
+```
+Phase 6D final summary: attempted=2 inv_arg=2 other_err=0
+                        pending=0 accepted=0 rejected=2 dropped=0
+                        dispatched=0 herr=0 unhandled=0 bp=0 handler_called=0
+```
+
+All counters stable across tick 0 through tick 6. No events dispatched. Handler never called.
+
+---
+
+### Fault Register Check
+
+```
+CFSR = 0x0    (no configurable fault)
+HFSR = 0x0    (no hard fault)
+```
+
+No faults. Runtime stable across full 3-second capture window.
+
+---
+
+### Legacy Isolation Confirmation
+
+No `RobotOS_v1.0/src/` file compiled, staged, or referenced.
+Rejection smoke is devkit-only. No core policy changes.
+`prj.conf` unchanged from Phase 6A (`CONFIG_SEGGER_RTT_BUFFER_SIZE_UP=4096`).
+
+---
+
+### Known Limitations
+
+- Invalid/rejection smoke only; queue-full/drop already covered in Phase 6C.
+- Only two invalid types tested: `ROBOTOS_EVENT_NONE` and reserved type 99.
+  Other reserved types not exercised in this phase.
+- `s_rejection_*` counters are file-local; observability via RTT log only.
+- No producer throttle; no real scheduler; no periodic producer.
+- Custom STM32F407VET6 board remains hardware-unvalidated.
+
+---
+
+### Next Recommended Phase
+
+**Team decision required.**
+
+Candidates:
+- **Phase 4K** — Scheduler Producer Throttle Policy (host-only, core layer)
+- **Phase 5D** — Platform Critical Section / ISR Lock Boundary
+- **Phase 6E** — Devkit Mixed Policy Smoke (valid + invalid + full in one sequence)
