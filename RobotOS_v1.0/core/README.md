@@ -355,6 +355,137 @@ consistent with `admission_accepted_count` and `admission_rejected_count`.
 
 ---
 
+## Phase 5G — ISR-Safe Producer Contract Audit
+
+Phase 5G is an **audit/doc-only** phase. No source code was changed.
+The objective is to inspect the actual lock boundaries established in
+Phase 5D/5E/5F and publish a precise ISR-safety contract for the event
+producer path.
+
+### Audit Verdict: CLOSED_AUDIT_CONFIRMED
+
+The event producer APIs (`post_event` and `try_post_event`) are confirmed
+ISR-safe on the Zephyr/ARMv7-M backend under the conditions documented below.
+No blocking, logging, handler invocation, or unbounded loop occurs inside the
+critical section on the producer path.
+
+### API Classification Table
+
+| API | Critical section | Calls handler | Calls logging | May block/sleep | ISR-safe producer |
+|-----|-----------------|---------------|---------------|-----------------|-------------------|
+| `robotos_core_post_event()` | YES — one short section | NO | NO | NO | **YES (conditional)** |
+| `robotos_core_try_post_event()` | YES — one short section | NO | NO | NO | **YES (conditional)** |
+| `robotos_core_tick()` | YES — state+count only | YES (outside lock) | YES (outside lock) | NO | **NO** — thread-context only |
+| `robotos_core_dispatch_events()` | YES — state check only | YES (outside lock) | NO direct | NO | **NO** — thread-context only |
+| `robotos_core_register_event_handler()` | YES — table mutation | NO | NO | NO | **NO** — thread-context only; semantically wrong from ISR |
+| `robotos_core_unregister_event_handler()` | YES — table mutation | NO | NO | NO | **NO** — thread-context only |
+| `robotos_core_has_event_handler()` | YES — brief read | NO | NO | NO | Not claimed; thread-context only |
+| `robotos_core_snapshot()` | YES — all reads | NO | NO | NO | Not claimed; thread-context only |
+| `robotos_core_*_count()` getters | YES — brief read per call | NO | NO | NO | Not claimed; thread-context only |
+| `robotos_platform_logf()` | NO | NO | — | Backend-specific | **NO** — explicitly not ISR-safe (Phase 5A) |
+| `robotos_platform_sleep_ms()` | NO | NO | NO | YES — by design | **NO** — blocks; forbidden in ISR |
+| `robotos_platform_uptime_ms()` | NO | NO | NO | NO | Not claimed (Phase 5B) |
+| `robotos_platform_fault_report()` | NO | NO | — | Backend-specific | **NO** — not claimed (Phase 5C) |
+| `robotos_platform_assert()` | NO | NO | — | Backend-specific | **NO** — not claimed (Phase 5C) |
+| `robotos_platform_critical_enter/exit()` | — | NO | NO | NO | YES — irq_lock/irq_unlock (ARMv7-M) |
+
+### ISR-Safe Producer Contract
+
+The following APIs may be called from an ISR-like producer context (e.g. a
+timer callback or hardware interrupt handler) **subject to all conditions below**:
+
+- `robotos_core_post_event(const robotos_event_t *event)`
+- `robotos_core_try_post_event(const robotos_event_t *event)`
+
+#### Conditions
+
+1. **Zephyr/ARMv7-M backend only.** The critical section uses `irq_lock()`/
+   `irq_unlock()` (BASEPRI masking). Safe for all maskable interrupts on
+   Cortex-M4. Not valid from non-maskable (NMI, HardFault at priority 0).
+2. **Event struct must be fully initialized before the call** and accessible
+   for the entire duration. The core copies the event into the queue under lock
+   (`q->buffer[tail] = *event`); the caller's copy is not referenced after return.
+3. **No handler is invoked during post.** The producer path never calls a
+   registered handler. Handler invocation occurs only in `tick()` or
+   `dispatch_events()` from thread context.
+4. **No logging under lock.** `robotos_platform_logf` is never called inside
+   the critical section on the producer path.
+5. **No sleep/yield under lock.** The critical section is O(1), deterministic:
+   NULL check → state check → admission check → optional throttle check →
+   queue push (struct copy) → counter increment. No dynamic allocation.
+6. **Caller must handle all error returns:**
+   - `ROBOTOS_CORE_ERR_NULL` — event pointer is NULL
+   - `ROBOTOS_CORE_ERR_INVALID_STATE` — core not yet initialized
+   - `ROBOTOS_CORE_ERR_INVALID_ARG` — event type rejected by admission gate
+   - `ROBOTOS_CORE_ERR_FULL` — queue at capacity; event dropped
+   - `ROBOTOS_CORE_ERR_THROTTLED` — (try_post only) backlog > dispatch budget
+
+#### Not ISR-safe (must not be called from ISR)
+
+- `robotos_core_tick()` — calls handler and logging from thread context
+- `robotos_core_dispatch_events()` — calls handler from thread context
+- Handler register/unregister — table mutation; semantically wrong from ISR
+- All getters and snapshot — no ISR claim; may introduce reordering hazard
+- `robotos_platform_logf()`, `sleep_ms()`, `fault_report()`, `assert()` —
+  explicitly documented as not ISR-safe in their respective platform phases
+
+#### Thread-context only
+
+- Tick/dispatch loop (`tick()`, `dispatch_events()`)
+- Handler registration and unregistration
+- Devkit runtime loop
+- Snapshot and diagnostic getters
+- All platform log/fault/sleep/time APIs
+
+#### Handler callback context
+
+Handlers are invoked from `tick()` or `dispatch_events()` in **thread context
+only**, never from ISR context. Handlers must not assume they are called from an
+ISR. Handler context pointer lifetime is the caller's responsibility; if an ISR
+provides a stack-local context to a registered handler, the context may be
+invalid by the time the handler runs in thread context.
+
+### Lock Boundary Audit Findings
+
+Confirmed from direct code inspection of `robotos_core.c` Phase 5F:
+
+| Finding | Result |
+|---------|--------|
+| Handler called under critical section? | **NO** — Step 3 always outside lock |
+| `robotos_platform_logf` called under critical section? | **NO** — all `CORE_LOG_*` outside lock |
+| `sleep`/`yield` under critical section? | **NO** |
+| Unbounded loop under critical section? | **NO** — handler table loop bounded by `ROBOTOS_CORE_MAX_EVENT_HANDLERS` (compile-time constant) |
+| `post_event_internal` critical section O(1)? | **YES** — NULL check, state read, admission, queue push (struct copy), counter increment |
+| Queue push (`robotos_event_queue_push`) safe in critical section? | **YES** — O(1), no allocation, no logging, no handler, struct copy only |
+| Dispatcher counters written under lock? | **NO** — written after handler returns in Step 4 (single-threaded assumption) |
+| s_unhandled_event_count updated under lock? | **YES** — Step 2, bounded table scan, safe |
+
+### Remaining Limitations
+
+- **No ISR producer runtime stress.** No timer ISR or EXTI ISR posting events
+  has been tested on hardware. Contract is based on code audit and Zephyr
+  `irq_lock/irq_unlock` semantics on ARMv7-M.
+- **No latency budget measured.** Critical section duration is O(1) and
+  bounded but no cycle-count measurement has been performed.
+- **No multi-producer stress.** Only single concurrent ISR producer assumed.
+- **No custom board validation.** STM32F407VET6 and other boards remain
+  hardware-unvalidated.
+- **Handler context lifetime.** If ISR-produced events reference ISR-local
+  context via the registered handler, the context may be stale when the handler
+  runs in thread context. Caller owns context lifetime.
+- **Dispatcher counters not ISR-protected.** `dispatched_count` and
+  `handler_error_count` are written from thread context (dispatch path) without
+  a lock. An ISR concurrently reading these counters could observe torn reads.
+  Do not read dispatch counters from ISR context.
+
+### Next Validation Recommendation
+
+**Phase 6G — ISR/Timer Producer Smoke:** Wire a Zephyr timer callback to call
+`robotos_core_try_post_event()` and verify on hardware that the handler receives
+events, no fault occurs, and tick count and dispatched count remain consistent.
+
+---
+
 ## Phase 5F — Dispatcher Pop / Handler Split
 
 Phase 5F refactors `robotos_core.c` to explicitly split the dispatch path

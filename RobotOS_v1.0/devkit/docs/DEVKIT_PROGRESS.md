@@ -4559,9 +4559,153 @@ LED: toggling every 500ms — confirmed.
 
 ### Next Recommended Phase
 
+**Phase 5G completed.** See Phase 5G section below.
+
+---
+
+---
+
+## Phase 5G — ISR-Safe Producer Contract Audit
+
+**Date:** 2026-05-02
+**Branch:** master
+**Baseline commit:** `460b9f1` — core: confirm dispatch split runtime (Phase 5F-R)
+**Type:** AUDIT/DOC-ONLY — no source code changed
+
+---
+
+### Purpose
+
+Inspect actual lock boundaries from Phase 5D/5E/5F and publish a precise
+ISR-safety contract for the event producer path. Determine exactly which
+RobotOS core APIs are safe to call from an ISR-like producer context and
+document the conditions, limitations, and gaps before any runtime ISR stress.
+
+---
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `core/README.md` | Phase 5G section: audit verdict, API classification table, ISR-safe producer contract, lock boundary findings, limitations, next recommendation |
+| `platform/README.md` | Phase 5G note: platform critical supports limited ISR producer contract; log/fault/time/sleep not ISR-safe |
+| `devkit/docs/DEVKIT_PROGRESS.md` | Phase 5G section (this entry) |
+| `tests/host/logs/phase_5G_host_2026-05-02.log` | Host test evidence (all prior suites, no regressions) |
+
+### Files Unchanged (confirmed)
+
+| File | Reason |
+|------|--------|
+| `core/robotos_core.c` | Audit-only: no source change |
+| `core/robotos_core.h` | No API change |
+| `platform/robotos_platform_critical.h` | No change |
+| `platform/zephyr/robotos_platform_critical_zephyr.c` | No change |
+| `devkit/src/devkit_runtime.c` | No change |
+| All test sources / CMakeLists.txt | No change |
+
+---
+
+### Audit Verdict: CLOSED_AUDIT_CONFIRMED
+
+`robotos_core_post_event()` and `robotos_core_try_post_event()` are confirmed
+ISR-safe on the Zephyr/ARMv7-M backend. The critical section on the producer
+path is O(1), deterministic, holds no logging, invokes no handler, and performs
+no sleep or dynamic allocation. Queue push is a bounded struct copy under lock.
+
+---
+
+### API Classification Summary
+
+**ISR-safe (conditional):**
+- `robotos_core_post_event()` — short lock, no handler/log/sleep inside
+- `robotos_core_try_post_event()` — same; additionally returns ERR_THROTTLED
+
+**Not ISR-safe:**
+- `robotos_core_tick()` — calls handler and logging outside lock; thread-context only
+- `robotos_core_dispatch_events()` — calls handler; thread-context only
+- Handler register/unregister — table mutation; semantically wrong from ISR
+- All platform log/fault/sleep/time APIs — explicitly not claimed ISR-safe
+- All getters and snapshot — not claimed; thread-context only
+
+**Conditions for ISR-safe post:**
+- Zephyr/ARMv7-M backend (irq_lock BASEPRI masking); not valid from NMI
+- Event struct fully initialized, accessible for call duration (copied under lock)
+- Caller handles: ERR_NULL, ERR_INVALID_STATE, ERR_INVALID_ARG, ERR_FULL, ERR_THROTTLED
+- No logging under lock confirmed; no handler under lock confirmed
+
+**Lock boundary audit findings:**
+- No handler called under critical section ✓
+- No `robotos_platform_logf` called under critical section ✓
+- No sleep/yield under critical section ✓
+- No unbounded loop under critical section ✓
+- Queue push O(1) struct copy — safe under irq_lock ✓
+
+---
+
+### Host Test Evidence
+
+**Result:** 13/13 suites pass, 0 failures. No regressions.
+
+**Commands:**
+```
+cmake -S RobotOS_v1.0/tests/host -B build-host-core -G "MinGW Makefiles"
+cmake --build build-host-core
+ctest --test-dir build-host-core --output-on-failure
+```
+
+**Log:** `tests/host/logs/phase_5G_host_2026-05-02.log`
+
+---
+
+### Zephyr Build Evidence
+
+```
+Build: west build -b stm32f411e_disco RobotOS_v1.0/devkit/ --pristine
+Board: stm32f411e_disco
+Zephyr: v3.6.0
+
+Memory:
+  FLASH: 29060 / 524288 bytes  (5.54%)
+  RAM:   12096 / 131072 bytes  (9.23%)
+
+Errors: 0
+```
+
+Memory unchanged from Phase 5F (docs-only phase, no source delta).
+
+---
+
+### Runtime Evidence
+
+Not required. No source code changed. Phase 5F-R runtime evidence remains valid.
+Handler path confirmed by Phase 5F-R RTT log `devkit/logs/phase_5F_rtt_2026-05-02.txt`.
+
+---
+
+### Legacy Isolation Confirmation
+
+No `RobotOS_v1.0/src/` file compiled, staged, or referenced.
+No custom board file changed. Audit is docs-only.
+
+---
+
+### Known Limitations
+
+- **No ISR producer runtime stress.** No timer ISR or EXTI ISR hardware test.
+- **No latency budget.** Critical section is O(1) bounded but not cycle-measured.
+- **No multi-producer stress.** Single concurrent ISR producer assumed only.
+- **No custom board validation.** STM32F407VET6 unvalidated.
+- **Handler context lifetime.** ISR-local context passed to registered handler
+  may be stale when handler runs in thread context; caller owns lifetime.
+- **Dispatcher counters not ISR-protected.** Do not read dispatch counters from ISR.
+
+---
+
+### Next Recommended Phase
+
 **Team decision required.**
 
 Candidates:
+- **Phase 6G** — ISR/Timer Producer Smoke (wire Zephyr timer callback to post_event, verify on hardware)
 - **Phase 4L** — Scheduler Retry/Backoff Policy Stub (host-only, core layer)
 - **Phase 6F** — Devkit Mixed Event Policy Smoke
-- **Phase 5G** — ISR-safe post_event stress test (concurrent producer simulation)

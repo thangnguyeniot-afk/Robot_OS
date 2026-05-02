@@ -266,6 +266,27 @@ platform header — they exist only in the host test environment.
 
 ---
 
+## Phase 5G — ISR-Safe Producer Contract Audit (Platform Note)
+
+A code audit (Phase 5G) confirmed that the Zephyr critical-section backend
+(`irq_lock`/`irq_unlock`) supports a **limited ISR-safe producer contract** for
+`robotos_core_post_event()` and `robotos_core_try_post_event()`. The producer
+path holds only a short, O(1) critical section with no logging, no handler
+call, and no sleep inside.
+
+This contract applies **only to the event producer APIs** documented in
+`core/README.md Phase 5G`. It does **not** extend to:
+- `robotos_platform_logf()` — not ISR-safe (Phase 5A documentation)
+- `robotos_platform_sleep_ms()` — explicitly blocks; forbidden in ISR
+- `robotos_platform_uptime_ms()` — not claimed ISR-safe (Phase 5B)
+- `robotos_platform_fault_report()` / `robotos_platform_assert()` — not claimed (Phase 5C)
+- Tick, dispatch, handler registration/unregistration, snapshot, or getters
+
+The platform critical API itself (`robotos_platform_critical_enter/exit`) is
+callable from any maskable IRQ context on ARMv7-M (BASEPRI masking).
+
+---
+
 ## Phase 5E — Critical Boundary Applied to Core
 
 Phase 5E begins using `robotos_platform_critical_enter`/`exit` from within
