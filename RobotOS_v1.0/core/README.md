@@ -376,7 +376,7 @@ critical section on the producer path.
 | `robotos_core_post_event()` | YES — one short section | NO | NO | NO | **YES (conditional)** |
 | `robotos_core_try_post_event()` | YES — one short section | NO | NO | NO | **YES (conditional)** |
 | `robotos_core_tick()` | YES — state+count only | YES (outside lock) | YES (outside lock) | NO | **NO** — thread-context only |
-| `robotos_core_dispatch_events()` | YES — state check only | YES (outside lock) | NO direct | NO | **NO** — thread-context only |
+| `robotos_core_dispatch_events()` | YES — state check only | YES (outside lock) | NO | NO | **NO** — thread-context only |
 | `robotos_core_register_event_handler()` | YES — table mutation | NO | NO | NO | **NO** — thread-context only; semantically wrong from ISR |
 | `robotos_core_unregister_event_handler()` | YES — table mutation | NO | NO | NO | **NO** — thread-context only |
 | `robotos_core_has_event_handler()` | YES — brief read | NO | NO | NO | Not claimed; thread-context only |
@@ -471,8 +471,8 @@ Confirmed from direct code inspection of `robotos_core.c` Phase 5F:
 - **No custom board validation.** STM32F407VET6 and other boards remain
   hardware-unvalidated.
 - **Handler context lifetime.** If ISR-produced events reference ISR-local
-  context via the registered handler, the context may be stale when the handler
-  runs in thread context. Caller owns context lifetime.
+  context via the registered handler, the context may be stale when the
+  handler runs in thread context. Caller owns context lifetime.
 - **Dispatcher counters not ISR-protected.** `dispatched_count` and
   `handler_error_count` are written from thread context (dispatch path) without
   a lock. An ISR concurrently reading these counters could observe torn reads.
@@ -520,13 +520,13 @@ Step 4: update dispatcher counters       // no lock needed (same TU)
 |-----|----------------|
 | `post_event_internal()` | state check, admission, throttle check, queue push, all counters |
 | `robotos_core_init()` | core_state, core_tick_count, core_init_count, handler table clear |
-| `robotos_core_tick()` | state check and tick_count increment only |
+| `robotos_core_tick()` | state only and tick_count increment only |
 | `robotos_core_dispatch_events()` | state check only |
 | `robotos_core_snapshot()` | all counter/state reads as one coherent snapshot |
 | All individual getters | brief lock around each read |
 | Handler registration/unregistration/has/count | table search and mutation |
 | `s_core_dispatch_one_safe` Step 1 | queue pop |
-| `s_core_dispatch_one_safe` Step 2 | handler table lookup and local copy |
+| `s_core_dispatch_one_safe` Step 2 | handler table lookup, copy fn+ctx to locals |
 
 ### What is NOT Protected
 
@@ -576,7 +576,7 @@ Short state transitions held under a single critical section per operation:
 |-----|----------------|
 | `post_event_internal()` | state check, admission, throttle check, queue push, all counters |
 | `robotos_core_init()` | core_state, core_tick_count, core_init_count, handler table clear |
-| `robotos_core_tick()` | state check and tick_count increment only |
+| `robotos_core_tick()` | state only and tick_count increment only |
 | `robotos_core_dispatch_events()` | state check only |
 | `robotos_core_snapshot()` | all counter/state reads as one coherent snapshot |
 | All individual getters | brief lock around each read |
@@ -611,29 +611,3 @@ the appropriate follow-on to address this.
 
 All existing public API return values, counters, and behavior are identical
 to pre-5E. Phase 5E is a structural improvement only.
-
-
-
----
-
-### Phase 6H1 — Timer Producer Stress-Lite Evidence (2026-05-02)
-
-**Status:** CLOSED_TIMER_STRESS_LITE_CONFIRMED
-
-Phase 6H extends timer-producer evidence from Phase 6G (2 events) to bounded
-8-event stress-lite mode. This demonstrates post_event/dispatch/counter
-path under temporary producer backlog without exceeding queue capacity (16 events).
-
-**Key observations:**
-- k_timer callback posts 8 events at 100ms intervals
-- Consumer tick runs at 500ms (5x slower), creating temporary backlog
-- Queue capacity 16 is never exceeded; no full/drop path triggered
-- Backpressure activates during burst (pending > budget) but settles to 0
-- All 8 events accepted, handled, and dispatched successfully
-- Handler logs milestones only (seq=1, 4, 8) to avoid RTT spam
-- No faults, no errors, LED/tick loop healthy
-
-This confirms the ISR-safe producer contract (Phase 5G) holds under
-modest producer pressure without breaking queue semantics.
-
----
