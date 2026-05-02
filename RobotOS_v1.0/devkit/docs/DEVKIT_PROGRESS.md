@@ -3106,9 +3106,141 @@ All changes are in `core/` or `tests/host/`.
 
 ### Next Recommended Phase
 
+**Phase 6A completed.** See Phase 6A entry below.
+
+Candidates for next team decision:
+- **Phase 4K** — Scheduler Producer Throttle Policy
+- **Phase 5D** — Platform Critical Section / ISR Lock Boundary
+
+---
+
+## Phase 6A — Devkit Event Smoke Integration
+
+**Status: COMPLETE — 2026-05-02**
+
+### Scope
+
+Add a devkit-only smoke integration that exercises the full core event pipeline
+on real hardware: register a handler → post one controlled USER event at init →
+`robotos_core_tick()` dispatches it on the first tick → handler observes and logs evidence.
+
+No core policy changes. No CMake changes. No platform boundary changes.
+One file modified: `devkit/src/devkit_runtime.c`.
+
+### Change Summary
+
+**`RobotOS_v1.0/devkit/src/devkit_runtime.c`** — added:
+- `static uint32_t s_smoke_handled_count` — fire-once dispatch counter
+- `static const robotos_event_t s_smoke_event` — `type=USER, arg0=0x6A, arg1=1`
+- `static devkit_smoke_event_handler()` — logs evidence, increments counter
+- In `devkit_runtime_init()`, after `robotos_core_init()`:
+  - `robotos_core_register_event_handler(ROBOTOS_EVENT_USER, ...)`
+  - `robotos_core_post_event(&s_smoke_event)`
+
+**`RobotOS_v1.0/devkit/prj.conf`** — added `CONFIG_SEGGER_RTT_BUFFER_SIZE_UP=4096`
+to prevent ring-buffer overrun on boot (init messages fill 1024-byte default buffer
+before first tick fires).
+
+### Host Test Results
+
+No host test changes required. 9/9 pass:
+
+```
+100% tests passed, 0 tests failed out of 9
+Total Test time (real) =   0.15 sec
+```
+
+### Zephyr Build Evidence
+
+**Command:** `west build -b stm32f411e_disco --pristine` (Zephyr v3.6.0, SDK 0.17.0)
+
+```
+Memory region         Used Size  Region Size  %age Used
+           FLASH:       27732 B       512 KB      5.29%
+             RAM:       12096 B       128 KB      9.23%
+```
+
+Build: **PASS** (142 objects, no warnings, no errors).
+
+FLASH +600 B vs Phase 4J (smoke handler code).
+RAM +3072 B vs Phase 4J (RTT ring buffer 1024 → 4096 B).
+
+### Runtime Evidence
+
+**Status: RUNTIME_PASS — hardware validated 2026-05-02.**
+
+#### Method
+
+`west flash` → `openocd reset run` → `sleep 4000` → `halt` →
+`dump_image D:/Robot_OS/rtt_buf.bin 0x200009c8 4096` (_SEGGER_RTT at new address
+after buffer resize) → CFSR/HFSR read via `mrw`.
+
+#### RTT Boot Log
+
+```
+*** Booting Zephyr OS build v3.6.0 ***
+[00:00:00.000,000] <inf> devkit_fault: fault visibility active
+[00:00:00.000,000] <inf> devkit_build_info: RobotOS devkit build info:
+[00:00:00.000,000] <inf> devkit_build_info:   board=stm32f411e_disco
+[00:00:00.000,000] <inf> devkit_build_info:   zephyr=3.6.0
+[00:00:00.000,000] <inf> devkit_build_info:   build=May  2 2026 08:55:25
+[00:00:00.000,000] <inf> devkit_build_info:   tick_ms=500
+[00:00:00.000,000] <inf> devkit_build_info:   log_backend=RTT
+[00:00:00.000,000] <inf> robotos_platform: [robotos_core] RobotOS core init — version=4B-contract state=READY
+[00:00:00.000,000] <inf> robotos_platform: [robotos_core] event queue initialized capacity=16
+[00:00:00.000,000] <inf> robotos_platform: [robotos_core] event dispatcher initialized
+[00:00:00.000,000] <inf> devkit_runtime: RobotOS devkit starting — board: stm32f411e_disco
+[00:00:00.000,000] <inf> devkit_runtime: LED blink loop starting
+[00:00:00.000,000] <inf> devkit_runtime: tick count=0
+[00:00:00.000,000] <inf> robotos_platform: [robotos_core] core tick count=1
+[00:00:00.000,000] <inf> devkit_runtime: smoke event handled type=USER arg0=0x6a arg1=1
+[00:00:00.500,000] <inf> devkit_runtime: tick count=1
+[00:00:01.000,000] <inf> devkit_runtime: tick count=2
+[00:00:01.500,000] <inf> devkit_runtime: tick count=3
+[00:00:02.000,000] <inf> devkit_runtime: tick count=4
+[00:00:02.500,000] <inf> devkit_runtime: tick count=5
+[00:00:03.000,000] <inf> devkit_runtime: tick count=6
+```
+
+**Key evidence line:**
+```
+[00:00:00.000,000] <inf> devkit_runtime: smoke event handled type=USER arg0=0x6a arg1=1
+```
+
+- Dispatched on tick count=0 (first tick): confirms budget=1 dispatches the queued event immediately.
+- `arg0=0x6a` and `arg1=1` match the posted `s_smoke_event` exactly.
+- Ticks 1–6 are clean (no more smoke events, no errors).
+
+#### Fault Register Check
+
+```
+CFSR = 0x0    (no configurable fault)
+HFSR = 0x0    (no hard fault)
+```
+
+No faults. Runtime stable.
+
+---
+
+### Legacy Isolation Confirmation
+
+No `RobotOS_v1.0/src/` file compiled, staged, or referenced.
+Smoke integration is devkit-only; no core policy changes.
+
+---
+
+### Known Limitations
+
+- Smoke event fires only once (at init). Periodic event integration is out of scope for Phase 6A.
+- `s_smoke_handled_count` is file-local; no getter exposed. Observability via RTT log only.
+- Custom STM32F407VET6 board remains hardware-unvalidated.
+
+---
+
+### Next Recommended Phase
+
 **Team decision required.**
 
 Candidates:
 - **Phase 4K** — Scheduler Producer Throttle Policy
 - **Phase 5D** — Platform Critical Section / ISR Lock Boundary
-- **Phase 6A** — Devkit Event Smoke Integration
