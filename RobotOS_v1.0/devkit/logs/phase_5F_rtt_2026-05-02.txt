@@ -1,0 +1,58 @@
+Phase 5F -- Dispatcher Pop / Handler Split
+RTT Boot Log -- 2026-05-02
+Board: STM32F411E-DISCO
+Build timestamp: May  2 2026 15:41:18
+Firmware: b7f08fe -- core: split dispatch pop from handler call (Phase 5F)
+Capture method: openocd reset run -> after 3000 {halt; dump_image 0x200009e4 4096}
+_SEGGER_RTT address: 0x200009e4 (shifted from Phase 5E 0x200009c8; FLASH -20B)
+CFSR: 0x0  HFSR: 0x0
+
+===========================================================================
+
+*** Booting Zephyr OS build v3.6.0 ***
+[00:00:00.000,000] <inf> devkit_fault: fault visibility active
+[00:00:00.000,000] <inf> devkit_build_info: RobotOS devkit build info:
+[00:00:00.000,000] <inf> devkit_build_info:   board=stm32f411e_disco
+[00:00:00.000,000] <inf> devkit_build_info:   zephyr=3.6.0
+[00:00:00.000,000] <inf> devkit_build_info:   build=May  2 2026 15:41:18
+[00:00:00.000,000] <inf> devkit_build_info:   tick_ms=500
+[00:00:00.000,000] <inf> devkit_build_info:   log_backend=RTT
+[00:00:00.000,000] <inf> devkit_runtime: platform critical smoke ok
+[00:00:00.000,000] <inf> robotos_platform: [robotos_core] RobotOS core init -- version=4B-contract state=READY
+[00:00:00.000,000] <inf> robotos_platform: [robotos_core] event queue initialized capacity=16
+[00:00:00.000,000] <inf> robotos_platform: [robotos_core] event dispatcher initialized
+[00:00:00.000,000] <inf> devkit_runtime: Phase 6E post summary: attempted=3 ok=2 throttled=1 full=0 other=0 pending=2 accepted=2 rejected=0 dropped=0 prod_throttled=1 bp=1 th_active=1
+[00:00:00.000,000] <inf> devkit_runtime: RobotOS devkit starting -- board: stm32f411e_disco
+[00:00:00.000,000] <inf> devkit_runtime: LED blink loop starting
+[00:00:00.000,000] <inf> devkit_runtime: tick count=0
+[00:00:00.000,000] <inf> robotos_platform: [robotos_core] core tick count=1
+[00:00:00.000,000] <inf> devkit_runtime: Phase 6E: handled seq=1 count=1
+[00:00:00.500,000] <inf> devkit_runtime: tick count=1
+[00:00:00.500,000] <inf> devkit_runtime: Phase 6E: handled seq=2 count=2
+[00:00:00.500,000] <inf> devkit_runtime: Phase 6E final summary: handled=2 pending=0 dispatched=2 accepted=2 rejected=0 dropped=0 prod_throttled=1 herr=0 unhandled=0 bp=0 th_active=0 unexpected=0
+[00:00:01.000,000] <inf> devkit_runtime: tick count=2
+[00:00:01.500,000] <inf> devkit_runtime: tick count=3
+[00:00:02.000,000] <inf> devkit_runtime: tick count=4
+[00:00:02.500,000] <inf> devkit_runtime: tick count=5
+[00:00:03.000,000] <inf> devkit_runtime: tick count=6
+
+===========================================================================
+KEY EVIDENCE:
+
+Phase 5F dispatch path split confirmed:
+- s_core_dispatch_one_safe() now routes events: [lock]pop[unlock] -> [lock]lookup[unlock] -> invoke
+- No critical section held during handler callback (structural guarantee).
+- Handler path exercised: Phase 6E USER event handled seq=1,2 (dispatched=2, herr=0, unhandled=0).
+- Phase 6E throttle behavior fully preserved: attempted=3 ok=2 throttled=1 unexpected=0.
+- platform critical smoke: irq_lock backend functional (smoke ok at boot).
+- LED: toggling every 500ms (ticks 0..6 visible in 3s capture window).
+- No MemManage fault, no hard fault, no panic.
+
+MEMORY:
+  FLASH: 29060 B (512 KB, 5.54%)
+  RAM:   12096 B (128 KB, 9.23%)
+  Delta from Phase 5E: -20 B FLASH (s_core_routing_handler removed)
+
+FAULT REGISTERS:
+  CFSR = 0x0  (no configurable fault)
+  HFSR = 0x0  (no hard fault)

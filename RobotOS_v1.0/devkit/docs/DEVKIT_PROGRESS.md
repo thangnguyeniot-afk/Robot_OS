@@ -4515,6 +4515,35 @@ Delta from Phase 5E (29080 B flash): -20 B (routing handler path removed).
 
 ---
 
+### Runtime Evidence
+
+**RTT log:** `devkit/logs/phase_5F_rtt_2026-05-02.txt`
+
+`_SEGGER_RTT` address: `0x200009e4` (Phase 5E was `0x200009c8`; shifted -20B with routing handler removal).
+
+Dispatch path exercised via Phase 6E smoke: USER event handler invoked through
+`s_core_dispatch_one_safe()` — `handled=2 dispatched=2 herr=0 unhandled=0`.
+Phase 6E throttle behavior unchanged: `attempted=3 ok=2 throttled=1 unexpected=0`.
+No MemManage fault. No hard fault. No panic.
+
+```
+platform critical smoke ok
+RobotOS core init -- version=4B-contract state=READY
+Phase 6E: handled seq=1 count=1        (tick=0)
+Phase 6E: handled seq=2 count=2        (tick=1)
+Phase 6E final: handled=2 dispatched=2 herr=0 unhandled=0 unexpected=0
+tick count: 0,1,2,3,4,5,6 (7 ticks over ~3s at 500ms interval)
+```
+
+```
+CFSR = 0x0    (no configurable fault)
+HFSR = 0x0    (no hard fault)
+```
+
+LED: toggling every 500ms — confirmed.
+
+---
+
 ### Known Limitations
 
 - **Stale-copy on concurrent unregister.** If a handler is unregistered between
