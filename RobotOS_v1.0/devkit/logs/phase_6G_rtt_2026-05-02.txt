@@ -1,0 +1,82 @@
+Phase 6G -- ISR/Timer Producer Smoke
+RTT Boot Log -- 2026-05-02
+Board: STM32F411E-DISCO
+Build timestamp: May  2 2026 16:37:48
+Capture method: openocd reset run -> sleep 3500 -> halt -> dump_image 0x20000a1c 4096
+_SEGGER_RTT address: 0x20000a1c (4KB buffer)
+CFSR: 0x0  HFSR: 0x0
+
+===========================================================================
+
+*** Booting Zephyr OS build v3.6.0 ***
+[00:00:00.000,000] <inf> devkit_fault: fault visibility active
+[00:00:00.000,000] <inf> devkit_build_info: RobotOS devkit build info:
+[00:00:00.000,000] <inf> devkit_build_info:   board=stm32f411e_disco
+[00:00:00.000,000] <inf> devkit_build_info:   zephyr=3.6.0
+[00:00:00.000,000] <inf> devkit_build_info:   build=May  2 2026 16:37:48
+[00:00:00.000,000] <inf> devkit_build_info:   tick_ms=500
+[00:00:00.000,000] <inf> devkit_build_info:   log_backend=RTT
+[00:00:00.000,000] <inf> devkit_runtime: platform critical smoke ok
+[00:00:00.000,000] <inf> robotos_platform: [robotos_core] RobotOS core init -- version=4B-contract state=READY
+[00:00:00.000,000] <inf> robotos_platform: [robotos_core] event queue initialized capacity=16
+[00:00:00.000,000] <inf> robotos_platform: [robotos_core] event dispatcher initialized
+[00:00:00.000,000] <inf> devkit_runtime: Phase 6G timer producer started
+[00:00:00.000,000] <inf> devkit_runtime: RobotOS devkit starting -- board: stm32f411e_disco
+[00:00:00.000,000] <inf> devkit_runtime: LED blink loop starting
+[00:00:00.000,000] <inf> devkit_runtime: tick count=0
+[00:00:00.000,000] <inf> robotos_platform: [robotos_core] core tick count=1
+[00:00:00.500,000] <inf> devkit_runtime: tick count=1
+[00:00:00.500,000] <inf> devkit_runtime: Phase 6G timer event handled seq=1 count=1
+[00:00:01.000,000] <inf> devkit_runtime: tick count=2
+[00:00:01.000,000] <inf> devkit_runtime: Phase 6G timer event handled seq=2 count=2
+[00:00:01.000,000] <inf> devkit_runtime: Phase 6G final summary: attempted=2 ok=2 full=0 invalid=0 other=0 handled=2 unexpected=0 pending=0 dispatched=2 accepted=2 rejected=0 dropped=0 prod_throttled=0 herr=0 unhandled=0 bp=0 th_active=0
+[00:00:01.500,000] <inf> devkit_runtime: tick count=3
+[00:00:02.000,000] <inf> devkit_runtime: tick count=4
+[00:00:02.500,000] <inf> devkit_runtime: tick count=5
+[00:00:03.000,000] <inf> devkit_runtime: tick count=6
+
+===========================================================================
+KEY EVIDENCE:
+
+Timer producer (k_timer callback, Zephyr SysTick ISR context):
+  attempted=2  ok=2  full=0  invalid=0  other=0
+  No log / sleep / dispatch / register in callback.
+  k_timer_stop() called from callback after seq=2 posted.
+
+Handler evidence (thread context, dispatched in tick loop):
+  T=500ms  tick count=1  seq=1 handled  count=1
+  T=1000ms tick count=2  seq=2 handled  count=2
+  marker arg0=0x0607 verified in handler for both events.
+
+Final summary (logged at T=1000ms, after handled==2):
+  attempted=2  ok=2       full=0    invalid=0   other=0
+  handled=2    unexpected=0
+  pending=0    dispatched=2  accepted=2  rejected=0  dropped=0
+  prod_throttled=0  herr=0  unhandled=0  bp=0  th_active=0
+
+Timing:
+  T=0ms:    init, handler registered, timer started (100ms period)
+  T=100ms:  ISR fires -> posts seq=1 (ok_count=1)
+  T=200ms:  ISR fires -> posts seq=2 (ok_count=2), k_timer_stop called
+  T=500ms:  tick dispatches seq=1, handler logs
+  T=1000ms: tick dispatches seq=2, handler logs, final summary emitted
+  T=1500ms+: clean LED ticks (3..6), no further events.
+
+Post-drain ticks (3..6): clean, no errors, no unexpected events.
+LED: toggling every 500ms confirmed.
+
+MEMORY:
+  FLASH: 28940 B (512 KB, 5.52%)
+  RAM:   12160 B (128 KB, 9.28%)
+
+FAULT REGISTERS:
+  CFSR = 0x0  (no configurable fault)
+  HFSR = 0x0  (no hard fault)
+
+LIMITATIONS (stated at log time):
+  - Timer smoke only: k_timer on Zephyr SysTick, 100ms period, 2 events
+  - Not a high-freq ISR stress test
+  - No multi-producer concurrency in this smoke
+  - No latency budget verified
+  - Platform log/fault/sleep remain NOT ISR-safe
+  - Tested on stm32f411e_disco only

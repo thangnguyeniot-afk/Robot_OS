@@ -4706,6 +4706,225 @@ No custom board file changed. Audit is docs-only.
 **Team decision required.**
 
 Candidates:
-- **Phase 6G** — ISR/Timer Producer Smoke (wire Zephyr timer callback to post_event, verify on hardware)
+- **Phase 6G** — ISR/Timer Producer Smoke ← **completed**
 - **Phase 4L** — Scheduler Retry/Backoff Policy Stub (host-only, core layer)
 - **Phase 6F** — Devkit Mixed Event Policy Smoke
+
+---
+
+---
+
+## Phase 6G — ISR/Timer Producer Smoke
+
+**Date:** 2026-05-02
+**Branch:** master
+**Baseline commit:** `e4ab853` — core: ISR-safe producer contract audit (Phase 5G)
+
+---
+
+### Purpose
+
+Prove on devkit hardware that a producer running from a timer/ISR-like
+context can post events to RobotOS core under the Phase 5G contract.
+A `k_timer` periodic callback (Zephyr SysTick ISR context, ARMv7-M) posts
+two USER events (arg0=0x0607, seq=1 and seq=2) using
+`robotos_core_post_event()`. The normal tick loop dispatches them; a
+registered handler logs from thread context. All Phase 5G callback
+constraints are observed: no log, sleep, dispatch, or register call inside
+the timer callback.
+
+This is a timer smoke, not a full ISR stress. See Known Limitations.
+
+---
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `devkit/src/devkit_runtime.c` | Replaced Phase 6E throttled producer smoke with Phase 6G k_timer ISR producer smoke: k_timer_init/start at 100ms period; ISR callback posts seq=1 and seq=2 then stops timer; handler and final summary in thread context |
+| `devkit/docs/DEVKIT_PROGRESS.md` | Phase 6G section (this entry) |
+| `devkit/logs/phase_6G_rtt_2026-05-02.txt` | RTT boot log evidence |
+| `tests/host/logs/phase_6G_host_2026-05-02.log` | Host test evidence |
+
+### Files Unchanged (confirmed)
+
+| File | Reason |
+|------|--------|
+| `core/robotos_core.c` | No core policy change |
+| `core/robotos_core.h` | No API change |
+| `platform/` | No platform change |
+| `devkit/prj.conf` | RTT buffer 4096 B sufficient |
+
+---
+
+### Timer Producer Design
+
+```c
+#define DEVKIT_PHASE6G_MARKER          0x0607u
+#define DEVKIT_PHASE6G_MAX_ATTEMPTS    2u
+#define DEVKIT_PHASE6G_EXPECTED_OK     2u
+#define DEVKIT_PHASE6G_TIMER_PERIOD_MS 100u
+
+static struct k_timer s_phase6g_timer;
+static volatile uint32_t s_timer_attempted_count;
+static volatile uint32_t s_timer_ok_count;
+static volatile uint32_t s_timer_full_count;
+static volatile uint32_t s_timer_invalid_count;
+static volatile uint32_t s_timer_other_error_count;
+static volatile uint32_t s_timer_handled_count;
+static volatile uint32_t s_timer_unexpected_count;
+static bool              s_timer_final_logged;
+```
+
+Callback (Zephyr SysTick ISR context — NO log/sleep/tick/dispatch/register):
+```c
+static void devkit_phase6g_timer_cb(struct k_timer *timer) {
+    // post robotos_event_t {ROBOTOS_EVENT_USER, arg0=0x0607, arg1=seq}
+    // increment volatile counters only
+    // k_timer_stop after seq 2
+}
+```
+
+Init sequence (thread context):
+1. Register USER handler (`devkit_phase6g_handler`) — BEFORE timer start
+2. `k_timer_init` + `k_timer_start` (100ms period)
+3. `LOG_INF("Phase 6G timer producer started")`
+
+Handler (thread context):
+- Validates type == USER, arg0 == 0x0607, seq 1..2
+- Increments `s_timer_handled_count`
+- Logs: `"Phase 6G timer event handled seq=%u count=%u"`
+
+Final summary (in tick loop, once after handled==2):
+- Calls `robotos_core_get_snapshot()` and logs all counters
+
+---
+
+### Timing
+
+```
+T=0ms:    init, handler registered, timer started (100ms period)
+T=100ms:  ISR fires -> posts seq=1 (ok_count=1)
+T=200ms:  ISR fires -> posts seq=2 (ok_count=2), k_timer_stop called
+T=500ms:  tick count=1 -> dispatches seq=1, handler logs seq=1 count=1
+T=1000ms: tick count=2 -> dispatches seq=2, handler logs seq=2 count=2
+           Final summary emitted.
+T=1500ms+: clean LED ticks, no further events.
+```
+
+---
+
+### Host Test Evidence
+
+**Result:** 13/13 suites pass — no regression.
+
+**Log:** `tests/host/logs/phase_6G_host_2026-05-02.log`
+
+Suites: 4C Core Init, 4D Core Version, 4E Event Post, 4F Event Dispatch Budget,
+4G Handler Registration, 4H Core Snapshot, 4I Admission Policy, 4J Backpressure,
+4K Scheduler Throttle Contract, 5A Platform Critical Smoke, 5B Platform Version,
+5C Platform Lock Boundary, 5G ISR-Safe Producer Contract.
+
+---
+
+### Zephyr Build Evidence
+
+```
+Build: west build -b stm32f411e_disco RobotOS_v1.0/devkit/ --pristine
+Board: stm32f411e_disco
+Zephyr: v3.6.0
+Timestamp: May  2 2026 16:37:48
+
+Memory:
+  FLASH: 28940 / 524288 bytes  (5.52%)
+  RAM:   12160 / 131072 bytes  (9.28%)
+
+Errors: 0
+```
+
+Delta from Phase 5G (29060 B flash): −120 B (k_timer smoke is smaller than Phase 5G
+docs-only binary; Phase 6E source was replaced).
+
+---
+
+### Runtime RTT Evidence
+
+**RTT log:** `devkit/logs/phase_6G_rtt_2026-05-02.txt`
+
+**Capture:** `openocd reset run → sleep 3500 → halt → dump_image 0x20000a1c 4096`
+(`_SEGGER_RTT` address: `0x20000a1c` — changed from Phase 6E due to source delta)
+
+**Key log lines:**
+
+```
+[00:00:00.000,000] <inf> devkit_runtime: Phase 6G timer producer started
+[00:00:00.500,000] <inf> devkit_runtime: Phase 6G timer event handled seq=1 count=1
+[00:00:01.000,000] <inf> devkit_runtime: Phase 6G timer event handled seq=2 count=2
+[00:00:01.000,000] <inf> devkit_runtime: Phase 6G final summary: attempted=2 ok=2 full=0 invalid=0 other=0 handled=2 unexpected=0 pending=0 dispatched=2 accepted=2 rejected=0 dropped=0 prod_throttled=0 herr=0 unhandled=0 bp=0 th_active=0
+```
+
+**Counter verification:**
+
+| Counter | Expected | Result |
+|---------|----------|--------|
+| attempted | 2 | 2 ✓ |
+| ok | 2 | 2 ✓ |
+| full | 0 | 0 ✓ |
+| invalid | 0 | 0 ✓ |
+| other | 0 | 0 ✓ |
+| handled | 2 | 2 ✓ |
+| unexpected | 0 | 0 ✓ |
+| pending | 0 | 0 ✓ |
+| dispatched | 2 | 2 ✓ |
+| accepted | 2 | 2 ✓ |
+| rejected | 0 | 0 ✓ |
+| dropped | 0 | 0 ✓ |
+| prod_throttled | 0 | 0 ✓ |
+| herr | 0 | 0 ✓ |
+
+Post-drain ticks (3..6): clean, no further events, no errors.
+LED: toggling every 500ms confirmed.
+
+---
+
+### Fault Register Check
+
+```
+CFSR = 0x0    (no configurable fault)
+HFSR = 0x0    (no hard fault)
+```
+
+No faults. Runtime stable across full 3.5-second capture window.
+
+---
+
+### Legacy Isolation Confirmation
+
+No `RobotOS_v1.0/src/` file compiled, staged, or referenced.
+`<zephyr/kernel.h>` re-introduced in devkit layer (`devkit_runtime.c`) only;
+`core/` and `platform/` headers remain Zephyr-free.
+`prj.conf` unchanged (`CONFIG_SEGGER_RTT_BUFFER_SIZE_UP=4096`).
+
+---
+
+### Known Limitations
+
+- **Timer smoke only.** k_timer callbacks run from Zephyr SysTick ISR context
+  (ARMv7-M BASEPRI masking), but this is not a high-frequency EXTI/DMA ISR.
+- **Not a high-freq ISR stress.** Only 2 events at 100ms period; no burst from ISR.
+- **No multi-producer concurrency.** Single timer source only.
+- **No latency budget.** Critical section is O(1) confirmed but not cycle-measured.
+- **Platform APIs not ISR-safe.** Log, fault, sleep, time remain thread-context only.
+- **Not valid from NMI context.** irq_lock uses BASEPRI; does not mask NMI.
+- **Custom STM32F407VET6 board** remains hardware-unvalidated.
+
+---
+
+### Next Recommended Phase
+
+**Team decision required.**
+
+Candidates:
+- **Phase 6F** — Devkit Mixed Event Policy Smoke (valid + invalid + full in one run)
+- **Phase 4L** — Scheduler Retry/Backoff Policy Stub (host-only, core layer)
+- **Phase 6H** — Devkit EXTI ISR Producer Smoke (higher-freq ISR, button/EXTI)

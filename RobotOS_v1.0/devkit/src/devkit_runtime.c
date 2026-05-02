@@ -15,6 +15,13 @@
  * Phase 6E: throttle smoke (arg0=0x6E, 3 valid USER events via try_post_event).
  *           seq=1 OK, seq=2 OK (creates throttle condition), seq=3 ERR_THROTTLED.
  *           Proves throttle path: pending > budget, queue not full, no drop.
+ * Phase 6G: ISR/timer producer smoke. k_timer callback posts 2 USER events
+ *           (arg0=0x0607, seq=1..2) from Zephyr SysTick ISR context using
+ *           robotos_core_post_event(). No log/sleep/dispatch/register in
+ *           callback. Normal tick() dispatches; handler logs from thread
+ *           context. Proves conditional ISR-safe producer contract (Phase 5G).
+ *           <zephyr/kernel.h> re-introduced here for k_timer only; Zephyr
+ *           timer type must not appear in core or platform headers.
  */
 
 #include "devkit_runtime.h"
@@ -25,37 +32,96 @@
 #include "robotos_platform_critical.h"
 #include "robotos_platform_time.h"
 
+/* Phase 6G: k_timer used for ISR-like producer smoke.
+ * Zephyr kernel header re-introduced in devkit layer only.
+ * core/ and platform/ headers must remain Zephyr-free. */
+#include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
 LOG_MODULE_REGISTER(devkit_runtime, LOG_LEVEL_INF);
 
 /* --------------------------------------------------------------------------
- * Phase 6E: throttled producer smoke
+ * Phase 6G: ISR/timer producer smoke
  *
- * Use robotos_core_try_post_event() for all three attempts:
- *   seq=1: OK  -> pending=1, budget=1, throttle=false
- *   seq=2: OK  -> pending=2 > budget=1, throttle=true (but not full)
- *   seq=3: ERR_THROTTLED -> pending stays 2, producer_throttled_count++
+ * A Zephyr k_timer fires periodically (100 ms). Its callback runs from the
+ * Zephyr SysTick ISR context (IRQ-masked, genuine ISR path on ARMv7-M).
+ * The callback posts one USER event per invocation using
+ * robotos_core_post_event() and stops itself after 2 attempts.
  *
- * Handler sees seq=1 and seq=2 only (seq=3 never enters queue).
- * One event per tick drained; after 2 ticks: pending=0, throttle=false.
- * Final summary logged once after handler_called_count == 2.
+ * Contract from Phase 5G observed in callback:
+ *   - no logging
+ *   - no sleep
+ *   - no tick / dispatch / register / unregister
+ *   - event is a local struct (stack): valid for call duration
+ *   - all error returns handled via volatile counters only
+ *
+ * Normal runtime tick() dispatches the posted events; handler runs from
+ * thread context and logs evidence.
+ *
+ * Expected outcome:
+ *   attempted=2, ok=2, full=0, invalid=0, other=0
+ *   handled=2, unexpected=0
+ *   pending=0, dropped=0, prod_throttled=0, herr=0
  * -------------------------------------------------------------------------- */
 
-#define DEVKIT_PHASE6E_MARKER         0x6Eu
-#define DEVKIT_PHASE6E_ATTEMPT_COUNT  3u
-#define DEVKIT_PHASE6E_EXPECTED_OK    2u
+#define DEVKIT_PHASE6G_MARKER          0x0607u
+#define DEVKIT_PHASE6G_MAX_ATTEMPTS    2u
+#define DEVKIT_PHASE6G_EXPECTED_OK     2u
+#define DEVKIT_PHASE6G_TIMER_PERIOD_MS 100u
 
-static uint32_t s_throttle_attempted_count;
-static uint32_t s_throttle_ok_count;
-static uint32_t s_throttle_throttled_count;
-static uint32_t s_throttle_full_count;
-static uint32_t s_throttle_other_error_count;
-static uint32_t s_throttle_handler_called_count;
-static uint32_t s_throttle_unexpected_seq_count;
-static bool     s_throttle_summary_logged;
+/* volatile: written from ISR (timer callback), read from thread context */
+static volatile uint32_t s_timer_attempted_count;
+static volatile uint32_t s_timer_ok_count;
+static volatile uint32_t s_timer_full_count;
+static volatile uint32_t s_timer_invalid_count;
+static volatile uint32_t s_timer_other_error_count;
+static volatile uint32_t s_timer_handled_count;
+static volatile uint32_t s_timer_unexpected_count;
+static bool              s_timer_final_logged;
 
-static robotos_core_status_t devkit_throttle_handler(
+static struct k_timer s_phase6g_timer;
+
+/* ISR context: called from Zephyr SysTick handler.
+ * MUST NOT log, sleep, tick, dispatch, register, or fault. */
+static void devkit_phase6g_timer_cb(struct k_timer *timer)
+{
+	/* Static seq persists across invocations; timer callback is
+	 * serialized by Zephyr (only one active at a time). */
+	static uint32_t seq = 1u;
+
+	if (seq > DEVKIT_PHASE6G_MAX_ATTEMPTS) {
+		return;
+	}
+
+	/* Local stack event: valid for entire duration of post_event call. */
+	robotos_event_t ev = {
+		.type           = ROBOTOS_EVENT_USER,
+		.timestamp_tick = 0u,  /* uptime_ms not ISR-safe; omit */
+		.arg0           = DEVKIT_PHASE6G_MARKER,
+		.arg1           = seq,
+	};
+
+	s_timer_attempted_count++;
+	robotos_core_status_t ret = robotos_core_post_event(&ev);
+	if (ret == ROBOTOS_CORE_OK) {
+		s_timer_ok_count++;
+	} else if (ret == ROBOTOS_CORE_ERR_FULL) {
+		s_timer_full_count++;
+	} else if (ret == ROBOTOS_CORE_ERR_INVALID_ARG) {
+		s_timer_invalid_count++;
+	} else {
+		s_timer_other_error_count++;
+	}
+
+	seq++;
+	if (seq > DEVKIT_PHASE6G_MAX_ATTEMPTS) {
+		/* Stop timer after 2 attempts; k_timer_stop is safe from callback */
+		k_timer_stop(timer);
+	}
+}
+
+/* Handler runs from thread context (called by tick/dispatch, never from ISR). */
+static robotos_core_status_t devkit_phase6g_handler(
 	const robotos_event_t *event, void *user_context)
 {
 	(void)user_context;
@@ -63,28 +129,26 @@ static robotos_core_status_t devkit_throttle_handler(
 		return ROBOTOS_CORE_ERR_NULL;
 	}
 	if (event->type != ROBOTOS_EVENT_USER) {
-		LOG_ERR("Phase 6E: unexpected type=%d", (int)event->type);
-		s_throttle_unexpected_seq_count++;
+		LOG_ERR("Phase 6G: unexpected type=%d", (int)event->type);
+		s_timer_unexpected_count++;
 		return ROBOTOS_CORE_ERR_INVALID_ARG;
 	}
-	if (event->arg0 != DEVKIT_PHASE6E_MARKER) {
-		LOG_ERR("Phase 6E: unexpected arg0=0x%x", (unsigned)event->arg0);
-		s_throttle_unexpected_seq_count++;
+	if (event->arg0 != DEVKIT_PHASE6G_MARKER) {
+		LOG_ERR("Phase 6G: unexpected arg0=0x%x", (unsigned)event->arg0);
+		s_timer_unexpected_count++;
 		return ROBOTOS_CORE_ERR_INVALID_ARG;
 	}
 
 	uint32_t seq = (uint32_t)event->arg1;
-
-	/* seq=3 should never reach handler — it was throttled before enqueue */
-	if (seq == 3u) {
-		LOG_ERR("Phase 6E: seq=3 reached handler (should have been throttled)");
-		s_throttle_unexpected_seq_count++;
-		return ROBOTOS_CORE_ERR_INVALID_STATE;
+	if (seq < 1u || seq > DEVKIT_PHASE6G_MAX_ATTEMPTS) {
+		LOG_ERR("Phase 6G: unexpected seq=%u", seq);
+		s_timer_unexpected_count++;
+		return ROBOTOS_CORE_ERR_INVALID_ARG;
 	}
 
-	s_throttle_handler_called_count++;
-	LOG_INF("Phase 6E: handled seq=%u count=%u",
-		seq, s_throttle_handler_called_count);
+	s_timer_handled_count++;
+	LOG_INF("Phase 6G timer event handled seq=%u count=%u",
+		seq, (uint32_t)s_timer_handled_count);
 	return ROBOTOS_CORE_OK;
 }
 
@@ -113,59 +177,23 @@ int devkit_runtime_init(void)
 		LOG_ERR("Core init failed: %d -- continuing", (int)core_ret);
 	}
 
-	/* Phase 6E: register USER handler */
+	/* Phase 6G: register USER handler from thread context (before timer start) */
 	core_ret = robotos_core_register_event_handler(ROBOTOS_EVENT_USER,
-						       devkit_throttle_handler,
+						       devkit_phase6g_handler,
 						       NULL);
 	if (core_ret != ROBOTOS_CORE_OK) {
-		LOG_ERR("Phase 6E handler registration failed: %d",
+		LOG_ERR("Phase 6G handler registration failed: %d",
 			(int)core_ret);
 	}
 
-	/* Phase 6E: post 3 valid USER events via try_post_event */
-	for (uint32_t i = 0u; i < DEVKIT_PHASE6E_ATTEMPT_COUNT; i++) {
-		robotos_event_t ev = {
-			.type           = ROBOTOS_EVENT_USER,
-			.timestamp_tick = 0u,
-			.arg0           = DEVKIT_PHASE6E_MARKER,
-			.arg1           = (uint32_t)(i + 1u),
-		};
-		s_throttle_attempted_count++;
-		core_ret = robotos_core_try_post_event(&ev);
-		if (core_ret == ROBOTOS_CORE_OK) {
-			s_throttle_ok_count++;
-		} else if (core_ret == ROBOTOS_CORE_ERR_THROTTLED) {
-			s_throttle_throttled_count++;
-		} else if (core_ret == ROBOTOS_CORE_ERR_FULL) {
-			s_throttle_full_count++;
-		} else {
-			s_throttle_other_error_count++;
-			LOG_ERR("Phase 6E: try_post[%u] unexpected err=%d",
-				i + 1u, (int)core_ret);
-		}
-	}
-
-	/* Post summary */
-	{
-		robotos_core_snapshot_t snap;
-		robotos_core_snapshot(&snap);
-		LOG_INF("Phase 6E post summary: "
-			"attempted=%u ok=%u throttled=%u full=%u other=%u "
-			"pending=%u accepted=%u rejected=%u dropped=%u "
-			"prod_throttled=%u bp=%d th_active=%d",
-			s_throttle_attempted_count,
-			s_throttle_ok_count,
-			s_throttle_throttled_count,
-			s_throttle_full_count,
-			s_throttle_other_error_count,
-			snap.pending_event_count,
-			snap.admission_accepted_count,
-			snap.admission_rejected_count,
-			snap.dropped_event_count,
-			snap.producer_throttled_count,
-			(int)snap.backpressure_active,
-			(int)snap.producer_throttle_active);
-	}
+	/* Phase 6G: init and start periodic 100ms timer.
+	 * Timer callback is called from Zephyr SysTick ISR context.
+	 * It stops itself after 2 attempts. */
+	k_timer_init(&s_phase6g_timer, devkit_phase6g_timer_cb, NULL);
+	k_timer_start(&s_phase6g_timer,
+		      K_MSEC(DEVKIT_PHASE6G_TIMER_PERIOD_MS),
+		      K_MSEC(DEVKIT_PHASE6G_TIMER_PERIOD_MS));
+	LOG_INF("Phase 6G timer producer started");
 
 	LOG_INF("RobotOS devkit starting -- board: %s", CONFIG_BOARD);
 
@@ -198,17 +226,24 @@ void devkit_runtime_run(void)
 			LOG_ERR("Core tick failed: %d", (int)core_ret);
 		}
 
-		/* Phase 6E: log final summary once after both accepted events handled */
-		if (s_throttle_handler_called_count >= DEVKIT_PHASE6E_EXPECTED_OK &&
-		    !s_throttle_summary_logged) {
+		/* Phase 6G: log final summary once after both timer events handled */
+		if ((uint32_t)s_timer_handled_count >= DEVKIT_PHASE6G_EXPECTED_OK &&
+		    !s_timer_final_logged) {
 			robotos_core_snapshot_t snap;
 			robotos_core_snapshot(&snap);
-			LOG_INF("Phase 6E final summary: "
-				"handled=%u pending=%u dispatched=%u "
-				"accepted=%u rejected=%u dropped=%u "
-				"prod_throttled=%u herr=%u unhandled=%u "
-				"bp=%d th_active=%d unexpected=%u",
-				s_throttle_handler_called_count,
+			LOG_INF("Phase 6G final summary: "
+				"attempted=%u ok=%u full=%u invalid=%u other=%u "
+				"handled=%u unexpected=%u "
+				"pending=%u dispatched=%u accepted=%u rejected=%u "
+				"dropped=%u prod_throttled=%u herr=%u unhandled=%u "
+				"bp=%d th_active=%d",
+				(uint32_t)s_timer_attempted_count,
+				(uint32_t)s_timer_ok_count,
+				(uint32_t)s_timer_full_count,
+				(uint32_t)s_timer_invalid_count,
+				(uint32_t)s_timer_other_error_count,
+				(uint32_t)s_timer_handled_count,
+				(uint32_t)s_timer_unexpected_count,
 				snap.pending_event_count,
 				snap.dispatched_event_count,
 				snap.admission_accepted_count,
@@ -218,9 +253,8 @@ void devkit_runtime_run(void)
 				snap.handler_error_count,
 				snap.unhandled_event_count,
 				(int)snap.backpressure_active,
-				(int)snap.producer_throttle_active,
-				s_throttle_unexpected_seq_count);
-			s_throttle_summary_logged = true;
+				(int)snap.producer_throttle_active);
+			s_timer_final_logged = true;
 		}
 
 		robotos_platform_sleep_ms(DEVKIT_TICK_MS);
