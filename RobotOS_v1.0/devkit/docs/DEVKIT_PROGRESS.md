@@ -3111,7 +3111,7 @@ All changes are in `core/` or `tests/host/`.
 Candidates for next team decision:
 - **Phase 4K** — Scheduler Producer Throttle Policy
 - **Phase 5D** — Platform Critical Section / ISR Lock Boundary
-
+- **Phase 6B** — Devkit Event Burst / Backpressure Smoke ← **completed**
 ---
 
 ## Phase 6A — Devkit Event Smoke Integration
@@ -3244,3 +3244,188 @@ Smoke integration is devkit-only; no core policy changes.
 Candidates:
 - **Phase 4K** — Scheduler Producer Throttle Policy
 - **Phase 5D** — Platform Critical Section / ISR Lock Boundary
+- **Phase 6B** — Devkit Event Burst / Backpressure Smoke ← **completed**
+
+---
+
+---
+
+## Phase 6B — Devkit Event Burst / Backpressure Smoke
+
+**Date:** 2026-05-02
+**Branch:** master
+**Baseline commit:** `dba2fd1` — log evidence hygiene patch
+
+---
+
+### Purpose
+
+Extend the Phase 6A single-event smoke to a burst of three USER events posted at init.
+Prove that the core admission gate, queue, per-tick dispatch budget, and backpressure
+flag all behave correctly under load: pending=3 > budget=1 triggers backpressure
+immediately; the burst drains one event per tick over three ticks; backpressure clears
+once pending ≤ budget; a final snapshot is logged exactly once after all three are handled.
+
+No core policy changes. No platform changes. Devkit-only modification.
+
+---
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `devkit/src/devkit_runtime.c` | Replaced single smoke event with burst of 3 (`BURST_SIZE=3`, `arg0=0x6B`, `arg1=1/2/3`); updated handler to count and log per-event; added post-burst snapshot log in run loop |
+
+### Files Unchanged (confirmed)
+
+| File | Reason |
+|------|--------|
+| `RobotOS_v1.0/src/robotos_core.c` | No core policy change |
+| `RobotOS_v1.0/src/robotos_core.h` | No interface change |
+| `RobotOS_v1.0/platform/` | No platform change |
+| `devkit/prj.conf` | RTT buffer already 4096 B from Phase 6A — sufficient |
+
+---
+
+### Burst Design
+
+```
+BURST_SIZE = 3
+arg0 = 0x6B  (phase tag)
+arg1 = 1, 2, 3  (sequence numbers)
+
+budget (ROBOTOS_CORE_MAX_EVENTS_PER_TICK) = 1
+
+Post sequence:
+  robotos_core_post_event(&s_burst_events[0])  → pending=1
+  robotos_core_post_event(&s_burst_events[1])  → pending=2
+  robotos_core_post_event(&s_burst_events[2])  → pending=3
+  → backpressure ACTIVE (pending=3 > budget=1)
+
+Dispatch timeline (one per tick):
+  tick 0  seq=1 dispatched  pending→2  bp still true
+  tick 1  seq=2 dispatched  pending→1  bp false (pending==budget)
+  tick 2  seq=3 dispatched  pending→0  bp false
+
+Final snapshot logged once after s_burst_handled_count == 3.
+```
+
+---
+
+### Expected Policy
+
+- `backpressure_active = (pending > ROBOTOS_CORE_MAX_EVENTS_PER_TICK) || queue_is_full`
+- After burst post: `3 > 1` → bp=true
+- After tick 0: `2 > 1` → bp=true
+- After tick 1: `1 > 1` is false → bp=false
+- After tick 2: `0 > 1` is false → bp=false
+- `rejected=0, dropped=0, herr=0, unhandled=0` — clean admission and handling throughout
+
+---
+
+### Host Test Evidence
+
+**Result:** 9/9 suites pass — no regression.
+
+**Log:** `tests/host/logs/phase_6B_host_2026-05-02.log`
+
+Suites covered:
+- Phase 4C: Core Init
+- Phase 4D: Core Version
+- Phase 4E: Event Post
+- Phase 4F: Event Dispatch Budget
+- Phase 4G: Event Handler Registration
+- Phase 4H: Core Snapshot
+- Phase 4I: Event Admission Policy
+- Phase 4J: Backpressure
+- Phase 4K: Scheduler Admission Policy (stub)
+
+All 9 suites pass without modification. The burst design is consistent with the
+4J backpressure policy and 4F dispatch-budget policy verified in host tests.
+
+---
+
+### Zephyr Build Evidence
+
+```
+Build: west build -b stm32f411e_disco RobotOS_v1.0/devkit/
+Board: stm32f411e_disco
+Zephyr: v3.6.0
+Timestamp: May 2 2026 09:40:22
+
+Memory:
+  FLASH: 28352 / 524288 bytes  (5.41%)
+  RAM:   12096 / 131072 bytes  (9.23%)
+
+Errors: 0
+```
+
+Delta from Phase 6A (27732 B flash): +620 B for burst array, for-loop, and snapshot log call.
+
+---
+
+### Runtime RTT Evidence
+
+**RTT log:** `devkit/logs/phase_6B_rtt_2026-05-02.txt`
+
+**Capture:** `openocd reset run → sleep 5000 → halt → dump_image 0x200009c8 4096`
+(`_SEGGER_RTT` address confirmed via `nm` after Phase 6A rebuild — unchanged)
+
+**Key log lines:**
+
+```
+[00:00:00.000,000] <inf> devkit_runtime: Phase 6B: burst posted 3 events pending=3 bp=1
+[00:00:00.000,000] <inf> devkit_runtime: Phase 6B burst handled seq=1 count=1
+[00:00:00.500,000] <inf> devkit_runtime: Phase 6B burst handled seq=2 count=2
+[00:00:01.000,000] <inf> devkit_runtime: Phase 6B burst handled seq=3 count=3
+[00:00:01.000,000] <inf> devkit_runtime: Phase 6B summary: handled=3 pending=0 dispatched=3 accepted=3 rejected=0 dropped=0 herr=0 unhandled=0 bp=0
+```
+
+**Backpressure transitions confirmed:**
+- At post: `pending=3 bp=1` → bp ACTIVE immediately
+- After tick 0: seq=1 dispatched, pending→2, bp still true
+- After tick 1: seq=2 dispatched, pending→1, bp clears (pending ≤ budget)
+- After tick 2: seq=3 dispatched, pending→0, bp=false
+
+Post-burst ticks (3–9): clean, no burst events, no errors.
+
+---
+
+### Fault Register Check
+
+```
+CFSR = 0x0    (no configurable fault)
+HFSR = 0x0    (no hard fault)
+```
+
+No faults. Runtime stable across full 5-second capture window.
+
+---
+
+### Legacy Isolation Confirmation
+
+No `RobotOS_v1.0/src/` file compiled, staged, or referenced.
+Burst integration is devkit-only; no core policy changes.
+`prj.conf` unchanged from Phase 6A (`CONFIG_SEGGER_RTT_BUFFER_SIZE_UP=4096`).
+
+---
+
+### Known Limitations
+
+- Burst is fixed at compile time (`BURST_SIZE=3`). Dynamic burst injection is out of scope.
+- `s_burst_handled_count` and `s_burst_summary_logged` are file-local; no getter exposed.
+  Observability via RTT log only.
+- Backpressure rejection path (queue full or admission rejected) not exercised — burst of 3
+  is well within capacity=16. Rejection smoke is a candidate for a future phase.
+- Custom STM32F407VET6 board remains hardware-unvalidated.
+
+---
+
+### Next Recommended Phase
+
+**Team decision required.**
+
+Candidates:
+- **Phase 4K** — Scheduler Producer Throttle Policy (host-only, core layer)
+- **Phase 5D** — Platform Critical Section / ISR Lock Boundary
+- **Phase 6C** — Devkit Event Rejection Smoke (fill queue to capacity, prove rejected > 0)
