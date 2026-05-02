@@ -355,6 +355,71 @@ consistent with `admission_accepted_count` and `admission_rejected_count`.
 
 ---
 
+## Phase 4L — Scheduler Advisory Retry Decision Policy
+
+Phase 4L adds a **pure advisory retry decision API** that maps a
+`robotos_core_status_t` to a suggested producer action. No auto-retry, no
+sleep, no timer, no queue mutation, no new status codes, no mutable state.
+The producer owns all scheduling decisions.
+
+### New API
+
+```c
+typedef enum {
+    ROBOTOS_CORE_RETRY_NONE        = 0,
+    ROBOTOS_CORE_RETRY_SOON        = 1,
+    ROBOTOS_CORE_RETRY_AFTER_TICK  = 2,
+    ROBOTOS_CORE_RETRY_NEVER       = 3
+} robotos_core_retry_action_t;
+
+typedef struct {
+    robotos_core_retry_action_t action;
+    uint32_t                    suggested_wait_ticks;
+    bool                        producer_should_drop;
+    bool                        producer_should_report;
+} robotos_core_retry_decision_t;
+
+robotos_core_status_t robotos_core_retry_decision_for_status(
+    robotos_core_status_t          status,
+    robotos_core_retry_decision_t *out
+);
+
+bool robotos_core_status_is_retryable(robotos_core_status_t status);
+```
+
+### Status → Decision Mapping
+
+| Status | action | wait_ticks | drop | report |
+|--------|--------|-----------|------|--------|
+| `OK` | `RETRY_NONE` | 0 | false | false |
+| `ERR_FULL` | `RETRY_AFTER_TICK` | 1 | false | false |
+| `ERR_THROTTLED` | `RETRY_AFTER_TICK` | 1 | false | false |
+| `ERR_INVALID_STATE` | `RETRY_SOON` | 0 | false | false |
+| `ERR_INVALID_ARG` | `RETRY_NEVER` | 0 | true | true |
+| `ERR_NULL` | `RETRY_NEVER` | 0 | true | true |
+| `ERR_EMPTY` | `RETRY_NONE` | 0 | false | false |
+| unknown | → `ERR_INVALID_ARG` | 0 | false | false |
+
+### Design Constraints
+
+- **Pure stateless mapping.** No lock, no platform call, no queue access.
+- **Safe to call before init.** No dependency on core lifecycle state.
+- **No auto-retry.** The producer drives all retry scheduling.
+- **No sleep, no timer.** `suggested_wait_ticks` is advisory only.
+- **No new status code.** Existing status codes are unchanged.
+- **No snapshot extension.** No new counters; no snapshot mutation.
+- **Producer owns drop decision.** `producer_should_drop` is advisory.
+- **No runtime required.** Policy proven by host tests alone.
+
+### Known Limitations
+
+- No per-producer accounting or priority.
+- No dynamic policy override.
+- Retry window (`suggested_wait_ticks`) is fixed; no exponential backoff.
+- No automatic retry loop of any kind.
+
+---
+
 ## Phase 5G — ISR-Safe Producer Contract Audit
 
 Phase 5G is an **audit/doc-only** phase. No source code was changed.

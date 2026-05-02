@@ -317,4 +317,80 @@ bool robotos_core_producer_throttle_active(void);
  */
 uint32_t robotos_core_producer_throttled_count(void);
 
+/* ---------------------------------------------------------------------------
+ * Phase 4L: Advisory Retry Decision Policy
+ *
+ * Pure advisory mapping from a post_event status code to a suggested producer
+ * action. No auto-retry, no sleep, no timer, no queue mutation, no new status
+ * codes, no mutable state. The producer owns all scheduling decisions.
+ * ---------------------------------------------------------------------------
+ */
+
+/*
+ * Suggested action a producer should take after receiving a given status code.
+ *
+ *   RETRY_NONE         — no retry needed (success or nothing to do)
+ *   RETRY_SOON         — retry at first opportunity (e.g. after state recovers)
+ *   RETRY_AFTER_TICK   — retry after the next tick() drains the queue
+ *   RETRY_NEVER        — do not retry; event should be discarded
+ */
+typedef enum {
+	ROBOTOS_CORE_RETRY_NONE        = 0,
+	ROBOTOS_CORE_RETRY_SOON        = 1,
+	ROBOTOS_CORE_RETRY_AFTER_TICK  = 2,
+	ROBOTOS_CORE_RETRY_NEVER       = 3
+} robotos_core_retry_action_t;
+
+/*
+ * Advisory retry decision returned for a given status code.
+ *
+ *   action                  — suggested producer action (see above)
+ *   suggested_wait_ticks    — advisory tick count before retrying (0 = no wait)
+ *   producer_should_drop    — event should be discarded; retrying is pointless
+ *   producer_should_report  — producer should propagate the error upstream
+ */
+typedef struct {
+	robotos_core_retry_action_t action;
+	uint32_t                    suggested_wait_ticks;
+	bool                        producer_should_drop;
+	bool                        producer_should_report;
+} robotos_core_retry_decision_t;
+
+/*
+ * Map a robotos_core_status_t to an advisory retry decision.
+ *
+ * This is a pure, stateless mapping. It has no side effects, acquires no
+ * lock, makes no platform calls, and does not access the event queue.
+ * Safe to call from any context including before init.
+ *
+ * Returns ROBOTOS_CORE_ERR_NULL        if out is NULL.
+ * Returns ROBOTOS_CORE_ERR_INVALID_ARG if status is not a known code;
+ *   *out is zeroed in that case.
+ * Returns ROBOTOS_CORE_OK              otherwise; *out is filled.
+ *
+ * Status -> decision mapping:
+ *   OK              -> RETRY_NONE,       wait=0, drop=false, report=false
+ *   ERR_FULL        -> RETRY_AFTER_TICK, wait=1, drop=false, report=false
+ *   ERR_THROTTLED   -> RETRY_AFTER_TICK, wait=1, drop=false, report=false
+ *   ERR_INVALID_STATE -> RETRY_SOON,     wait=0, drop=false, report=false
+ *   ERR_INVALID_ARG -> RETRY_NEVER,      wait=0, drop=true,  report=true
+ *   ERR_NULL        -> RETRY_NEVER,      wait=0, drop=true,  report=true
+ *   ERR_EMPTY       -> RETRY_NONE,       wait=0, drop=false, report=false
+ *   unknown         -> ERR_INVALID_ARG,  *out zeroed
+ */
+robotos_core_status_t robotos_core_retry_decision_for_status(
+	robotos_core_status_t          status,
+	robotos_core_retry_decision_t *out
+);
+
+/*
+ * Return true if the given status code is a candidate for producer retry.
+ * Equivalent to checking whether the decision action is not RETRY_NEVER
+ * or RETRY_NONE. Pure mapping; no state access.
+ *
+ *   true  for: ERR_FULL, ERR_THROTTLED, ERR_INVALID_STATE
+ *   false for: OK, ERR_INVALID_ARG, ERR_NULL, ERR_EMPTY, unknown
+ */
+bool robotos_core_status_is_retryable(robotos_core_status_t status);
+
 #endif /* ROBOTOS_CORE_H */

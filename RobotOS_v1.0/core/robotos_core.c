@@ -596,3 +596,88 @@ uint32_t robotos_core_producer_throttled_count(void)
 	robotos_platform_critical_exit(tok);
 	return v;
 }
+
+/* ---------------------------------------------------------------------------
+ * Phase 4L: Advisory Retry Decision Policy — pure stateless mapping
+ * No lock, no logging, no platform calls, no queue access, no new status code.
+ * ---------------------------------------------------------------------------
+ */
+
+robotos_core_status_t robotos_core_retry_decision_for_status(
+	robotos_core_status_t          status,
+	robotos_core_retry_decision_t *out)
+{
+	if (out == NULL) {
+		return ROBOTOS_CORE_ERR_NULL;
+	}
+
+	switch (status) {
+	case ROBOTOS_CORE_OK:
+		out->action               = ROBOTOS_CORE_RETRY_NONE;
+		out->suggested_wait_ticks = 0u;
+		out->producer_should_drop   = false;
+		out->producer_should_report = false;
+		return ROBOTOS_CORE_OK;
+
+	case ROBOTOS_CORE_ERR_FULL:
+		out->action               = ROBOTOS_CORE_RETRY_AFTER_TICK;
+		out->suggested_wait_ticks = 1u;
+		out->producer_should_drop   = false;
+		out->producer_should_report = false;
+		return ROBOTOS_CORE_OK;
+
+	case ROBOTOS_CORE_ERR_THROTTLED:
+		out->action               = ROBOTOS_CORE_RETRY_AFTER_TICK;
+		out->suggested_wait_ticks = 1u;
+		out->producer_should_drop   = false;
+		out->producer_should_report = false;
+		return ROBOTOS_CORE_OK;
+
+	case ROBOTOS_CORE_ERR_INVALID_STATE:
+		out->action               = ROBOTOS_CORE_RETRY_SOON;
+		out->suggested_wait_ticks = 0u;
+		out->producer_should_drop   = false;
+		out->producer_should_report = false;
+		return ROBOTOS_CORE_OK;
+
+	case ROBOTOS_CORE_ERR_INVALID_ARG:
+		out->action               = ROBOTOS_CORE_RETRY_NEVER;
+		out->suggested_wait_ticks = 0u;
+		out->producer_should_drop   = true;
+		out->producer_should_report = true;
+		return ROBOTOS_CORE_OK;
+
+	case ROBOTOS_CORE_ERR_NULL:
+		out->action               = ROBOTOS_CORE_RETRY_NEVER;
+		out->suggested_wait_ticks = 0u;
+		out->producer_should_drop   = true;
+		out->producer_should_report = true;
+		return ROBOTOS_CORE_OK;
+
+	case ROBOTOS_CORE_ERR_EMPTY:
+		out->action               = ROBOTOS_CORE_RETRY_NONE;
+		out->suggested_wait_ticks = 0u;
+		out->producer_should_drop   = false;
+		out->producer_should_report = false;
+		return ROBOTOS_CORE_OK;
+
+	default:
+		out->action               = ROBOTOS_CORE_RETRY_NONE;
+		out->suggested_wait_ticks = 0u;
+		out->producer_should_drop   = false;
+		out->producer_should_report = false;
+		return ROBOTOS_CORE_ERR_INVALID_ARG;
+	}
+}
+
+bool robotos_core_status_is_retryable(robotos_core_status_t status)
+{
+	switch (status) {
+	case ROBOTOS_CORE_ERR_FULL:
+	case ROBOTOS_CORE_ERR_THROTTLED:
+	case ROBOTOS_CORE_ERR_INVALID_STATE:
+		return true;
+	default:
+		return false;
+	}
+}

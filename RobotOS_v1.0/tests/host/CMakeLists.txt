@@ -252,6 +252,25 @@ target_include_directories(robotos_core_dispatch_critical_contract_test PRIVATE
 add_test(NAME robotos_core_dispatch_critical_contract
          COMMAND robotos_core_dispatch_critical_contract_test)
 
+# ---- Scheduler advisory retry policy contract test (Phase 4L) ---------------
+# Tests robotos_core_retry_decision_for_status() and
+# robotos_core_status_is_retryable(). Pure stateless mapping; no init required
+# for most tests (TC12 explicitly exercises the pre-init path).
+add_executable(robotos_scheduler_retry_policy_contract_test
+    test_robotos_scheduler_retry_policy_contract.c
+    ${CORE_SRCS}
+    ${PLATFORM_HOST_STUB}
+)
+
+target_include_directories(robotos_scheduler_retry_policy_contract_test PRIVATE
+    "${CORE_DIR}"
+    "${PLATFORM_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+)
+
+add_test(NAME robotos_scheduler_retry_policy_contract
+         COMMAND robotos_scheduler_retry_policy_contract_test)
+
 # ---- Log persistence target --------------------------------------------------
 # Saves ctest output to a timestamped file in the version-controlled logs/
 # directory alongside this CMakeLists.txt.

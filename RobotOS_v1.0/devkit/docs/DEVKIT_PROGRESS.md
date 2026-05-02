@@ -3935,7 +3935,7 @@ Core changes are additive (new API + counter). Existing `post_event` semantics u
 Candidates:
 - **Phase 6E** — Devkit Throttled Producer Smoke ← **completed**
 - **Phase 5D** — Platform Critical Section / ISR Lock Boundary
-- **Phase 4L** — Scheduler Retry/Backoff Policy Stub
+- **Phase 4L** — Scheduler Advisory Retry Decision Policy ← **completed**
 
 ---
 
@@ -5447,6 +5447,154 @@ No `RobotOS_v1.0/src/` file compiled, staged, or referenced.
 
 Candidates:
 - **Phase 6F** — Devkit Mixed Event Policy Smoke (valid + invalid + full in one run)
-- **Phase 4L** — Scheduler Retry/Backoff Policy Stub (host-only, core layer)
+- **Phase 4L** — Scheduler Advisory Retry Decision Policy ← **completed**
 - **Phase 6I** — Timer Producer Queue-Pressure Stress (high-frequency test)
 
+---
+
+---
+
+## Phase 4L — Scheduler Advisory Retry Decision Policy
+
+**Date:** 2026-05-03
+**Branch:** master
+**Baseline commit:** `7bb81cd` — Revert bad auto-retry Phase 4L stub
+**Type:** HOST-ONLY — no devkit runtime required
+
+---
+
+### Purpose
+
+Add a pure advisory retry decision policy to the core. Maps a
+`robotos_core_status_t` to a suggested producer action. No auto-retry,
+no sleep, no timer, no queue mutation, no new status codes, no mutable
+state. The producer owns all scheduling decisions.
+
+---
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `core/robotos_core.h` | Add `robotos_core_retry_action_t` enum, `robotos_core_retry_decision_t` struct, `robotos_core_retry_decision_for_status()`, `robotos_core_status_is_retryable()` |
+| `core/robotos_core.c` | Add stateless implementation of both functions (no lock, no platform call, no queue access) |
+| `core/README.md` | Phase 4L section: advisory API, mapping table, design constraints, known limitations |
+| `tests/host/CMakeLists.txt` | Add `robotos_scheduler_retry_policy_contract_test` target |
+| `tests/host/test_robotos_scheduler_retry_policy_contract.c` | 13 test cases |
+| `devkit/docs/DEVKIT_PROGRESS.md` | Phase 4L section (this entry) |
+| `tests/host/logs/phase_4L_host_2026-05-03.log` | Host test evidence |
+
+### Files Unchanged (confirmed)
+
+| File | Reason |
+|------|--------|
+| `core/robotos_core.c` — post_event/try_post_event | No behavior change |
+| `platform/` | No platform change |
+| `devkit/src/devkit_runtime.c` | No devkit runtime required |
+| `devkit/prj.conf` | No config change |
+
+---
+
+### Design Constraints
+
+- Pure stateless mapping — no lock, no platform call, no queue access.
+- Safe to call from any context including before init.
+- No auto-retry, no sleep, no timer.
+- No new status code; `ROBOTOS_CORE_ERR_THROTTLED = -7` remains the highest.
+- No snapshot extension; no new counters.
+- Producer owns all drop and retry scheduling decisions.
+
+---
+
+### Mapping Table
+
+| Status | action | wait_ticks | drop | report |
+|--------|--------|-----------|------|--------|
+| `OK` | `RETRY_NONE` | 0 | false | false |
+| `ERR_FULL` | `RETRY_AFTER_TICK` | 1 | false | false |
+| `ERR_THROTTLED` | `RETRY_AFTER_TICK` | 1 | false | false |
+| `ERR_INVALID_STATE` | `RETRY_SOON` | 0 | false | false |
+| `ERR_INVALID_ARG` | `RETRY_NEVER` | 0 | true | true |
+| `ERR_NULL` | `RETRY_NEVER` | 0 | true | true |
+| `ERR_EMPTY` | `RETRY_NONE` | 0 | false | false |
+| unknown | → `ERR_INVALID_ARG` | 0 | false | false |
+
+---
+
+### Host Test Evidence
+
+**Result:** 14/14 suites pass — no regression on prior 13, new retry policy suite passes.
+
+**Log:** `tests/host/logs/phase_4L_host_2026-05-03.log`
+
+New suite (`robotos_scheduler_retry_policy_contract`), 13 test cases:
+- TC01: NULL out → ERR_NULL
+- TC02–TC08: each status code mapping verified
+- TC09: unknown status → ERR_INVALID_ARG, out zeroed
+- TC10–TC11: `is_retryable` true/false cases
+- TC12: functions work before init
+- TC13: no snapshot mutation after repeated calls
+
+---
+
+### Zephyr Build Evidence
+
+```
+Build: west build -b stm32f411e_disco RobotOS_v1.0/devkit/ --pristine
+Board: stm32f411e_disco
+Zephyr: v3.6.0
+
+Memory:
+  FLASH: 28988 / 524288 bytes  (5.53%)
+  RAM:   12160 / 131072 bytes  (9.28%)
+
+Errors: 0
+```
+
+Advisory functions not called from devkit; binary unchanged from Phase 6H.
+
+---
+
+### Runtime Evidence
+
+Not required. Advisory mapping is pure C with no platform dependency.
+All semantics proven by host tests.
+
+---
+
+### Legacy Isolation Confirmation
+
+No `RobotOS_v1.0/src/` file compiled, staged, or referenced.
+Core changes are additive (new API only). Existing `post_event` and
+`try_post_event` semantics unchanged.
+
+---
+
+### Known Limitations
+
+- No per-producer accounting or priority.
+- No dynamic policy override.
+- Retry window (`suggested_wait_ticks`) is fixed; no exponential backoff.
+- No automatic retry loop of any kind.
+- `producer_should_drop` and `producer_should_report` are advisory only.
+
+---
+
+### Correction Note
+
+Commit `475a063` implemented an auto-retry API (`robotos_core_post_event_with_retry`,
+`robotos_core_set_retry_policy`, `ROBOTOS_CORE_ERR_RETRY_EXHAUSTED = -8`,
+mutable retry counters in snapshot) and was committed without passing host tests.
+That commit was reverted at `7bb81cd`. This entry is the correct Phase 4L
+implementation under the approved advisory-only scope.
+
+---
+
+### Next Recommended Phase
+
+**Team decision required.**
+
+Candidates:
+- **Phase 6F** — Devkit Mixed Event Policy Smoke
+- **Phase 6I** — Timer Producer Queue-Pressure Stress
+- **Phase 5D** — Platform Critical Section / ISR Lock Boundary
