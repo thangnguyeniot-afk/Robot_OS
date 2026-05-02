@@ -3428,4 +3428,187 @@ Burst integration is devkit-only; no core policy changes.
 Candidates:
 - **Phase 4K** — Scheduler Producer Throttle Policy (host-only, core layer)
 - **Phase 5D** — Platform Critical Section / ISR Lock Boundary
-- **Phase 6C** — Devkit Event Rejection Smoke (fill queue to capacity, prove rejected > 0)
+- **Phase 6C** — Devkit Queue Full / Drop Smoke ← **completed**
+
+---
+
+---
+
+## Phase 6C — Devkit Queue Full / Drop Smoke
+
+**Date:** 2026-05-02
+**Branch:** master
+**Baseline commit:** `b8ee7f9` — devkit burst/backpressure smoke (Phase 6B)
+
+---
+
+### Purpose
+
+Replace Phase 6B burst with a queue-full/drop smoke. Post exactly
+`ROBOTOS_EVENT_QUEUE_CAPACITY + 1` (17) valid USER events at init. Prove:
+- First 16 are accepted into the queue (returns `ROBOTOS_CORE_OK`).
+- 17th valid event returns `ROBOTOS_CORE_ERR_FULL` because queue is full.
+- `dropped_count` increments by 1; `admission_rejected_count` stays 0.
+- This is a queue-full drop, not an admission rejection.
+- Backpressure is active immediately (pending=16 > budget=1, queue full).
+- Tick budget=1 drains one event per tick over 16 ticks.
+- Handler logs milestones at seq=1/8/16 only; no RTT flood.
+- Final snapshot logged once after all 16 handled.
+
+No core policy changes. Devkit-only modification.
+
+---
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `devkit/src/devkit_runtime.c` | Replaced Phase 6B burst with Phase 6C full-queue burst (attempt=17, arg0=0x6C, seq 1..17); milestone-only handler logging; post summary; final summary after 16 handled |
+
+### Files Unchanged (confirmed)
+
+| File | Reason |
+|------|--------|
+| `core/robotos_core.c` | No core policy change |
+| `core/robotos_event_queue.h` | Read-only include for `ROBOTOS_EVENT_QUEUE_CAPACITY` constant |
+| `platform/` | No platform change |
+| `devkit/prj.conf` | RTT buffer 4096 B from Phase 6A — sufficient |
+
+---
+
+### Burst Design
+
+```
+DEVKIT_PHASE6C_ATTEMPT_COUNT = ROBOTOS_EVENT_QUEUE_CAPACITY + 1 = 17
+DEVKIT_PHASE6C_MARKER        = 0x6C
+DEVKIT_PHASE6C_EXPECTED_OK   = ROBOTOS_EVENT_QUEUE_CAPACITY = 16
+
+arg0 = 0x6C  (phase marker)
+arg1 = 1..17 (sequence numbers)
+
+Post result expectations:
+  seq 1..16:  ROBOTOS_CORE_OK  -> posted_ok_count++
+  seq 17:     ROBOTOS_CORE_ERR_FULL -> full_count++, dropped_count++
+  errs=0      (no unexpected return codes)
+
+Handler milestone logging:
+  seq=1   -> log "handled seq=1 count=1"
+  seq=8   -> log "handled seq=8 count=8"
+  seq=16  -> log "handled seq=16 count=16"
+  (no log for seq 2..7, 9..15)
+```
+
+---
+
+### Expected Policy
+
+- `admitted` = valid type passes admission gate — all 17 pass admission
+- Queue push returns `ERR_FULL` on slot 17 — not an admission rejection
+- `dropped_event_count` += 1 (queue full path)
+- `admission_rejected_count` unchanged = 0
+- `admission_accepted_count` = 16 (only successful queue entries)
+- Backpressure: pending=16 > budget=1, also queue_is_full → bp=true at post
+- Tick budget=1: drain one event per tick → 16 ticks to empty
+- After drain: pending=0, dispatched=16, bp=false
+
+---
+
+### Host Test Evidence
+
+**Result:** 9/9 suites pass — no regression.
+
+**Log:** `tests/host/logs/phase_6C_host_2026-05-02.log`
+
+Suites: 4C Core Init, 4D Core Version, 4E Event Post, 4F Event Dispatch Budget,
+4G Handler Registration, 4H Core Snapshot, 4I Admission Policy, 4J Backpressure,
+4K Scheduler Admission (stub).
+
+---
+
+### Zephyr Build Evidence
+
+```
+Build: west build -b stm32f411e_disco RobotOS_v1.0/devkit/ --pristine
+Board: stm32f411e_disco
+Zephyr: v3.6.0
+Timestamp: May 2 2026 13:18:03
+
+Memory:
+  FLASH: 28568 / 524288 bytes  (5.45%)
+  RAM:   12096 / 131072 bytes  (9.23%)
+
+Errors: 0
+```
+
+Delta from Phase 6B (28352 B flash): +216 B for larger burst loop, post summary, counters.
+
+---
+
+### Runtime RTT Evidence
+
+**RTT log:** `devkit/logs/phase_6C_rtt_2026-05-02.txt`
+
+**Capture:** `openocd reset run -> sleep 9000 -> halt -> dump_image 0x200009c8 4096`
+(`_SEGGER_RTT` address unchanged from Phase 6A/6B)
+
+**Post summary (at init):**
+```
+Phase 6C post summary: attempted=17 ok=16 full=1 errs=0
+                       pending=16 dropped=1 accepted=16 rejected=0 bp=1
+```
+
+**Drain milestones:**
+```
+[00:00:00.000] Phase 6C: handled seq=1  count=1   (tick 0)
+[00:00:03.501] Phase 6C: handled seq=8  count=8   (tick 7)
+[00:00:07.501] Phase 6C: handled seq=16 count=16  (tick 15)
+```
+
+**Final summary (logged once after count==16):**
+```
+[00:00:07.501] Phase 6C summary: handled=16 pending=0 dispatched=16
+               accepted=16 rejected=0 dropped=1 herr=0 unhandled=0 bp=0
+```
+
+Post-drain ticks (16..18): clean, no burst events, no errors.
+
+---
+
+### Fault Register Check
+
+```
+CFSR = 0x0    (no configurable fault)
+HFSR = 0x0    (no hard fault)
+```
+
+No faults. Runtime stable across full 9-second capture window.
+
+---
+
+### Legacy Isolation Confirmation
+
+No `RobotOS_v1.0/src/` file compiled, staged, or referenced.
+Queue-full/drop integration is devkit-only. No core policy changes.
+`prj.conf` unchanged from Phase 6A (`CONFIG_SEGGER_RTT_BUFFER_SIZE_UP=4096`).
+
+---
+
+### Known Limitations
+
+- Queue-full smoke only; no invalid/reserved event type injection in this phase.
+- `admission_rejected_count` remains 0 — rejection smoke is Phase 6D scope.
+- No producer throttle; no real scheduler; no periodic producer.
+- Burst is fixed at compile time (`DEVKIT_PHASE6C_ATTEMPT_COUNT = 17`).
+- `s_burst_*` counters are file-local; observability via RTT log only.
+- Custom STM32F407VET6 board remains hardware-unvalidated.
+
+---
+
+### Next Recommended Phase
+
+**Team decision required.**
+
+Candidates:
+- **Phase 6D** — Devkit Invalid/Rejection Smoke (post reserved/NONE type, prove `rejected > 0`)
+- **Phase 4K** — Scheduler Producer Throttle Policy (host-only, core layer)
+- **Phase 5D** — Platform Critical Section / ISR Lock Boundary

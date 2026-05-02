@@ -1,0 +1,86 @@
+Phase 6C -- Devkit Queue Full / Drop Smoke
+RTT Boot Log -- 2026-05-02
+Board: STM32F411E-DISCO
+Build timestamp: May 2 2026 13:18:03
+Capture method: openocd reset run -> sleep 9000 -> halt -> dump_image 0x200009c8 4096
+_SEGGER_RTT address: 0x200009c8 (4KB buffer, unchanged from Phase 6A)
+CFSR: 0x0  HFSR: 0x0
+
+===========================================================================
+
+*** Booting Zephyr OS build v3.6.0 ***
+[00:00:00.000,000] <inf> devkit_fault: fault visibility active
+[00:00:00.000,000] <inf> devkit_build_info: RobotOS devkit build info:
+[00:00:00.000,000] <inf> devkit_build_info:   board=stm32f411e_disco
+[00:00:00.000,000] <inf> devkit_build_info:   zephyr=3.6.0
+[00:00:00.000,000] <inf> devkit_build_info:   build=May  2 2026 13:18:03
+[00:00:00.000,000] <inf> devkit_build_info:   tick_ms=500
+[00:00:00.000,000] <inf> devkit_build_info:   log_backend=RTT
+[00:00:00.000,000] <inf> robotos_platform: [robotos_core] RobotOS core init -- version=4B-contract state=READY
+[00:00:00.000,000] <inf> robotos_platform: [robotos_core] event queue initialized capacity=16
+[00:00:00.000,000] <inf> robotos_platform: [robotos_core] event dispatcher initialized
+[00:00:00.000,000] <inf> devkit_runtime: Phase 6C post summary: attempted=17 ok=16 full=1 errs=0 pending=16 dropped=1 accepted=16 rejected=0 bp=1
+[00:00:00.000,000] <inf> devkit_runtime: RobotOS devkit starting -- board: stm32f411e_disco
+[00:00:00.000,000] <inf> devkit_runtime: LED blink loop starting
+[00:00:00.000,000] <inf> devkit_runtime: tick count=0
+[00:00:00.000,000] <inf> robotos_platform: [robotos_core] core tick count=1
+[00:00:00.000,000] <inf> devkit_runtime: Phase 6C: handled seq=1 count=1
+[00:00:00.500,000] <inf> devkit_runtime: tick count=1
+[00:00:01.000,000] <inf> devkit_runtime: tick count=2
+[00:00:01.500,000] <inf> devkit_runtime: tick count=3
+[00:00:02.000,000] <inf> devkit_runtime: tick count=4
+[00:00:02.500,000] <inf> devkit_runtime: tick count=5
+[00:00:03.001,000] <inf> devkit_runtime: tick count=6
+[00:00:03.501,000] <inf> devkit_runtime: tick count=7
+[00:00:03.501,000] <inf> devkit_runtime: Phase 6C: handled seq=8 count=8
+[00:00:04.001,000] <inf> devkit_runtime: tick count=8
+[00:00:04.501,000] <inf> devkit_runtime: tick count=9
+[00:00:04.501,000] <inf> robotos_platform: [robotos_core] core tick count=10
+[00:00:05.001,000] <inf> devkit_runtime: tick count=10
+[00:00:05.501,000] <inf> devkit_runtime: tick count=11
+[00:00:06.001,000] <inf> devkit_runtime: tick count=12
+[00:00:06.501,000] <inf> devkit_runtime: tick count=13
+[00:00:07.001,000] <inf> devkit_runtime: tick count=14
+[00:00:07.501,000] <inf> devkit_runtime: tick count=15
+[00:00:07.501,000] <inf> devkit_runtime: Phase 6C: handled seq=16 count=16
+[00:00:07.501,000] <inf> devkit_runtime: Phase 6C summary: handled=16 pending=0 dispatched=16 accepted=16 rejected=0 dropped=1 herr=0 unhandled=0 bp=0
+[00:00:08.002,000] <inf> devkit_runtime: tick count=16
+[00:00:08.502,000] <inf> devkit_runtime: tick count=17
+[00:00:09.002,000] <inf> devkit_runtime: tick count=18
+
+===========================================================================
+KEY EVIDENCE:
+
+Post summary (at init):
+  attempted=17  ok=16  full=1  errs=0
+  pending=16  dropped=1  accepted=16  rejected=0  bp=1
+  -> Queue full on 17th valid USER event: ERR_FULL confirmed.
+  -> dropped_count=1, admission_rejected_count=0: correct separation.
+  -> Backpressure ACTIVE immediately (pending=16 > budget=1, queue full).
+
+Drain timeline (budget=1 per tick):
+  tick 0  [00:00:00.000] seq=1  handled  count=1   (milestone)
+  tick 7  [00:00:03.501] seq=8  handled  count=8   (milestone)
+  tick 15 [00:00:07.501] seq=16 handled  count=16  (milestone)
+
+Final summary (logged once after count==16):
+  handled   = 16
+  pending   = 0
+  dispatched= 16
+  accepted  = 16
+  rejected  = 0
+  dropped   = 1
+  herr      = 0
+  unhandled = 0
+  bp        = 0  (false)
+
+Post-drain ticks (16..18): clean, no burst events, no errors.
+LED: toggling every 500ms (tick count increments visible).
+
+MEMORY:
+  FLASH: 28568 B (512 KB, 5.45%)
+  RAM:   12096 B (128 KB, 9.23%)
+
+FAULT REGISTERS:
+  CFSR = 0x0  (no configurable fault)
+  HFSR = 0x0  (no hard fault)
