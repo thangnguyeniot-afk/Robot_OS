@@ -9,66 +9,53 @@
 
 ## Last Closed Phase
 
-**Phase 4L — Scheduler Advisory Retry Decision Policy**
+### Phase 6F — Devkit Mixed Event Policy Smoke
 
-- **Commit:** `a3f4369`
+- **Commit:** `5bca62f`
 - **Date:** 2026-05-03
 - **Branch:** master
 - **Remote:** `https://github.com/thangnguyeniot-afk/Robot_OS` (confirmed linked)
 
 ---
 
-## Validation Evidence (Phase 4L)
+## Validation Evidence (Phase 6F)
 
 | Gate | Result | Detail |
 |------|--------|--------|
-| Host tests | PASS | 14/14 suites, 0 failures |
+| Host tests | PASS | 15/15 suites, 45 cases, 0 failures |
 | Zephyr build | PASS | west build -b stm32f411e_disco |
-| FLASH | 28988 B / 524288 B (5.53%) | stm32f411e_disco |
-| RAM | 12160 B / 131072 B (9.28%) | stm32f411e_disco |
-| Runtime evidence | Not required | Advisory mapping is pure C, no platform dependency |
+| FLASH | 28716 B / 524288 B (5.48%) | stm32f411e_disco |
+| RAM | 12096 B / 131072 B (9.23%) | stm32f411e_disco |
+| RTT evidence | PASS | accepted=16 rejected=2 dropped=1 handled=16 herr=0 |
+| CFSR | 0x00000000 | no configurable fault |
+| HFSR | 0x00000000 | no hard fault |
 
-Host test log: `RobotOS_v1.0/tests/host/logs/phase_4L_host_2026-05-03.log`
+Host test log: `RobotOS_v1.0/tests/host/logs/host_2026-05-03.log`
+RTT log: `RobotOS_v1.0/devkit/logs/phase_6F_rtt_2026-05-03.txt`
 
 ---
 
-## Behavior Guarantees from Phase 4L
+## Behavior Guarantees from Phase 6F
 
 - **No new status codes.** `ROBOTOS_CORE_ERR_THROTTLED = -7` remains the highest-numbered error.
-- **No mutable retry state.** No retry counters, no per-producer state added to core or snapshot.
-- **No auto-retry behavior.** `robotos_core_retry_decision_for_status()` and `robotos_core_status_is_retryable()` are pure advisory mappings. The producer owns all scheduling decisions.
-- **No lock, no platform call, no queue access** in the new functions.
-- **Safe to call before init** and from any context.
+- **No mutable state added.** No new counters in core or snapshot.
+- **No auto-retry behavior.** Smoke only; all retry decisions remain producer-owned.
+- **Core scheduler semantics unchanged.** Admission gate, queue policy, dispatch budget: all unchanged.
+- **Platform boundary unchanged.**
 - Existing `post_event` / `try_post_event` semantics unchanged.
 
 ---
 
-## Files Changed in Phase 4L
+## Files Changed in Phase 6F
 
 | File | Change |
 |------|--------|
-| `core/robotos_core.h` | Add `robotos_core_retry_action_t` enum, `robotos_core_retry_decision_t` struct, `robotos_core_retry_decision_for_status()`, `robotos_core_status_is_retryable()` |
-| `core/robotos_core.c` | Stateless implementation of both advisory functions |
-| `core/README.md` | Phase 4L section: advisory API, mapping table, design constraints, limitations |
-| `tests/host/CMakeLists.txt` | Add `robotos_scheduler_retry_policy_contract_test` target |
-| `tests/host/test_robotos_scheduler_retry_policy_contract.c` | 13 test cases |
-| `RobotOS_v1.0/devkit/docs/DEVKIT_PROGRESS.md` | Phase 4L section |
-| `tests/host/logs/phase_4L_host_2026-05-03.log` | Host test evidence |
-
----
-
-## Retry Policy Mapping Table (Phase 4L)
-
-| Status | action | wait_ticks | drop | report |
-|--------|--------|-----------|------|--------|
-| `OK` | `RETRY_NONE` | 0 | false | false |
-| `ERR_FULL` | `RETRY_AFTER_TICK` | 1 | false | false |
-| `ERR_THROTTLED` | `RETRY_AFTER_TICK` | 1 | false | false |
-| `ERR_INVALID_STATE` | `RETRY_SOON` | 0 | false | false |
-| `ERR_INVALID_ARG` | `RETRY_NEVER` | 0 | true | true |
-| `ERR_NULL` | `RETRY_NEVER` | 0 | true | true |
-| `ERR_EMPTY` | `RETRY_NONE` | 0 | false | false |
-| unknown | -> `ERR_INVALID_ARG` | 0 | false | false |
+| `devkit/src/devkit_runtime.c` | Replace Phase 6H k_timer smoke with Phase 6F mixed policy smoke; `<zephyr/kernel.h>` removed |
+| `tests/host/test_robotos_mixed_event_policy_contract.c` | New -- 45 test cases (valid/invalid/full-queue + retry alignment) |
+| `tests/host/CMakeLists.txt` | Add `robotos_mixed_event_policy_contract_test` target |
+| `devkit/docs/DEVKIT_PROGRESS.md` | Phase 6F section |
+| `devkit/logs/phase_6F_rtt_2026-05-03.txt` | Hardware RTT evidence |
+| `tests/host/logs/host_2026-05-03.log` | Host test log |
 
 ---
 
