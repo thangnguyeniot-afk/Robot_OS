@@ -70,6 +70,7 @@ to `DEVKIT_PROGRESS.md` for the full history.
 | 5F/5F-R | Dispatch split + runtime confirm | `b7f08fe`, `460b9f1` |
 | 5E | Critical boundary applied to core queue | `ff24147` |
 | 5D | Platform critical section boundary | `4187bb3` |
+| 6F | Devkit Mixed Event Policy Smoke | `5bca62f` |
 | 6G | Timer producer smoke (ISR context) | `335ee29` |
 | 6A–6E | Event pipeline smokes | preceding commits |
 | 4K | Scheduler admission + throttle policy | preceding commits |
@@ -81,7 +82,6 @@ to `DEVKIT_PROGRESS.md` for the full history.
 
 | Phase | Description | Status |
 |-------|-------------|--------|
-| Phase 6F | Devkit Mixed Event Policy Smoke | Candidate |
 | Phase 6I | Timer Producer Queue-Pressure Stress | Candidate |
 
 ---
