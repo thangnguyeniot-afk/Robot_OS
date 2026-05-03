@@ -221,6 +221,18 @@ Prefer:
 
 ---
 
+## Token/context discipline
+
+Do not optimize RobotOS work by making prompts vague or reducing validation depth.
+Use the shortest command that preserves scope, boundary, evidence, and rollback clarity.
+
+Use `CURRENT_STATE.md` for live phase state and `PHASE_CLOSE_TEMPLATE.md` for closeout structure.
+Treat build/test/hardware logs as necessary cost unless caused by repeated known hazards.
+Optimize repeated context reconstruction, stale-state ambiguity, and known failed validation loops, not correctness checks.
+Keep GLM excluded from token-shortening strategy until Level 15-17 stabilization closes.
+
+---
+
 ## Forbidden behaviors
 
 - no silent scope expansion
