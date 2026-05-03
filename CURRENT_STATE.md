@@ -96,7 +96,6 @@ to `DEVKIT_PROGRESS.md` for the full history.
 |-------|-------------|--------|
 | Phase 6F | Devkit Mixed Event Policy Smoke | Candidate |
 | Phase 6I | Timer Producer Queue-Pressure Stress | Candidate |
-| Phase 5D | Platform Critical Section / ISR Lock Boundary | **Pending / Verify** — `4187bb3` in git log may indicate already completed; confirm before scheduling |
 
 ---
 
