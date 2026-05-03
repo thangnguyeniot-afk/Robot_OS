@@ -292,6 +292,26 @@ target_include_directories(robotos_mixed_event_policy_contract_test PRIVATE
 add_test(NAME robotos_mixed_event_policy_contract
          COMMAND robotos_mixed_event_policy_contract_test)
 
+# ---- Queue pressure producer stress contract test (Phase 6I) ----------------
+# Tests rapid-fill queue pressure: CAPACITY posts accepted, overflow ERR_FULL,
+# try_post_event ERR_THROTTLED under partial pressure, backpressure_active
+# settles after drain, retry policy alignment ERR_FULL/ERR_THROTTLED->RETRY_AFTER_TICK.
+# Needs all three core sources + platform log stub + platform critical stub.
+add_executable(robotos_queue_pressure_contract_test
+    test_robotos_queue_pressure_contract.c
+    ${CORE_SRCS}
+    ${PLATFORM_HOST_STUB}
+)
+
+target_include_directories(robotos_queue_pressure_contract_test PRIVATE
+    "${CORE_DIR}"
+    "${PLATFORM_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+)
+
+add_test(NAME robotos_queue_pressure_contract
+         COMMAND robotos_queue_pressure_contract_test)
+
 # ---- Log persistence target --------------------------------------------------
 # Saves ctest output to a timestamped file in the version-controlled logs/
 # directory alongside this CMakeLists.txt.

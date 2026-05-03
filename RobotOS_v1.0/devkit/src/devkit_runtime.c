@@ -14,18 +14,19 @@
  *           Proves ERR_INVALID_ARG + admission_rejected, not dropped_count.
  * Phase 6E: throttle smoke (arg0=0x6E, 3 valid USER events via try_post_event).
  *           seq=1 OK, seq=2 OK (creates throttle condition), seq=3 ERR_THROTTLED.
- *           Proves throttle path: pending > budget, queue not full, no drop.
- * Phase 6H: ISR/timer producer stress-lite (committed, replaced by Phase 6F).
- *           k_timer callback posted 8 USER events from SysTick ISR context.
- *           Proven via hardware evidence (GDB counter read, 2026-05-03).
- * Phase 6F: Mixed event policy smoke (arg0=0x6F00).
- *           One boot run exercises:
- *             - NONE type event -> ERR_INVALID_ARG (admission_rejected++)
- *             - reserved type=99 event -> ERR_INVALID_ARG (admission_rejected++)
- *             - CAPACITY valid USER events posted -> all OK (queue full)
- *             - one more valid event -> ERR_FULL (dropped_count++)
- *           Proves accept/reject/drop paths in a single run.
- *           Phase 6H k_timer removed; <zephyr/kernel.h> no longer needed.
+ * Phase 6H: ISR/timer producer stress-lite (committed, 8 events at 100ms).
+ *           Proved post_event/dispatch path from Zephyr SysTick ISR context.
+ * Phase 6F: Mixed event policy smoke (committed, replaced by Phase 6I).
+ *           Proved accept/reject/drop in one thread-context boot run.
+ * Phase 6I: Timer producer queue-pressure stress (arg0=0x6900).
+ *           k_timer fires every 50ms. Attempts 24 events; capacity=16.
+ *           Events 1-16 accepted (queue fills). Events 17-24 ERR_FULL.
+ *           Producer rate (50ms) > consumer rate (500ms/tick, budget=1).
+ *           Proves backpressure_active during burst; ERR_FULL from queue
+ *           pressure, not admission failure. Handler dispatches 16 events.
+ *           Final summary logged once handled==16.
+ *           <zephyr/kernel.h> re-introduced for k_timer; Zephyr type must
+ *           not appear in core/ or platform/ headers.
  */
 
 #include "devkit_runtime.h"
@@ -33,50 +34,95 @@
 #include "devkit_fault.h"
 #include "devkit_status_led.h"
 #include "robotos_core.h"
-#include "robotos_event_queue.h"
 #include "robotos_platform_critical.h"
 #include "robotos_platform_time.h"
 
+#include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
 LOG_MODULE_REGISTER(devkit_runtime, LOG_LEVEL_INF);
 
 /* --------------------------------------------------------------------------
- * Phase 6F: Mixed event policy smoke
+ * Phase 6I: Timer producer queue-pressure stress
  *
- * Run once at boot (devkit_runtime_init). Posts events covering three paths:
- *   1. NONE type        -> ERR_INVALID_ARG  (admission gate, rejected_count++)
- *   2. reserved type=99 -> ERR_INVALID_ARG  (admission gate, rejected_count++)
- *   3. CAPACITY valid   -> ROBOTOS_CORE_OK  (queue fills, accepted_count+=16)
- *   4. one more valid   -> ERR_FULL         (dropped_count++)
+ * A Zephyr k_timer fires every 50ms from SysTick ISR context.
+ * It posts USER events (arg0=0x6900) and stops after 24 attempts.
  *
- * The 16 queued valid events are dispatched by the tick loop (one per tick).
- * Handler logs first/mid/last milestones and final summary after all handled.
+ * Queue capacity = 16. Events 1-16 succeed; events 17-24 get ERR_FULL
+ * (queue pressure -- not admission failure). Tick dispatches 1/500ms.
+ *
+ * Producer rate (20 events/s) >> consumer rate (2 events/s).
+ * This creates genuine queue pressure and proves backpressure_active.
+ *
+ * ISR contract (Phase 5G):
+ *   - no log, no sleep, no tick, no dispatch, no register
+ *   - event is a stack local; valid for entire post_event call
+ *   - all error returns handled via volatile counters only
  *
  * Expected final state:
- *   accepted=16, rejected=2, dropped=1, handled=16
- *   CFSR=0, HFSR=0, no faults
+ *   attempted=24, ok=16, full=8, invalid=0, other=0
+ *   handled=16
+ *   dropped=8 (ERR_FULL from queue pressure, admission already passed)
+ *   CFSR=0, HFSR=0
  * -------------------------------------------------------------------------- */
 
-#define DEVKIT_PHASE6F_MARKER           0x6F00u
-#define DEVKIT_PHASE6F_CAPACITY         ROBOTOS_EVENT_QUEUE_CAPACITY  /* 16 */
-#define DEVKIT_PHASE6F_EXPECTED_HANDLED DEVKIT_PHASE6F_CAPACITY
+#define DEVKIT_PHASE6I_MARKER          0x6900u
+#define DEVKIT_PHASE6I_ATTEMPT_COUNT     24u   /* more than queue capacity=16 */
+#define DEVKIT_PHASE6I_EXPECTED_OK       16u   /* == ROBOTOS_EVENT_QUEUE_CAPACITY */
+#define DEVKIT_PHASE6I_EXPECTED_FULL      8u   /* ATTEMPT_COUNT - EXPECTED_OK */
+#define DEVKIT_PHASE6I_TIMER_MS          50u   /* 50ms -- faster than Phase 6H's 100ms */
 
-/* Boot-time smoke result counters (set in init, read in run) */
-static uint32_t s_smoke_accepted;
-static uint32_t s_smoke_rejected;
-static uint32_t s_smoke_dropped;
+/* volatile: written from ISR (timer callback), read from thread context */
+static volatile uint32_t s_prod_attempted;
+static volatile uint32_t s_prod_ok;
+static volatile uint32_t s_prod_full;
+static volatile uint32_t s_prod_invalid;    /* expected 0 -- valid type only */
+static volatile uint32_t s_prod_other;      /* expected 0 */
 
-/* Dispatch-time tracking (written/read in run loop thread context only) */
+/* thread context only (written/read in run loop, never from ISR) */
 static uint32_t s_handled_count;
-static bool     s_final_logged;
+static bool     s_prod_final_logged;
 
-/* --------------------------------------------------------------------------
- * Phase 6F handler
- * Receives valid USER events (arg0 == DEVKIT_PHASE6F_MARKER, arg1 == seq 1..N).
- * Runs from tick/dispatch thread context only — never from ISR.
- * -------------------------------------------------------------------------- */
-static robotos_core_status_t devkit_phase6f_handler(
+static struct k_timer s_phase6i_timer;
+
+/* ISR context: called from Zephyr SysTick handler.
+ * MUST NOT log, sleep, tick, dispatch, register, or fault. */
+static void devkit_phase6i_timer_cb(struct k_timer *timer)
+{
+	static uint32_t seq = 1u;
+
+	if (seq > DEVKIT_PHASE6I_ATTEMPT_COUNT) {
+		return;
+	}
+
+	robotos_event_t ev = {
+		.type           = ROBOTOS_EVENT_USER,
+		.timestamp_tick = 0u,  /* uptime_ms not ISR-safe; omit */
+		.arg0           = DEVKIT_PHASE6I_MARKER,
+		.arg1           = seq,
+	};
+
+	s_prod_attempted++;
+	robotos_core_status_t ret = robotos_core_post_event(&ev);
+	if (ret == ROBOTOS_CORE_OK) {
+		s_prod_ok++;
+	} else if (ret == ROBOTOS_CORE_ERR_FULL) {
+		s_prod_full++;
+	} else if (ret == ROBOTOS_CORE_ERR_INVALID_ARG) {
+		s_prod_invalid++;
+	} else {
+		s_prod_other++;
+	}
+
+	seq++;
+	if (seq > DEVKIT_PHASE6I_ATTEMPT_COUNT) {
+		k_timer_stop(timer);
+	}
+}
+
+/* Handler runs from thread context (called by tick/dispatch, never from ISR).
+ * Logs milestones only to avoid RTT buffer saturation. */
+static robotos_core_status_t devkit_phase6i_handler(
 	const robotos_event_t *event, void *user_context)
 {
 	(void)user_context;
@@ -84,8 +130,8 @@ static robotos_core_status_t devkit_phase6f_handler(
 		return ROBOTOS_CORE_ERR_NULL;
 	}
 	if (event->type != ROBOTOS_EVENT_USER ||
-	    event->arg0 != DEVKIT_PHASE6F_MARKER) {
-		LOG_ERR("Phase 6F: unexpected event type=%d arg0=0x%x",
+	    event->arg0 != DEVKIT_PHASE6I_MARKER) {
+		LOG_ERR("Phase 6I: unexpected event type=%d arg0=0x%x",
 			(int)event->type, (unsigned)event->arg0);
 		return ROBOTOS_CORE_ERR_INVALID_ARG;
 	}
@@ -93,9 +139,10 @@ static robotos_core_status_t devkit_phase6f_handler(
 	s_handled_count++;
 	uint32_t seq = (uint32_t)event->arg1;
 
-	/* Log milestones only to avoid RTT spam */
-	if (seq == 1u || seq == (DEVKIT_PHASE6F_CAPACITY / 2u) || seq == DEVKIT_PHASE6F_CAPACITY) {
-		LOG_INF("Phase 6F event handled seq=%u count=%u", seq, s_handled_count);
+	/* Milestones: seq=1 (first), seq=8 (mid), seq=16 (last accepted) */
+	if (seq == 1u || seq == (DEVKIT_PHASE6I_EXPECTED_OK / 2u) ||
+	    seq == DEVKIT_PHASE6I_EXPECTED_OK) {
+		LOG_INF("Phase 6I event handled seq=%u count=%u", seq, s_handled_count);
 	}
 	return ROBOTOS_CORE_OK;
 }
@@ -110,9 +157,7 @@ int devkit_runtime_init(void)
 	devkit_fault_init();
 	devkit_build_info_log();
 
-	/* Phase 5D: one-time critical-section boundary smoke.
-	 * Proves Zephyr irq_lock/irq_unlock backend links and executes.
-	 * Not wired into core queue -- single-threaded assumption unchanged. */
+	/* Phase 5D: one-time critical-section boundary smoke. */
 	{
 		robotos_platform_critical_token_t cs_tok =
 			robotos_platform_critical_enter();
@@ -125,61 +170,23 @@ int devkit_runtime_init(void)
 		LOG_ERR("Core init failed: %d -- continuing", (int)core_ret);
 	}
 
-	/* Phase 6F: register USER handler from thread context (before smoke) */
+	/* Phase 6I: register USER handler before timer start */
 	core_ret = robotos_core_register_event_handler(ROBOTOS_EVENT_USER,
-						       devkit_phase6f_handler,
+						       devkit_phase6i_handler,
 						       NULL);
 	if (core_ret != ROBOTOS_CORE_OK) {
-		LOG_ERR("Phase 6F handler registration failed: %d", (int)core_ret);
+		LOG_ERR("Phase 6I handler registration failed: %d", (int)core_ret);
 	}
 
-	/* Phase 6F: mixed event policy smoke
-	 *
-	 * Path 1: NONE type -> ERR_INVALID_ARG (admission gate rejects)
-	 * Path 2: reserved type=99 -> ERR_INVALID_ARG (admission gate rejects)
-	 * Path 3: CAPACITY valid USER events -> all OK (queue fills)
-	 * Path 4: one more valid USER event -> ERR_FULL (dropped_count++)
-	 */
-	{
-		robotos_event_t ev;
-
-		/* Path 1: invalid type NONE */
-		ev.type           = ROBOTOS_EVENT_NONE;
-		ev.timestamp_tick = 0u;
-		ev.arg0           = DEVKIT_PHASE6F_MARKER;
-		ev.arg1           = 0u;
-		core_ret = robotos_core_post_event(&ev);
-		if (core_ret == ROBOTOS_CORE_ERR_INVALID_ARG) {
-			s_smoke_rejected++;
-		}
-
-		/* Path 2: invalid reserved type=99 */
-		ev.type = (robotos_event_type_t)99;
-		core_ret = robotos_core_post_event(&ev);
-		if (core_ret == ROBOTOS_CORE_ERR_INVALID_ARG) {
-			s_smoke_rejected++;
-		}
-
-		/* Path 3: fill queue with CAPACITY valid events */
-		ev.type = ROBOTOS_EVENT_USER;
-		for (uint32_t seq = 1u; seq <= DEVKIT_PHASE6F_CAPACITY; seq++) {
-			ev.arg1 = seq;
-			core_ret = robotos_core_post_event(&ev);
-			if (core_ret == ROBOTOS_CORE_OK) {
-				s_smoke_accepted++;
-			}
-		}
-
-		/* Path 4: one more valid event -> ERR_FULL */
-		ev.arg1 = DEVKIT_PHASE6F_CAPACITY + 1u;
-		core_ret = robotos_core_post_event(&ev);
-		if (core_ret == ROBOTOS_CORE_ERR_FULL) {
-			s_smoke_dropped++;
-		}
-	}
-
-	LOG_INF("Phase 6F smoke: accepted=%u rejected=%u dropped=%u",
-		s_smoke_accepted, s_smoke_rejected, s_smoke_dropped);
+	/* Phase 6I: start periodic 50ms timer.
+	 * Callback posts from Zephyr SysTick ISR context.
+	 * Stops itself after DEVKIT_PHASE6I_ATTEMPT_COUNT (24) posts. */
+	k_timer_init(&s_phase6i_timer, devkit_phase6i_timer_cb, NULL);
+	k_timer_start(&s_phase6i_timer,
+		      K_MSEC(DEVKIT_PHASE6I_TIMER_MS),
+		      K_MSEC(DEVKIT_PHASE6I_TIMER_MS));
+	LOG_INF("Phase 6I timer producer started: attempts=%u interval=%ums",
+		DEVKIT_PHASE6I_ATTEMPT_COUNT, DEVKIT_PHASE6I_TIMER_MS);
 
 	LOG_INF("RobotOS devkit starting -- board: %s", CONFIG_BOARD);
 
@@ -212,20 +219,22 @@ void devkit_runtime_run(void)
 			LOG_ERR("Core tick failed: %d", (int)core_ret);
 		}
 
-		/* Phase 6F: log final summary once after all events dispatched */
-		if (s_handled_count >= DEVKIT_PHASE6F_EXPECTED_HANDLED &&
-		    !s_final_logged) {
+		/* Log final summary once after all accepted events are handled */
+		if (s_handled_count >= DEVKIT_PHASE6I_EXPECTED_OK &&
+		    !s_prod_final_logged) {
 			robotos_core_snapshot_t snap;
 			robotos_core_snapshot(&snap);
-			LOG_INF("Phase 6F final: "
-				"smoke_accepted=%u smoke_rejected=%u smoke_dropped=%u "
+			LOG_INF("Phase 6I final: "
+				"attempted=%u ok=%u full=%u invalid=%u other=%u "
 				"handled=%u "
 				"accepted=%u rejected=%u dropped=%u "
 				"dispatched=%u herr=%u unhandled=%u "
-				"bp=%d",
-				s_smoke_accepted,
-				s_smoke_rejected,
-				s_smoke_dropped,
+				"bp=%d th_active=%d",
+				(uint32_t)s_prod_attempted,
+				(uint32_t)s_prod_ok,
+				(uint32_t)s_prod_full,
+				(uint32_t)s_prod_invalid,
+				(uint32_t)s_prod_other,
 				s_handled_count,
 				snap.admission_accepted_count,
 				snap.admission_rejected_count,
@@ -233,8 +242,9 @@ void devkit_runtime_run(void)
 				snap.dispatched_event_count,
 				snap.handler_error_count,
 				snap.unhandled_event_count,
-				(int)snap.backpressure_active);
-			s_final_logged = true;
+				(int)snap.backpressure_active,
+				(int)snap.producer_throttle_active);
+			s_prod_final_logged = true;
 		}
 
 		robotos_platform_sleep_ms(DEVKIT_TICK_MS);

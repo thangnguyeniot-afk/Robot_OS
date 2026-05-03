@@ -1,6 +1,6 @@
-UpdateCTestConfiguration  from :/mnt/d/Robot_OS/build-host-core-phase6f/DartConfiguration.tcl
-UpdateCTestConfiguration  from :/mnt/d/Robot_OS/build-host-core-phase6f/DartConfiguration.tcl
-Test project /mnt/d/Robot_OS/build-host-core-phase6f
+UpdateCTestConfiguration  from :/mnt/d/Robot_OS/build-host-core-phase6i/DartConfiguration.tcl
+UpdateCTestConfiguration  from :/mnt/d/Robot_OS/build-host-core-phase6i/DartConfiguration.tcl
+Test project /mnt/d/Robot_OS/build-host-core-phase6i
 Constructing a list of tests
 Done constructing a list of tests
 Updating test list for fixtures
@@ -10,8 +10,8 @@ Checking test dependency graph end
 test 1
       Start  1: robotos_core_contract
 
-1: Test command: /mnt/d/Robot_OS/build-host-core-phase6f/robotos_core_contract_test
-1: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6f
+1: Test command: /mnt/d/Robot_OS/build-host-core-phase6i/robotos_core_contract_test
+1: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6i
 1: Test timeout computed to be: 10000000
 1: === robotos_core contract tests (Phase 4C) ===
 1: 
@@ -63,12 +63,12 @@ test 1
 1:   PASS  TC35: final snapshot.version == "4B-contract"
 1: 
 1: === Results: 35 passed, 0 failed ===
- 1/15 Test  #1: robotos_core_contract .....................   Passed    0.01 sec
+ 1/16 Test  #1: robotos_core_contract .....................   Passed    0.01 sec
 test 2
       Start  2: robotos_event_queue_contract
 
-2: Test command: /mnt/d/Robot_OS/build-host-core-phase6f/robotos_event_queue_contract_test
-2: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6f
+2: Test command: /mnt/d/Robot_OS/build-host-core-phase6i/robotos_event_queue_contract_test
+2: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6i
 2: Test timeout computed to be: 10000000
 2: === robotos_event_queue contract tests (Phase 4D) ===
 2: 
@@ -151,12 +151,12 @@ test 2
 2:   PASS  TC58: still initialized after clear
 2: 
 2: === Results: 58 passed, 0 failed ===
- 2/15 Test  #2: robotos_event_queue_contract ..............   Passed    0.01 sec
+ 2/16 Test  #2: robotos_event_queue_contract ..............   Passed    0.01 sec
 test 3
       Start  3: robotos_event_dispatcher_contract
 
-3: Test command: /mnt/d/Robot_OS/build-host-core-phase6f/robotos_event_dispatcher_contract_test
-3: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6f
+3: Test command: /mnt/d/Robot_OS/build-host-core-phase6i/robotos_event_dispatcher_contract_test
+3: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6i
 3: Test timeout computed to be: 10000000
 3: === robotos_event_dispatcher contract tests (Phase 4E) ===
 3: 
@@ -240,12 +240,12 @@ test 3
 3:   PASS  TC55: USER event dispatched with correct arg0
 3: 
 3: === Results: 55 passed, 0 failed ===
- 3/15 Test  #3: robotos_event_dispatcher_contract .........   Passed    0.01 sec
+ 3/16 Test  #3: robotos_event_dispatcher_contract .........   Passed    0.01 sec
 test 4
       Start  4: robotos_core_ingestion_contract
 
-4: Test command: /mnt/d/Robot_OS/build-host-core-phase6f/robotos_core_ingestion_contract_test
-4: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6f
+4: Test command: /mnt/d/Robot_OS/build-host-core-phase6i/robotos_core_ingestion_contract_test
+4: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6i
 4: Test timeout computed to be: 10000000
 4: === robotos_core ingestion contract tests (Phase 4F) ===
 4: 
@@ -321,12 +321,12 @@ test 4
 4:   PASS  TC57: snapshot.version == "4B-contract"
 4: 
 4: === Results: 57 passed, 0 failed ===
- 4/15 Test  #4: robotos_core_ingestion_contract ...........   Passed    0.01 sec
+ 4/16 Test  #4: robotos_core_ingestion_contract ...........   Passed    0.01 sec
 test 5
       Start  5: robotos_core_tick_policy_contract
 
-5: Test command: /mnt/d/Robot_OS/build-host-core-phase6f/robotos_core_tick_policy_contract_test
-5: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6f
+5: Test command: /mnt/d/Robot_OS/build-host-core-phase6i/robotos_core_tick_policy_contract_test
+5: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6i
 5: Test timeout computed to be: 10000000
 5: === robotos_core tick policy contract tests (Phase 4G) ===
 5: 
@@ -407,12 +407,12 @@ test 5
 5:   NOTE  TC42: handler error path not testable — internal handler always OK; no public handler override API yet.
 5: 
 5: === Results: 56 passed, 0 failed ===
- 5/15 Test  #5: robotos_core_tick_policy_contract .........   Passed    0.01 sec
+ 5/16 Test  #5: robotos_core_tick_policy_contract .........   Passed    0.01 sec
 test 6
       Start  6: robotos_core_handler_policy_contract
 
-6: Test command: /mnt/d/Robot_OS/build-host-core-phase6f/robotos_core_handler_policy_contract_test
-6: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6f
+6: Test command: /mnt/d/Robot_OS/build-host-core-phase6i/robotos_core_handler_policy_contract_test
+6: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6i
 6: Test timeout computed to be: 10000000
 6: === robotos_core handler policy contract tests (Phase 4H) ===
 6: 
@@ -493,12 +493,12 @@ test 6
 6:   PASS  TC50: snapshot.state == READY
 6: 
 6: === Results: 50 passed, 0 failed ===
- 6/15 Test  #6: robotos_core_handler_policy_contract ......   Passed    0.01 sec
+ 6/16 Test  #6: robotos_core_handler_policy_contract ......   Passed    0.01 sec
 test 7
       Start  7: robotos_platform_fault_contract
 
-7: Test command: /mnt/d/Robot_OS/build-host-core-phase6f/robotos_platform_fault_contract_test
-7: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6f
+7: Test command: /mnt/d/Robot_OS/build-host-core-phase6i/robotos_platform_fault_contract_test
+7: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6i
 7: Test timeout computed to be: 10000000
 7: PASS: TC01 report_count starts at 0 after reset
 7: PASS: TC02 fault_report INFO increments report_count
@@ -514,12 +514,12 @@ test 7
 7: PASS: TC12 assert(false) increments report_count
 7: 
 7: 12 passed, 0 failed
- 7/15 Test  #7: robotos_platform_fault_contract ...........   Passed    0.01 sec
+ 7/16 Test  #7: robotos_platform_fault_contract ...........   Passed    0.01 sec
 test 8
       Start  8: robotos_platform_critical_contract
 
-8: Test command: /mnt/d/Robot_OS/build-host-core-phase6f/robotos_platform_critical_contract_test
-8: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6f
+8: Test command: /mnt/d/Robot_OS/build-host-core-phase6i/robotos_platform_critical_contract_test
+8: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6i
 8: Test timeout computed to be: 10000000
 8: === Phase 5D: Platform Critical Section Contract Tests ===
 8: 
@@ -558,12 +558,12 @@ test 8
 8: [PASS] TC12 max_depth remains 3 after exits
 8: 
 8: --- Critical Section Contract: 33 passed, 0 failed ---
- 8/15 Test  #8: robotos_platform_critical_contract ........   Passed    0.01 sec
+ 8/16 Test  #8: robotos_platform_critical_contract ........   Passed    0.01 sec
 test 9
       Start  9: robotos_core_critical_boundary_contract
 
-9: Test command: /mnt/d/Robot_OS/build-host-core-phase6f/robotos_core_critical_boundary_contract_test
-9: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6f
+9: Test command: /mnt/d/Robot_OS/build-host-core-phase6i/robotos_core_critical_boundary_contract_test
+9: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6i
 9: Test timeout computed to be: 10000000
 9: === Phase 5E: Core Critical Boundary Contract Tests ===
 9: 
@@ -618,12 +618,12 @@ test 9
 9: [PASS] TC13 admission_accepted not reset by repeated init
 9: 
 9: --- Core Critical Boundary Contract: 49 passed, 0 failed ---
- 9/15 Test  #9: robotos_core_critical_boundary_contract ...   Passed    0.01 sec
+ 9/16 Test  #9: robotos_core_critical_boundary_contract ...   Passed    0.01 sec
 test 10
       Start 10: robotos_scheduler_admission_contract
 
-10: Test command: /mnt/d/Robot_OS/build-host-core-phase6f/robotos_scheduler_admission_contract_test
-10: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6f
+10: Test command: /mnt/d/Robot_OS/build-host-core-phase6i/robotos_scheduler_admission_contract_test
+10: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6i
 10: Test timeout computed to be: 10000000
 10: === Phase 4I: Scheduler Admission Policy Contract Tests ===
 10: 
@@ -667,12 +667,12 @@ test 10
 10: [PASS] snapshot: admission_rejected_count matches getter
 10: 
 10: --- Admission Policy Contract: 38 passed, 0 failed ---
-10/15 Test #10: robotos_scheduler_admission_contract ......   Passed    0.01 sec
+10/16 Test #10: robotos_scheduler_admission_contract ......   Passed    0.01 sec
 test 11
       Start 11: robotos_scheduler_backpressure_contract
 
-11: Test command: /mnt/d/Robot_OS/build-host-core-phase6f/robotos_scheduler_backpressure_contract_test
-11: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6f
+11: Test command: /mnt/d/Robot_OS/build-host-core-phase6i/robotos_scheduler_backpressure_contract_test
+11: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6i
 11: Test timeout computed to be: 10000000
 11: === Phase 4J: Scheduler Budget/Backpressure Contract Tests ===
 11: 
@@ -735,12 +735,12 @@ test 11
 11: [PASS] TC15 snapshot backpressure_active == true (2 pending > budget 1)
 11: 
 11: --- Backpressure Policy Contract: 57 passed, 0 failed ---
-11/15 Test #11: robotos_scheduler_backpressure_contract ...   Passed    0.01 sec
+11/16 Test #11: robotos_scheduler_backpressure_contract ...   Passed    0.01 sec
 test 12
       Start 12: robotos_scheduler_throttle_contract
 
-12: Test command: /mnt/d/Robot_OS/build-host-core-phase6f/robotos_scheduler_throttle_contract_test
-12: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6f
+12: Test command: /mnt/d/Robot_OS/build-host-core-phase6i/robotos_scheduler_throttle_contract_test
+12: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6i
 12: Test timeout computed to be: 10000000
 12: === Phase 4K: Scheduler Producer Throttle Contract Tests ===
 12: 
@@ -814,12 +814,12 @@ test 12
 12: [PASS] TC15 throttle_active == false after drain
 12: 
 12: --- Throttle Policy Contract: 68 passed, 0 failed ---
-12/15 Test #12: robotos_scheduler_throttle_contract .......   Passed    0.01 sec
+12/16 Test #12: robotos_scheduler_throttle_contract .......   Passed    0.01 sec
 test 13
       Start 13: robotos_core_dispatch_critical_contract
 
-13: Test command: /mnt/d/Robot_OS/build-host-core-phase6f/robotos_core_dispatch_critical_contract_test
-13: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6f
+13: Test command: /mnt/d/Robot_OS/build-host-core-phase6i/robotos_core_dispatch_critical_contract_test
+13: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6i
 13: Test timeout computed to be: 10000000
 13: === Phase 5F: Dispatch Critical Split Contract Tests ===
 13: 
@@ -878,12 +878,12 @@ test 13
 13: [PASS] TC13 enter == exit after loop
 13: 
 13: === Phase 5F Results: 53 passed, 0 failed ===
-13/15 Test #13: robotos_core_dispatch_critical_contract ...   Passed    0.01 sec
+13/16 Test #13: robotos_core_dispatch_critical_contract ...   Passed    0.01 sec
 test 14
       Start 14: robotos_scheduler_retry_policy_contract
 
-14: Test command: /mnt/d/Robot_OS/build-host-core-phase6f/robotos_scheduler_retry_policy_contract_test
-14: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6f
+14: Test command: /mnt/d/Robot_OS/build-host-core-phase6i/robotos_scheduler_retry_policy_contract_test
+14: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6i
 14: Test timeout computed to be: 10000000
 14: === robotos_scheduler_retry_policy_contract ===
 14:   PASS: TC01: NULL out -> ERR_NULL
@@ -945,12 +945,12 @@ test 14
 14:   PASS: TC13: throttled_count unchanged
 14: 
 14: 57 passed, 0 failed
-14/15 Test #14: robotos_scheduler_retry_policy_contract ...   Passed    0.01 sec
+14/16 Test #14: robotos_scheduler_retry_policy_contract ...   Passed    0.01 sec
 test 15
       Start 15: robotos_mixed_event_policy_contract
 
-15: Test command: /mnt/d/Robot_OS/build-host-core-phase6f/robotos_mixed_event_policy_contract_test
-15: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6f
+15: Test command: /mnt/d/Robot_OS/build-host-core-phase6i/robotos_mixed_event_policy_contract_test
+15: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6i
 15: Test timeout computed to be: 10000000
 15: === Phase 6F: Mixed Event Policy Smoke Contract Tests ===
 15: 
@@ -1016,8 +1016,78 @@ test 15
 15: [PASS] TC45: ERR_INVALID_ARG is not retryable
 15: 
 15: === Phase 6F Results: 45 passed, 0 failed ===
-15/15 Test #15: robotos_mixed_event_policy_contract .......   Passed    0.01 sec
+15/16 Test #15: robotos_mixed_event_policy_contract .......   Passed    0.01 sec
+test 16
+      Start 16: robotos_queue_pressure_contract
 
-100% tests passed, 0 tests failed out of 15
+16: Test command: /mnt/d/Robot_OS/build-host-core-phase6i/robotos_queue_pressure_contract_test
+16: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6i
+16: Test timeout computed to be: 10000000
+16: === Phase 6I: Queue Pressure Producer Contract Tests ===
+16: 
+16: [ Init ]
+16: [PASS] TC01: init returns OK
+16: [PASS] TC02: state == READY
+16: 
+16: [ Rapid fill to capacity ]
+16: [PASS] TC03: all CAPACITY posts succeed
+16: [PASS] TC04: accepted_count == CAPACITY
+16: [PASS] TC05: pending == CAPACITY (queue full)
+16: [PASS] TC06: backpressure_active == true when queue full
+16: 
+16: [ Queue-pressure overflow (ERR_FULL) ]
+16: [PASS] TC07: post to full queue -> ERR_FULL
+16: [PASS] TC08: dropped_count == 1 after overflow
+16: [PASS] TC09: pending unchanged == CAPACITY after overflow
+16: [PASS] TC10: accepted_count unchanged (ERR_FULL not admitted)
+16: 
+16: [ Admission gate before queue check ]
+16: [PASS] TC11: post NONE while full -> ERR_INVALID_ARG (not ERR_FULL)
+16: [PASS] TC12: dropped_count still 1 (NONE rejected before queue check)
+16: [PASS] TC13: rejected_count == 1 (NONE rejected by admission)
+16: 
+16: [ try_post_event throttle under partial pressure ]
+16: [PASS] TC14: dispatch 1 returns OK
+16: [PASS] TC15: pending == CAPACITY-1 after dispatch
+16: [PASS] TC16: try_post_event with pending>budget and not full -> ERR_THROTTLED
+16: [PASS] TC17: producer_throttled_count == 1
+16: [PASS] TC18: pending unchanged after ERR_THROTTLED
+16: [PASS] TC19: dropped_count still 1 (throttle != drop)
+16: 
+16: [ Snapshot consistency under pressure ]
+16: [PASS] TC20: snapshot returns OK
+16: [PASS] TC21: snap.accepted == CAPACITY
+16: [PASS] TC22: snap.rejected == 1
+16: [PASS] TC23: snap.dropped == 1
+16: [PASS] TC24: snap.producer_throttled_count == 1
+16: [PASS] TC25: backpressure_active == true (pending > budget)
+16: [PASS] TC26: producer_throttle_active == true (pending > budget, not full)
+16: 
+16: [ Drain and settle ]
+16: [PASS] TC27: pending == 0 after drain
+16: [PASS] TC28: dispatched_count == CAPACITY (all queued events dispatched)
+16: [PASS] TC29: backpressure_active == false after drain
+16: [PASS] TC30: producer_throttle_active == false after drain
+16: 
+16: [ Retry policy alignment ]
+16: [PASS] TC31: retry_decision(ERR_FULL) returns OK
+16: [PASS] TC32: ERR_FULL -> RETRY_AFTER_TICK
+16: [PASS] TC33: ERR_FULL -> wait_ticks == 1
+16: [PASS] TC34: ERR_FULL is retryable
+16: [PASS] TC35: retry_decision(ERR_THROTTLED) returns OK
+16: [PASS] TC36: ERR_THROTTLED -> RETRY_AFTER_TICK
+16: [PASS] TC37: ERR_THROTTLED -> wait_ticks == 1
+16: [PASS] TC38: ERR_THROTTLED is retryable
+16: [PASS] TC39: ERR_FULL and ERR_THROTTLED both RETRY_AFTER_TICK -- same guidance
+16: 
+16: [ Post succeeds after drain ]
+16: [PASS] TC40: post succeeds after drain
+16: [PASS] TC41: accepted_count incremented after post
+16: [PASS] TC42: pending == 0 after final drain
+16: 
+16: === Phase 6I Results: 42 passed, 0 failed ===
+16/16 Test #16: robotos_queue_pressure_contract ...........   Passed    0.01 sec
 
-Total Test time (real) =   0.27 sec
+100% tests passed, 0 tests failed out of 16
+
+Total Test time (real) =   0.28 sec

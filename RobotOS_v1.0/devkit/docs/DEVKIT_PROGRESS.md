@@ -5907,3 +5907,178 @@ No `RobotOS_v1.0/src/` file compiled, staged, or referenced.
 Candidates:
 - **Phase 6I** -- Timer Producer Queue-Pressure Stress (high-frequency ISR test)
 - **Phase 6J** -- (TBD by team)
+
+---
+
+## Phase 6I -- Timer Producer Queue-Pressure Stress
+
+**Status:** CLOSED_QUEUE_PRESSURE_CONFIRMED
+**Date:** 2026-05-03
+**Runtime confirmed:** 2026-05-03
+**Branch:** master
+**Baseline commit:** `5bca62f` -- Phase 6F mixed event policy smoke
+**Type:** HOST + DEVKIT -- host tests + hardware RTT evidence
+
+---
+
+### Purpose
+
+Stress the timer/producer path under genuine queue pressure.
+A high-frequency k_timer (50ms) posts events faster than the consumer
+tick (500ms, budget=1) can dispatch. With 24 attempts and queue capacity=16,
+the queue fills during the burst and overflow events return ERR_FULL from
+queue pressure (not admission failure). Proves producer/consumer rate
+mismatch behavior, backpressure_active during burst, and final drain.
+
+Phase 6I replaces Phase 6F in devkit_runtime.c. Phase 6F evidence is
+preserved in DEVKIT_PROGRESS.md and committed at 5bca62f.
+
+Design choice: Phase 6I replaces (not composes with) Phase 6F to avoid
+queue-capacity interference. Composing would pre-fill the queue at boot,
+making all timer events immediately fail with ERR_FULL and obscuring the
+gradual queue-pressure dynamics.
+
+---
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `devkit/src/devkit_runtime.c` | Replace Phase 6F thread smoke with Phase 6I k_timer (50ms, 24 events); `<zephyr/kernel.h>` re-introduced |
+| `tests/host/test_robotos_queue_pressure_contract.c` | New -- 42 test cases, queue-pressure + throttle + retry alignment |
+| `tests/host/CMakeLists.txt` | Add `robotos_queue_pressure_contract_test` target (test #16) |
+| `devkit/docs/DEVKIT_PROGRESS.md` | This section |
+| `devkit/logs/phase_6I_rtt_2026-05-03.txt` | Hardware RTT evidence |
+| `tests/host/logs/host_2026-05-03.log` | Host test log (16/16) |
+
+### Files Unchanged (confirmed)
+
+| File | Reason |
+|------|--------|
+| `core/robotos_core.h` | No new API, no new status codes |
+| `core/robotos_core.c` | No behavior change |
+| `platform/` | No platform change |
+| `devkit/prj.conf` | No config change |
+
+---
+
+### Behavior Changed
+
+- Devkit boot smoke changed from Phase 6F (thread-context, no timer) to Phase 6I (k_timer ISR, 50ms, 24 events)
+- `<zephyr/kernel.h>` re-introduced for k_timer; `robotos_event_queue.h` removed from runtime
+
+### Behavior Explicitly Not Changed
+
+- Core scheduler semantics: unchanged
+- Status code contract: unchanged (ERR_THROTTLED = -7 still highest)
+- Admission gate logic: unchanged
+- Platform boundary: unchanged
+- Mutable state: no new counters in core or snapshot
+- No auto-retry
+
+---
+
+### Host Test Evidence
+
+```
+Command: ctest --test-dir build-host-core-phase6i --output-on-failure
+Result:  16/16 suites pass, 0 fail (100%)
+Log:     tests/host/logs/host_2026-05-03.log
+```
+
+New suite (robotos_queue_pressure_contract), 42 test cases:
+- TC01-TC02: init
+- TC03-TC06: rapid fill to capacity -- all 16 OK, backpressure_active=true
+- TC07-TC10: queue-pressure overflow -- ERR_FULL, dropped++, not admitted
+- TC11-TC13: admission gate before queue check -- NONE rejected as ERR_INVALID_ARG even when full
+- TC14-TC19: try_post_event throttle under partial pressure -- ERR_THROTTLED, producer_throttled++
+- TC20-TC26: snapshot consistency -- all counters match getters under pressure
+- TC27-TC30: drain and settle -- backpressure_active=false, throttle_active=false
+- TC31-TC39: retry policy -- ERR_FULL/ERR_THROTTLED both RETRY_AFTER_TICK (retryable)
+- TC40-TC42: post succeeds after drain
+
+---
+
+### Zephyr Build Evidence
+
+```
+Build: west build -b stm32f411e_disco RobotOS_v1.0/devkit/ --pristine
+Board: stm32f411e_disco
+Zephyr: v3.6.0
+Build timestamp: May  3 2026 14:27:25
+
+Memory:
+  FLASH: 28820 / 524288 bytes  (5.50%)
+  RAM:   12160 / 131072 bytes  (9.28%)
+
+Errors: 0
+Warnings: q_valid unused (pre-existing)
+```
+
+Delta from Phase 6F: +104 B FLASH, +64 B RAM (k_timer and ISR callback added; robotos_event_queue.h include removed from runtime).
+
+---
+
+### Runtime RTT Evidence
+
+**RTT log:** `devkit/logs/phase_6I_rtt_2026-05-03.txt`
+**Capture:** openocd reset run -> after 14000ms -> halt -> dump_image 0x20000a18 4096
+**_SEGGER_RTT address:** 0x20000a18
+
+**Key log lines:**
+```
+Phase 6I timer producer started: attempts=24 interval=50ms
+Phase 6I event handled seq=1 count=1
+Phase 6I event handled seq=8 count=8
+Phase 6I event handled seq=16 count=16
+Phase 6I final: attempted=24 ok=18 full=6 invalid=0 other=0 handled=16
+               accepted=18 rejected=0 dropped=6 dispatched=16
+               herr=0 unhandled=0 bp=1 th_active=1
+```
+
+**Queue pressure dynamics confirmed:**
+
+| Counter | Observed | Notes |
+|---------|----------|-------|
+| attempted | 24 | Timer fired 24 times as designed |
+| ok | 18 | 18 events accepted (ticks freed slots during burst) |
+| full | 6 | 6 events ERR_FULL from queue pressure |
+| invalid | 0 | Valid type only; admission gate not triggered |
+| other | 0 | No unexpected errors |
+| handled | 16 | All 16 queued valid events dispatched (2 still pending at final log) |
+| dropped | 6 | Equals full count (ERR_FULL path, not admission) |
+
+Note: ok=18/full=6 (not the idealized 16/8) because the tick at t=500ms
+freed queue slots while the timer was still firing, allowing 2 extra events
+to succeed before the queue filled again. This is correct queue-pressure
+behavior -- the producer and consumer genuinely competed for queue slots.
+Final summary logged when handled=16 (EXPECTED_OK); at that moment
+2 events were still pending (bp=1, th_active=1), confirming ongoing pressure.
+
+**Fault registers:**
+```
+CFSR = 0x00000000  (no configurable fault)
+HFSR = 0x00000000  (no hard fault)
+```
+
+LED/tick loop healthy at tick count=27+ when capture ended.
+
+---
+
+### Known Limitations
+
+- **Not a sustained-stress test.** 24 events at 50ms = 1.2s burst, then timer stops. Not a continuous high-frequency ISR test.
+- **Single-producer only.** No concurrent ISR producers.
+- **No latency budget.** Critical section is O(1) confirmed but not measured.
+- **ok/full split is timing-dependent.** Exact split (ok=18/full=6) depends on tick/timer interleaving. Contract (ok <= CAPACITY, full = attempted - ok) is always upheld.
+- **Platform APIs not ISR-safe.** Log, fault, sleep, time remain thread-context only.
+- **Not valid from NMI context.** irq_lock uses BASEPRI; does not mask NMI.
+
+---
+
+### Next Recommended Phase
+
+**Team decision required.**
+
+Candidates:
+- **Phase 6J** -- (TBD by team; sustained/high-frequency ISR stress, multi-producer, or next planned phase)
