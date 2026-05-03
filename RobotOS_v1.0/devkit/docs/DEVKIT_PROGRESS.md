@@ -5194,8 +5194,157 @@ No `RobotOS_v1.0/src/` file compiled, staged, or referenced.
 
 Candidates:
 - **Phase 6F** — Devkit Mixed Event Policy Smoke (valid + invalid + full in one run)
-- **Phase 4L** — Scheduler Retry/Backoff Policy Stub (host-only, core layer)
+- **Phase 4L** — Scheduler Advisory Retry Decision Policy ← **completed**
 - **Phase 6I** — Timer Producer Queue-Pressure Stress (high-frequency test)
+
+---
+
+---
+
+## Phase 4L — Scheduler Advisory Retry Decision Policy
+
+**Date:** 2026-05-03
+**Branch:** master
+**Baseline commit:** `7bb81cd` — Revert bad auto-retry Phase 4L stub
+**Type:** HOST-ONLY — no devkit runtime required
+
+---
+
+### Purpose
+
+Add a pure advisory retry decision policy to the core. Maps a
+`robotos_core_status_t` to a suggested producer action. No auto-retry,
+no sleep, no timer, no queue mutation, no new status codes, no mutable
+state. The producer owns all scheduling decisions.
+
+---
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `core/robotos_core.h` | Add `robotos_core_retry_action_t` enum, `robotos_core_retry_decision_t` struct, `robotos_core_retry_decision_for_status()`, `robotos_core_status_is_retryable()` |
+| `core/robotos_core.c` | Add stateless implementation of both functions (no lock, no platform call, no queue access) |
+| `core/README.md` | Phase 4L section: advisory API, mapping table, design constraints, known limitations |
+| `tests/host/CMakeLists.txt` | Add `robotos_scheduler_retry_policy_contract_test` target |
+| `tests/host/test_robotos_scheduler_retry_policy_contract.c` | 13 test cases |
+| `devkit/docs/DEVKIT_PROGRESS.md` | Phase 4L section (this entry) |
+| `tests/host/logs/phase_4L_host_2026-05-03.log` | Host test evidence |
+
+### Files Unchanged (confirmed)
+
+| File | Reason |
+|------|--------|
+| `core/robotos_core.c` — post_event/try_post_event | No behavior change |
+| `platform/` | No platform change |
+| `devkit/src/devkit_runtime.c` | No devkit runtime required |
+| `devkit/prj.conf` | No config change |
+
+---
+
+### Design Constraints
+
+- Pure stateless mapping — no lock, no platform call, no queue access.
+- Safe to call from any context including before init.
+- No auto-retry, no sleep, no timer.
+- No new status code; `ROBOTOS_CORE_ERR_THROTTLED = -7` remains the highest.
+- No snapshot extension; no new counters.
+- Producer owns all drop and retry scheduling decisions.
+
+---
+
+### Mapping Table
+
+| Status | action | wait_ticks | drop | report |
+|--------|--------|-----------|------|--------|
+| `OK` | `RETRY_NONE` | 0 | false | false |
+| `ERR_FULL` | `RETRY_AFTER_TICK` | 1 | false | false |
+| `ERR_THROTTLED` | `RETRY_AFTER_TICK` | 1 | false | false |
+| `ERR_INVALID_STATE` | `RETRY_SOON` | 0 | false | false |
+| `ERR_INVALID_ARG` | `RETRY_NEVER` | 0 | true | true |
+| `ERR_NULL` | `RETRY_NEVER` | 0 | true | true |
+| `ERR_EMPTY` | `RETRY_NONE` | 0 | false | false |
+| unknown | → `ERR_INVALID_ARG` | 0 | false | false |
+
+---
+
+### Host Test Evidence
+
+**Result:** 14/14 suites pass — no regression on prior 13, new retry policy suite passes.
+
+**Log:** `tests/host/logs/phase_4L_host_2026-05-03.log`
+
+New suite (`robotos_scheduler_retry_policy_contract`), 13 test cases:
+- TC01: NULL out → ERR_NULL
+- TC02–TC08: each status code mapping verified
+- TC09: unknown status → ERR_INVALID_ARG, out zeroed
+- TC10–TC11: `is_retryable` true/false cases
+- TC12: functions work before init
+- TC13: no snapshot mutation after repeated calls
+
+---
+
+### Zephyr Build Evidence
+
+```
+Build: west build -b stm32f411e_disco RobotOS_v1.0/devkit/ --pristine
+Board: stm32f411e_disco
+Zephyr: v3.6.0
+
+Memory:
+  FLASH: 28988 / 524288 bytes  (5.53%)
+  RAM:   12160 / 131072 bytes  (9.28%)
+
+Errors: 0
+```
+
+Delta from Phase 6H: +0 B RAM, +0 B FLASH (advisory functions not called from devkit).
+
+---
+
+### Runtime Evidence
+
+Not required. Advisory mapping is pure C with no platform dependency.
+All semantics proven by host tests.
+
+---
+
+### Legacy Isolation Confirmation
+
+No `RobotOS_v1.0/src/` file compiled, staged, or referenced.
+Core changes are additive (new API only). Existing `post_event` and
+`try_post_event` semantics unchanged.
+
+---
+
+### Known Limitations
+
+- No per-producer accounting or priority.
+- No dynamic policy override.
+- Retry window (`suggested_wait_ticks`) is fixed; no exponential backoff.
+- No automatic retry loop of any kind.
+- `producer_should_drop` and `producer_should_report` are advisory only.
+
+---
+
+### Correction Note
+
+Commit `475a063` implemented an auto-retry API (`robotos_core_post_event_with_retry`,
+`robotos_core_set_retry_policy`, `ROBOTOS_CORE_ERR_RETRY_EXHAUSTED = -8`,
+mutable retry counters in snapshot) and was committed without passing host tests.
+That commit was reverted at `7bb81cd`. This entry is the correct Phase 4L
+implementation under the approved advisory-only scope.
+
+---
+
+### Next Recommended Phase
+
+**Team decision required.**
+
+Candidates:
+- **Phase 6F** — Devkit Mixed Event Policy Smoke
+- **Phase 6I** — Timer Producer Queue-Pressure Stress
+- **Phase 5D** — Platform Critical Section / ISR Lock Boundary
 EOF'
 
 
@@ -5598,3 +5747,163 @@ Candidates:
 - **Phase 6F** — Devkit Mixed Event Policy Smoke
 - **Phase 6I** — Timer Producer Queue-Pressure Stress
 - **Phase 5D** — Platform Critical Section / ISR Lock Boundary
+
+---
+
+## Phase 6F -- Devkit Mixed Event Policy Smoke
+
+**Status:** CLOSED_MIXED_POLICY_CONFIRMED
+**Date:** 2026-05-03
+**Runtime confirmed:** 2026-05-03
+**Branch:** master
+**Baseline commit:** `a3f4369` -- Phase 4L scheduler advisory retry policy
+**Type:** HOST + DEVKIT -- host tests + hardware RTT evidence
+
+---
+
+### Purpose
+
+Exercise valid, invalid, and full-queue event paths in a single devkit boot run.
+Proves accept/reject/drop behavior under existing admission and queue policies.
+No new core behavior introduced; smoke only.
+
+---
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `devkit/src/devkit_runtime.c` | Replace Phase 6H k_timer smoke with Phase 6F mixed policy smoke; remove `<zephyr/kernel.h>` |
+| `tests/host/test_robotos_mixed_event_policy_contract.c` | New -- 45 test cases, mixed policy + retry alignment |
+| `tests/host/CMakeLists.txt` | Add `robotos_mixed_event_policy_contract_test` target (test #15) |
+| `devkit/docs/DEVKIT_PROGRESS.md` | This section |
+| `devkit/logs/phase_6F_rtt_2026-05-03.txt` | Hardware RTT evidence |
+| `tests/host/logs/host_2026-05-03.log` | Host test log (15/15) |
+
+### Files Unchanged (confirmed)
+
+| File | Reason |
+|------|--------|
+| `core/robotos_core.h` | No new API, no new status codes |
+| `core/robotos_core.c` | No behavior change |
+| `platform/` | No platform change |
+| `devkit/prj.conf` | No config change |
+
+---
+
+### Behavior Changed
+
+- Devkit boot smoke changed from Phase 6H (k_timer ISR) to Phase 6F (mixed policy, thread-only)
+- `<zephyr/kernel.h>` removed from `devkit_runtime.c` (no k_timer needed)
+- Boot smoke now covers all three event paths in one run
+
+### Behavior Explicitly Not Changed
+
+- Core scheduler semantics: unchanged
+- Admission gate logic: unchanged
+- Status codes: unchanged (no new codes; ERR_THROTTLED = -7 still highest)
+- Mutable state: no new mutable state added
+- Platform boundary: unchanged
+- Phase 4L retry policy: unchanged
+
+---
+
+### Host Test Evidence
+
+```
+Command: ctest --test-dir build-host-core-phase6f --output-on-failure
+Result:  15/15 pass, 0 fail (100%)
+Log:     tests/host/logs/host_2026-05-03.log
+```
+
+New suite (robotos_mixed_event_policy_contract), 45 test cases:
+- TC01-TC02: init
+- TC03-TC12: invalid event paths (NULL, NONE, reserved 99) -- rejection, no drop
+- TC13-TC18: valid event path -- acceptance, pending, fill to capacity
+- TC19-TC25: full-queue path -- ERR_FULL, drop; NONE-while-full still ERR_INVALID_ARG
+- TC26-TC36: snapshot consistency -- all three paths reflect in snapshot counters
+- TC37-TC38: dispatch clears queue
+- TC39-TC45: retry policy alignment -- ERR_FULL->RETRY_AFTER_TICK, ERR_INVALID_ARG->RETRY_NEVER
+
+---
+
+### Zephyr Build Evidence
+
+```
+Build: west build -b stm32f411e_disco RobotOS_v1.0/devkit/ --pristine
+Board: stm32f411e_disco
+Zephyr: v3.6.0
+Build timestamp: May  3 2026 13:25:12
+
+Memory:
+  FLASH: 28716 / 524288 bytes  (5.48%)
+  RAM:   12096 / 131072 bytes  (9.23%)
+
+Errors: 0
+Warnings: q_valid unused (pre-existing)
+```
+
+Delta from Phase 6H: -272 B FLASH, -64 B RAM (k_timer and ISR callback removed).
+
+---
+
+### Runtime RTT Evidence
+
+**RTT log:** `devkit/logs/phase_6F_rtt_2026-05-03.txt`
+**Capture:** openocd reset run -> after 16000ms -> halt -> dump_image 0x200009d8 4096
+**_SEGGER_RTT address:** 0x200009d8
+
+**Key log lines:**
+```
+Phase 6F smoke: accepted=16 rejected=2 dropped=1
+Phase 6F event handled seq=1 count=1
+Phase 6F event handled seq=8 count=8
+Phase 6F event handled seq=16 count=16
+Phase 6F final: smoke_accepted=16 smoke_rejected=2 smoke_dropped=1 handled=16
+               accepted=16 rejected=2 dropped=1 dispatched=16 herr=0 unhandled=0 bp=0
+```
+
+**All three paths confirmed on hardware:**
+
+| Path | Status | Counter |
+|------|--------|---------|
+| Valid event (CAPACITY=16 USER events) | accepted | accepted=16, handled=16 |
+| Invalid type NONE | rejected (admission gate) | rejected=1 |
+| Invalid type 99 (reserved) | rejected (admission gate) | rejected=1, total=2 |
+| Queue overflow (1 extra valid) | dropped | dropped=1 |
+
+**Fault registers:**
+```
+CFSR = 0x00000000  (no configurable fault)
+HFSR = 0x00000000  (no hard fault)
+```
+
+LED/tick loop healthy at tick count=28+ when capture ended.
+
+---
+
+### Legacy Isolation Confirmation
+
+No `RobotOS_v1.0/src/` file compiled, staged, or referenced.
+`<zephyr/kernel.h>` removed from devkit (no longer needed).
+`core/` and `platform/` headers remain Zephyr-free.
+`prj.conf` unchanged.
+
+---
+
+### Known Limitations
+
+- **Devkit smoke only.** Full policy matrix coverage via host tests; devkit proves hardware path.
+- **Thread-context only.** No ISR producer in Phase 6F (Phase 6H proved ISR path).
+- **No latency measurement.** Budget/backpressure not measured.
+- **No retry loop.** Smoke only posts each category once; retry behavior exercised in host test only.
+
+---
+
+### Next Recommended Phase
+
+**Team decision required.**
+
+Candidates:
+- **Phase 6I** -- Timer Producer Queue-Pressure Stress (high-frequency ISR test)
+- **Phase 6J** -- (TBD by team)

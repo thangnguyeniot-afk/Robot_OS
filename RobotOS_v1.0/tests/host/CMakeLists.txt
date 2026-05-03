@@ -271,6 +271,27 @@ target_include_directories(robotos_scheduler_retry_policy_contract_test PRIVATE
 add_test(NAME robotos_scheduler_retry_policy_contract
          COMMAND robotos_scheduler_retry_policy_contract_test)
 
+# ---- Mixed event policy smoke contract test (Phase 6F) ----------------------
+# Tests valid, invalid, and full-queue event paths in a single run.
+# Exercises admission gate (accepted, rejected) and drop path (ERR_FULL).
+# Also confirms retry policy alignment: ERR_FULL->RETRY_AFTER_TICK,
+# ERR_INVALID_ARG->RETRY_NEVER.
+# Needs all three core sources + platform log stub + platform critical stub.
+add_executable(robotos_mixed_event_policy_contract_test
+    test_robotos_mixed_event_policy_contract.c
+    ${CORE_SRCS}
+    ${PLATFORM_HOST_STUB}
+)
+
+target_include_directories(robotos_mixed_event_policy_contract_test PRIVATE
+    "${CORE_DIR}"
+    "${PLATFORM_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+)
+
+add_test(NAME robotos_mixed_event_policy_contract
+         COMMAND robotos_mixed_event_policy_contract_test)
+
 # ---- Log persistence target --------------------------------------------------
 # Saves ctest output to a timestamped file in the version-controlled logs/
 # directory alongside this CMakeLists.txt.
