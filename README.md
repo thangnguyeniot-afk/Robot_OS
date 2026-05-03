@@ -20,9 +20,10 @@ Robot_OS/
 
 | File / Thư mục | Mô tả |
 |----------------|-------|
+| [CURRENT_STATE.md](CURRENT_STATE.md) | **Live phase state** — last closed phase, validation evidence, next candidates |
 | [ROBOTOS_BOOTSTRAP.md](ROBOTOS_BOOTSTRAP.md) | Điểm khởi đầu — tổng quan, cách setup |
 | [docs/](docs/README.md) | Tất cả tài liệu thiết kế (Architecture → Application Layer) |
-| [manifest/ROBOTOS_CONTEXT.md](manifest/ROBOTOS_CONTEXT.md) | Context, yêu cầu, constraints của dự án |
+| [manifest/ROBOTOS_CONTEXT.md](manifest/ROBOTOS_CONTEXT.md) | Context, yêu cầu, constraints của dự án (architectural; phase state superseded by CURRENT_STATE.md) |
 | [RobotOS_v1.0/](RobotOS_v1.0/README.md) | Source code đầy đủ v1.0 |
 
 ---

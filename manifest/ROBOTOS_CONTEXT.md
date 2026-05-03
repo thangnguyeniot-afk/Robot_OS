@@ -1,6 +1,13 @@
 # RobotOS Inspire — Project Context
 
-> **Cập nhật lần cuối:** 2026-02-27  
+> **NOTICE (2026-05-03):** This file is superseded for live phase state by
+> [`CURRENT_STATE.md`](../CURRENT_STATE.md) at the repo root.
+> The architectural and design context below remains valid.
+> The progress percentages, milestones, and deadlines in sections 1-2
+> are historical as of 2026-02-27 and do not reflect current phase state.
+> Do not use section 2 (Current State) as startup context for agents.
+>
+> **Cập nhật lần cuối:** 2026-02-27 (historical)
 > **File này:** Ngữ cảnh dự án để import vào agent/AI assistant
 
 ---
