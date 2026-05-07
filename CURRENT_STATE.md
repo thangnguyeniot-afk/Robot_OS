@@ -11,7 +11,7 @@
 
 ### Phase 6J — Observability and Contract Stress Expansion
 
-- **Commit:** TBD (pending commit)
+- **Commit:** `8a1af69`
 - **Date:** 2026-05-07
 - **Branch:** master
 - **Remote:** `https://github.com/thangnguyeniot-afk/Robot_OS` (confirmed linked)
