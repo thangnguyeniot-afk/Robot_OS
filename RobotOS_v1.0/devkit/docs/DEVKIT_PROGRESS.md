@@ -6602,7 +6602,7 @@ update CURRENT_STATE.md to reflect Phase 6L as the new last-closed phase
 **Date:** 2026-05-07
 **Branch:** master
 **Phase 6L baseline commit:** `d3759a7`
-**Commit:** TBD
+**Commit:** `a6b253b`
 **Close status:** `READY_BUT_NOT_CLOSED_PENDING_RTT`
 
 ---
