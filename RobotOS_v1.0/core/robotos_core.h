@@ -20,6 +20,12 @@
  * Queue-full through try_post_event still returns ERR_FULL + dropped_count.
  * Invalid events return ERR_INVALID_ARG regardless of throttle state.
  *
+ * Phase 6J-D: peak_queue_depth passive observability field.
+ * High-water mark of event queue depth since first successful post.
+ * Updated under critical section in post_event_internal on every successful push.
+ * Monotonically non-decreasing. Not reset by repeated init.
+ * Zero behavioral impact — pure counter, no scheduling consequence.
+ *
  * No Zephyr or board-specific types.
  */
 
@@ -108,6 +114,7 @@ typedef robotos_core_status_t (*robotos_core_event_handler_t)(
  *   backpressure_active      true when pending > dispatch budget OR queue is full
  *   producer_throttle_active true when pending > budget AND queue NOT full
  *   producer_throttled_count events returned ERR_THROTTLED by try_post_event
+ *   peak_queue_depth         high-water mark of pending_event_count (Phase 6J-D)
  */
 typedef struct {
 	robotos_core_state_t state;
@@ -125,6 +132,7 @@ typedef struct {
 	bool                 backpressure_active;      /* pending > budget OR queue full */
 	bool                 producer_throttle_active; /* pending > budget AND queue NOT full */
 	uint32_t             producer_throttled_count; /* events throttled by try_post_event */
+	uint32_t             peak_queue_depth;         /* high-water mark of pending (Phase 6J-D) */
 } robotos_core_snapshot_t;
 
 /* Maximum number of simultaneously registered event handlers. */
@@ -316,6 +324,19 @@ bool robotos_core_producer_throttle_active(void);
  * Returns 0 before init.
  */
 uint32_t robotos_core_producer_throttled_count(void);
+
+/*
+ * Phase 6J-D: Return the high-water mark of the event queue depth observed
+ * since the first successful robotos_core_post_event() or
+ * robotos_core_try_post_event() call.
+ *
+ * Updated under critical section in post_event_internal whenever a push
+ * succeeds and the resulting queue count exceeds the current peak.
+ * Passive: has no scheduling or dispatch consequence.
+ * Monotonically non-decreasing. Not reset by repeated init.
+ * Returns 0 before first successful post.
+ */
+uint32_t robotos_core_peak_queue_depth(void);
 
 /* ---------------------------------------------------------------------------
  * Phase 4L: Advisory Retry Decision Policy

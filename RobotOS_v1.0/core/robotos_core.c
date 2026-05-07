@@ -1,6 +1,7 @@
 /*
  * robotos_core.c
  * RobotOS portable core — Phase 5F: dispatcher pop / handler split.
+ * Phase 6J-D: peak_queue_depth passive observability field.
  *
  * Logging is routed through robotos_platform_log.h — a portable interface.
  * The Zephyr backend (platform/zephyr/robotos_platform_log_zephyr.c) is
@@ -77,6 +78,7 @@ static uint32_t          s_unhandled_event_count;
 static uint32_t          s_admission_accepted_count;
 static uint32_t          s_admission_rejected_count;
 static uint32_t          s_producer_throttled_count;
+static uint32_t          s_peak_queue_depth; /* Phase 6J-D: high-water mark */
 
 /* --------------------------------------------------------------------------- */
 
@@ -311,6 +313,7 @@ robotos_core_status_t robotos_core_snapshot(robotos_core_snapshot_t *out)
 	out->admission_accepted_count = s_admission_accepted_count;
 	out->admission_rejected_count = s_admission_rejected_count;
 	out->producer_throttled_count = s_producer_throttled_count;
+	out->peak_queue_depth         = s_peak_queue_depth;
 
 	/* Inline backpressure/throttle calculation to avoid nested lock */
 	bool     full    = robotos_event_queue_is_full(&s_core_event_queue);
@@ -359,6 +362,11 @@ static robotos_core_status_t post_event_internal(const robotos_event_t *event,
 	robotos_core_status_t push_ret = robotos_event_queue_push(&s_core_event_queue, event);
 	if (push_ret == ROBOTOS_CORE_OK) {
 		s_admission_accepted_count++;
+		/* Phase 6J-D: update peak depth under the same lock — pure observability */
+		uint32_t depth = robotos_event_queue_count(&s_core_event_queue);
+		if (depth > s_peak_queue_depth) {
+			s_peak_queue_depth = depth;
+		}
 	}
 	robotos_platform_critical_exit(tok);
 	return push_ret;
@@ -593,6 +601,14 @@ uint32_t robotos_core_producer_throttled_count(void)
 {
 	robotos_platform_critical_token_t tok = robotos_platform_critical_enter();
 	uint32_t v = s_producer_throttled_count;
+	robotos_platform_critical_exit(tok);
+	return v;
+}
+
+uint32_t robotos_core_peak_queue_depth(void)
+{
+	robotos_platform_critical_token_t tok = robotos_platform_critical_enter();
+	uint32_t v = s_peak_queue_depth;
 	robotos_platform_critical_exit(tok);
 	return v;
 }

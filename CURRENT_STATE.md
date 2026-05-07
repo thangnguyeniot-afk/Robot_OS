@@ -9,56 +9,61 @@
 
 ## Last Closed Phase
 
-### Phase 6I — Timer Producer Queue-Pressure Stress
+### Phase 6J — Observability and Contract Stress Expansion
 
-- **Commit:** `e78e503`
-- **Date:** 2026-05-03
+- **Commit:** TBD (pending commit)
+- **Date:** 2026-05-07
 - **Branch:** master
 - **Remote:** `https://github.com/thangnguyeniot-afk/Robot_OS` (confirmed linked)
 
 ---
 
-## Validation Evidence (Phase 6I)
+## Validation Evidence (Phase 6J)
 
 | Gate | Result | Detail |
-|------|--------|--------|
-| Host tests | PASS | 16/16 suites, 42 new cases, 0 failures |
+| ---- | ------ | ------ |
+| Host tests | PASS | 19/19 suites, 299 new cases, 0 failures |
 | Zephyr build | PASS | west build -b stm32f411e_disco |
-| FLASH | 28820 B / 524288 B (5.50%) | stm32f411e_disco |
-| RAM | 12160 B / 131072 B (9.28%) | stm32f411e_disco |
-| RTT pressure | PASS | attempted=24 ok=18 full=6 invalid=0 other=0 handled=16 |
-| RTT acceptance | PASS | accepted=18 dropped=6 dispatched=16 herr=0 |
-| CFSR | 0x00000000 | no configurable fault |
-| HFSR | 0x00000000 | no hard fault |
+| FLASH | 28852 B / 524288 B (5.50%) | stm32f411e_disco (+32 B from Phase 6I) |
+| RAM | 12160 B / 131072 B (9.28%) | stm32f411e_disco (unchanged) |
+| RTT smoke | N/A | Phase 6J is host-test-only per approved scope |
+| CFSR | not checked | No devkit smoke in Phase 6J |
+| HFSR | not checked | No devkit smoke in Phase 6J |
 
-Host test log: `RobotOS_v1.0/tests/host/logs/host_2026-05-03.log`
-RTT log: `RobotOS_v1.0/devkit/logs/phase_6I_rtt_2026-05-03.txt`
+Host test log: `RobotOS_v1.0/tests/host/logs/host_2026-05-07.log`
 
-**Note on ok/full split:** The ok=18 / full=6 split is timing-dependent. During the 50ms producer burst, a tick freed 2 queue slots, allowing 2 additional events to post successfully. This is expected behavior and was settled cleanly in subsequent ticks.
+**New Phase 6J suite results:**
+
+- Phase 6J-A (routing stress): 55 passed, 0 failed
+- Phase 6J-B (lifecycle): 52 passed, 0 failed
+- Phase 6J-C/D (snapshot + peak): 192 passed, 0 failed
 
 ---
 
-## Behavior Guarantees from Phase 6I
+## Behavior Guarantees from Phase 6J
 
 - **No new status codes.** `ROBOTOS_CORE_ERR_THROTTLED = -7` remains the highest-numbered error.
-- **No mutable state added.** No new counters in core or snapshot.
-- **No auto-retry behavior.** Stress test only; all retry decisions remain producer-owned.
-- **Core scheduler semantics unchanged.** Admission gate, queue policy, dispatch budget: all unchanged.
-- **Platform boundary unchanged.**
+- **No scheduler semantics changed.** `ROBOTOS_CORE_MAX_EVENTS_PER_TICK = 1` unchanged.
+- **No auto-retry behavior.** Retry policy remains pure advisory stateless mapping.
+- **No dispatch lock-boundary regression.** Handler-outside-lock invariant confirmed preserved.
+- **No admission policy change.** NONE/reserved rejected; USER+ accepted: unchanged.
+- **`peak_queue_depth` is passive.** Updated only after successful push, under existing lock. Monotonically non-decreasing. Not reset by repeated init. Zero behavioral impact.
 - Existing `post_event` / `try_post_event` semantics unchanged.
 
 ---
 
-## Files Changed in Phase 6I
+## Files Changed in Phase 6J
 
 | File | Change |
-|------|--------|
-| `tests/host/test_robotos_queue_pressure_contract.c` | New -- 42 test cases (50ms producer burst, queue fill + throttle + ok/full split) |
-| `tests/host/CMakeLists.txt` | Add `robotos_queue_pressure_contract_test` target |
-| `devkit/src/devkit_runtime.c` | Add Phase 6I 50ms producer burst smoke with counter inspection |
-| `devkit/docs/DEVKIT_PROGRESS.md` | Phase 6I section |
-| `devkit/logs/phase_6I_rtt_2026-05-03.txt` | Hardware RTT evidence |
-| `tests/host/logs/host_2026-05-03.log` | Host test log |
+| ---- | ------ |
+| `core/robotos_core.h` | Add `peak_queue_depth` to snapshot struct; add `robotos_core_peak_queue_depth()` getter |
+| `core/robotos_core.c` | Add `s_peak_queue_depth` static + peak update in `post_event_internal` + getter |
+| `tests/host/test_robotos_handler_routing_stress_contract.c` | New -- 55 test cases (6J-A) |
+| `tests/host/test_robotos_handler_lifecycle_contract.c` | New -- 52 test cases (6J-B) |
+| `tests/host/test_robotos_snapshot_coherence_contract.c` | New -- 192 test cases (6J-C/D) |
+| `tests/host/CMakeLists.txt` | Add 3 new test targets (19 total) |
+| `devkit/docs/DEVKIT_PROGRESS.md` | Phase 6J section |
+| `tests/host/logs/host_2026-05-07.log` | Host test log |
 
 ---
 
@@ -68,15 +73,16 @@ The following phases are closed and committed. This list is not exhaustive — r
 to `DEVKIT_PROGRESS.md` for the full history.
 
 | Phase | Description | Commit |
-|-------|-------------|--------|
+| ----- | ----------- | ------ |
+| 6J | Observability and Contract Stress Expansion | TBD |
+| 6I | Timer Producer Queue-Pressure Stress | `e78e503` |
 | 6H | ISR/Timer Producer Stress-Lite | `22edfee` |
+| 6G | Timer producer smoke (ISR context) | `335ee29` |
+| 6F | Devkit Mixed Event Policy Smoke | `5bca62f` |
+| 6A–6E | Event pipeline smokes | preceding commits |
 | 5F/5F-R | Dispatch split + runtime confirm | `b7f08fe`, `460b9f1` |
 | 5E | Critical boundary applied to core queue | `ff24147` |
 | 5D | Platform critical section boundary | `4187bb3` |
-| 6I | Timer Producer Queue-Pressure Stress | `e78e503` |
-| 6F | Devkit Mixed Event Policy Smoke | `5bca62f` |
-| 6G | Timer producer smoke (ISR context) | `335ee29` |
-| 6A–6E | Event pipeline smokes | preceding commits |
 | 4K | Scheduler admission + throttle policy | preceding commits |
 | 4L | Scheduler advisory retry decision policy | `a3f4369` |
 
@@ -85,8 +91,8 @@ to `DEVKIT_PROGRESS.md` for the full history.
 ## Next Candidate Phases
 
 | Phase | Description | Status |
-|-------|-------------|--------|
-| Phase 6J | TBD by team | Candidate |
+| ----- | ----------- | ------ |
+| Phase 6K | TBD by team | Candidate |
 
 ---
 

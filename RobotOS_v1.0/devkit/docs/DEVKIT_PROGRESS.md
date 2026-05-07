@@ -6081,4 +6081,126 @@ LED/tick loop healthy at tick count=27+ when capture ended.
 **Team decision required.**
 
 Candidates:
-- **Phase 6J** -- (TBD by team; sustained/high-frequency ISR stress, multi-producer, or next planned phase)
+
+- **Phase 6J** -- Observability and Contract Stress Expansion (implemented, see below)
+
+---
+
+## Phase 6J -- Observability and Contract Stress Expansion
+
+**Date:** 2026-05-07
+**Branch:** master
+**Phase 6I baseline commit:** `e78e503`
+
+---
+
+### Phase 6J Purpose
+
+Harden deterministic validation, improve observability trust, and reduce future
+runtime evolution risk. Host-test-first. No scheduler evolution. No runtime feature
+expansion.
+
+Scopes:
+
+- **6J-A** Handler Routing Stress: multi-handler dispatch correctness and FIFO
+- **6J-B** Handler Lifecycle Edge Cases: slot reuse, churn, error semantics
+- **6J-C** Snapshot Coherence: all snapshot fields vs getters at multiple points
+- **6J-D** Passive Observability: `peak_queue_depth` high-water mark field
+
+---
+
+### Phase 6J Files Added
+
+| File | Role |
+| ---- | ---- |
+| `tests/host/test_robotos_handler_routing_stress_contract.c` | 6J-A: 55 test cases |
+| `tests/host/test_robotos_handler_lifecycle_contract.c` | 6J-B: 52 test cases |
+| `tests/host/test_robotos_snapshot_coherence_contract.c` | 6J-C/D: 192 test cases |
+
+### Phase 6J Files Modified
+
+| File | Change |
+| ---- | ------ |
+| `core/robotos_core.h` | Added `peak_queue_depth` to `robotos_core_snapshot_t`; added `robotos_core_peak_queue_depth()` getter declaration |
+| `core/robotos_core.c` | Added `s_peak_queue_depth` static; peak update in `post_event_internal`; snapshot field; getter implementation |
+| `tests/host/CMakeLists.txt` | Added 3 new test targets (19 total, up from 16) |
+
+---
+
+### Phase 6J Behavior Guarantees
+
+- **No status codes added.** `ROBOTOS_CORE_ERR_THROTTLED = -7` remains the ceiling.
+- **No mutable retry state added.** `robotos_core_retry_decision_for_status()` unchanged.
+- **No scheduler semantics changed.** `ROBOTOS_CORE_MAX_EVENTS_PER_TICK = 1` unchanged.
+- **No dispatch lock-boundary change.** Handler-outside-lock invariant preserved.
+- **No admission policy change.** NONE/reserved still rejected; USER+ still accepted.
+- **`peak_queue_depth` is passive.** Updated only after successful push, under existing lock.
+  Monotonically non-decreasing. Not reset by repeated init. Zero behavioral impact.
+
+---
+
+### Phase 6J Host Test Evidence
+
+**Commands (WSL Ubuntu, gcc 13.3.0):**
+
+```bash
+cmake -S RobotOS_v1.0/tests/host -B build-host-core-phase6j --fresh
+cmake --build build-host-core-phase6j
+ctest --test-dir build-host-core-phase6j --output-on-failure
+cmake --build build-host-core-phase6j --target save_test_log
+```
+
+**Result:**
+
+```
+17/19 Test #17: robotos_handler_routing_stress_contract ...   Passed    0.01 sec
+18/19 Test #18: robotos_handler_lifecycle_contract ........   Passed    0.01 sec
+19/19 Test #19: robotos_snapshot_coherence_contract .......   Passed    0.01 sec
+
+100% tests passed, 0 tests failed out of 19
+
+Total Test time (real) = 0.35 sec
+```
+
+Per-suite case totals (Phase 6J new suites):
+
+- Phase 6J-A (routing stress):  55 passed, 0 failed
+- Phase 6J-B (lifecycle):       52 passed, 0 failed
+- Phase 6J-C/D (snapshot):     192 passed, 0 failed
+- **Total new test cases: 299**
+
+Pre-existing suites: 16/16 PASS (zero regressions).
+
+Test log: `tests/host/logs/host_2026-05-07.log`
+
+---
+
+### Phase 6J Zephyr Build Evidence
+
+```
+Command: west build -b stm32f411e_disco RobotOS_v1.0/devkit/ --pristine
+Result:  PASS
+FLASH:   28852 B / 524288 B (5.50%)  [+32 B from Phase 6I baseline 28820 B]
+RAM:     12160 B / 131072 B (9.28%)  [unchanged from Phase 6I]
+Errors:  0
+Warnings: 1 pre-existing warning in robotos_event_queue.c (q_valid unused,
+          unrelated to Phase 6J)
+```
+
+---
+
+### Phase 6J Known Limitations
+
+- **No devkit RTT smoke for Phase 6J.** Phase 6J is host-test-only per approved scope.
+  `peak_queue_depth` is not yet exercised via RTT snapshot logging.
+- **check_all_getters_match_snapshot helper** produces identically-labelled CHECK calls
+  across 10 call sites; failures are disambiguated by section printf headers + line numbers.
+
+---
+
+### Phase 6J Next Recommended Phase
+
+**Team decision required.** Candidates:
+
+- **Phase 6K** (TBD): devkit RTT snapshot logging (expose `peak_queue_depth` via RTT),
+  sustained multi-event stress, or scheduler evolution preparation.

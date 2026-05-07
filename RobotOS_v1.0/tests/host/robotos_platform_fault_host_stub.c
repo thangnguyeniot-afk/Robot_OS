@@ -12,6 +12,11 @@
  *
  * Call robotos_platform_fault_host_reset() between test cases to clear state.
  * Test-inspection functions are declared in robotos_platform_fault_host_stub.h.
+ *
+ * GLM note: this file is host-test support infrastructure. GLM may audit this file
+ * and propose changes, but must not alter compiled behavior, counters, assertions,
+ * or function semantics unless a future command explicitly authorizes source/test
+ * implementation.
  */
 
 #include <stdint.h>

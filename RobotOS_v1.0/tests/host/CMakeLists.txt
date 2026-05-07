@@ -4,6 +4,8 @@
 #           core critical boundary contract,
 #           scheduler admission policy, scheduler backpressure policy,
 #           scheduler producer throttle policy.
+# Phase 6J: handler routing stress, handler lifecycle edge cases,
+#           snapshot coherence + peak_queue_depth observability (6J-D).
 #
 # Platform logging: each target that compiles robotos_core.c also compiles
 # the no-op host stub (robotos_platform_log_host_stub.c) and adds the
@@ -311,6 +313,68 @@ target_include_directories(robotos_queue_pressure_contract_test PRIVATE
 
 add_test(NAME robotos_queue_pressure_contract
          COMMAND robotos_queue_pressure_contract_test)
+
+# ---- Handler routing stress contract test (Phase 6J-A) ----------------------
+# Tests multi-handler dispatch routing: isolation, FIFO ordering within type,
+# no cross-handler contamination, unhandled events alongside handled,
+# repeated post/dispatch cycles, USER+ range boundary routing.
+# Needs all three core sources + platform log stub + platform critical stub.
+add_executable(robotos_handler_routing_stress_contract_test
+    test_robotos_handler_routing_stress_contract.c
+    ${CORE_SRCS}
+    ${PLATFORM_HOST_STUB}
+)
+
+target_include_directories(robotos_handler_routing_stress_contract_test PRIVATE
+    "${CORE_DIR}"
+    "${PLATFORM_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+)
+
+add_test(NAME robotos_handler_routing_stress_contract
+         COMMAND robotos_handler_routing_stress_contract_test)
+
+# ---- Handler lifecycle edge cases contract test (Phase 6J-B) ----------------
+# Tests slot reuse after unregister, full-table + unregister + new type,
+# unregister-all behavior, churn stability, handler error does not deregister,
+# replacement routing, re-register after unregister, snapshot coherence.
+# Extends Phase 4H handler policy coverage without repeating it.
+# Needs all three core sources + platform log stub + platform critical stub.
+add_executable(robotos_handler_lifecycle_contract_test
+    test_robotos_handler_lifecycle_contract.c
+    ${CORE_SRCS}
+    ${PLATFORM_HOST_STUB}
+)
+
+target_include_directories(robotos_handler_lifecycle_contract_test PRIVATE
+    "${CORE_DIR}"
+    "${PLATFORM_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+)
+
+add_test(NAME robotos_handler_lifecycle_contract
+         COMMAND robotos_handler_lifecycle_contract_test)
+
+# ---- Snapshot coherence + peak_queue_depth contract test (Phase 6J-C/D) -----
+# Tests snapshot field coherence against individual getters at multiple points:
+# post, dispatch, overflow, throttle, handler error, tick/init count.
+# Also validates peak_queue_depth high-water mark semantics (Phase 6J-D):
+# monotonically non-decreasing, not reset by drain or repeated init.
+# Needs all three core sources + platform log stub + platform critical stub.
+add_executable(robotos_snapshot_coherence_contract_test
+    test_robotos_snapshot_coherence_contract.c
+    ${CORE_SRCS}
+    ${PLATFORM_HOST_STUB}
+)
+
+target_include_directories(robotos_snapshot_coherence_contract_test PRIVATE
+    "${CORE_DIR}"
+    "${PLATFORM_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+)
+
+add_test(NAME robotos_snapshot_coherence_contract
+         COMMAND robotos_snapshot_coherence_contract_test)
 
 # ---- Log persistence target --------------------------------------------------
 # Saves ctest output to a timestamped file in the version-controlled logs/

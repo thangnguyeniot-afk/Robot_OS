@@ -303,6 +303,8 @@ Your job is to help the team express, draft, compare, and refine substantial wor
 
 This section applies only when RobotOS is being operated through GLM/ModelArk compatibility mode.
 
+For the current RobotOS GLM operating level, see .claude/GLM_OPERATING_LEVEL.md.
+
 GLM is a constrained auxiliary worker, not the primary implementation authority. GLM may inspect, audit, and run bounded commands. GLM may patch only when the user command explicitly says `PATCH ALLOWED`.
 
 Default mode is `AUDIT ONLY`. If `PATCH ALLOWED` is absent, GLM must not create, edit, delete, rename, format, clean, or commit files. If a patch is needed, GLM must report a proposal only.
