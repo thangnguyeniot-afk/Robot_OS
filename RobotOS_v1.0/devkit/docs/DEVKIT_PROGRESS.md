@@ -6203,5 +6203,188 @@ Warnings: 1 pre-existing warning in robotos_event_queue.c (q_valid unused,
 
 **Team decision required.** Candidates:
 
-- **Phase 6K** (TBD): devkit RTT snapshot logging (expose `peak_queue_depth` via RTT),
-  sustained multi-event stress, or scheduler evolution preparation.
+- **Phase 6K** (implemented, see below; pending RTT smoke for full close)
+
+---
+
+## Phase 6K -- Runtime Observability Surfacing
+
+**Date:** 2026-05-07
+**Branch:** master
+**Phase 6J baseline commit:** `8a1af69`
+**Commit:** TBD
+**Close status:** `READY_BUT_NOT_CLOSED_PENDING_RTT`
+
+---
+
+### Phase 6K Purpose
+
+Expose existing core runtime state in devkit RTT logs in a bounded,
+deterministic, low-noise way. No scheduler evolution. No new runtime
+state. Pure visibility/debuggability work.
+
+The goal is runtime snapshot visibility, queue/dispatch/pressure
+visibility, and diagnostic confidence for future debugging support,
+without changing runtime behavior.
+
+---
+
+### Phase 6K Files Added
+
+| File | Role |
+| ---- | ---- |
+| `devkit/src/devkit_observability.h` | Phase 6K interface: log helper declaration + cadence constant |
+| `devkit/src/devkit_observability.c` | Phase 6K implementation: snapshot capture + LOG_INF emission |
+
+### Phase 6K Files Modified
+
+| File | Change |
+| ---- | ------ |
+| `devkit/CMakeLists.txt` | Add `src/devkit_observability.c` to `target_sources` |
+| `devkit/src/devkit_runtime.c` | Add `#include "devkit_observability.h"`; baseline call after init; periodic call every 10 ticks in run loop |
+
+---
+
+### Phase 6K Log Format
+
+Stable single-line format, integer/boolean fields only, grep-friendly:
+
+```text
+ROBOTOS_OBS state=<NAME> ticks=N pending=N peak=N dropped=N dispatched=N \
+            herr=N throttled=N rejected=N accepted=N unhandled=N \
+            bp=0|1 th_active=0|1
+```
+
+Fields:
+
+- `state`: core lifecycle state name (UNINIT / READY / ERROR / UNKNOWN)
+- `ticks`: `snap.tick_count`
+- `pending`: `snap.pending_event_count` (current queue depth)
+- `peak`: `snap.peak_queue_depth` (Phase 6J-D high-water mark)
+- `dropped`: `snap.dropped_event_count`
+- `dispatched`: `snap.dispatched_event_count`
+- `herr`: `snap.handler_error_count`
+- `throttled`: `snap.producer_throttled_count`
+- `rejected`: `snap.admission_rejected_count`
+- `accepted`: `snap.admission_accepted_count`
+- `unhandled`: `snap.unhandled_event_count`
+- `bp`: `snap.backpressure_active` (0 or 1)
+- `th_active`: `snap.producer_throttle_active` (0 or 1)
+
+Field-name discipline: `herr`, `bp`, `th_active` match the Phase 6I
+final-summary log so existing RTT parsing tooling continues to work.
+
+---
+
+### Phase 6K Log Cadence
+
+- One baseline log immediately after `devkit_runtime_init()` completes.
+- One periodic log every `DEVKIT_OBSERVABILITY_LOG_INTERVAL_TICKS = 10`
+  runtime ticks. At `DEVKIT_TICK_MS = 500`, this is once every ~5 s.
+- The cadence is bounded at compile time. There is no runtime config.
+
+---
+
+### Phase 6K Behavior Guarantees
+
+- **No core semantics changed.** `robotos_core.[ch]` is unmodified in 6K.
+- **No new mutable state.** `devkit_observability` is read-only over snapshot.
+- **No feedback loop.** Log values do not feed back into scheduling,
+  admission, dispatch, throttle, or retry decisions.
+- **No dynamic allocation.** Snapshot is a stack-local struct in the helper.
+- **No floating point.** All fields are integer or boolean.
+- **No new threads.** Helper runs in existing devkit_runtime thread context.
+- **Handler-outside-lock invariant preserved.** Helper acquires the
+  snapshot critical section briefly and exits before logging.
+
+---
+
+### Phase 6K Host Test Evidence
+
+Host regression confirms zero impact on portable core behavior. No new
+host tests added: the helper is Zephyr-LOG-bound and has no host-testable
+formatting logic worth artificial test scaffolding.
+
+```text
+cmake -S RobotOS_v1.0/tests/host -B build-host-core-phase6k --fresh
+cmake --build build-host-core-phase6k
+ctest --test-dir build-host-core-phase6k --output-on-failure
+```
+
+Result:
+
+```text
+100% tests passed, 0 tests failed out of 19
+Total Test time (real) = 0.33 sec
+```
+
+Test log: `tests/host/logs/host_2026-05-07.log` (overwritten -- same date as 6J)
+
+Pre-existing 16 suites: PASS. Phase 6J 3 suites: PASS. Zero regressions.
+
+---
+
+### Phase 6K Zephyr Build Evidence
+
+```text
+Command: west build -b stm32f411e_disco RobotOS_v1.0/devkit/ --pristine
+Result:  PASS
+FLASH:   29272 B / 524288 B (5.58%)  [+420 B from Phase 6J baseline 28852 B]
+RAM:     12160 B / 131072 B (9.28%)  [unchanged from Phase 6J]
+Errors:  0
+Warnings: 1 pre-existing in robotos_event_queue.c (q_valid unused,
+          unrelated to Phase 6K and Phase 6J)
+```
+
+FLASH +420 B is consistent with: state-name switch, `LOG_MODULE_REGISTER`
+metadata for `devkit_obs`, the long format string literal, and two call
+sites. RAM is unchanged because the Zephyr LOG backend reuses existing
+deferred-log infrastructure.
+
+---
+
+### Phase 6K RTT Smoke
+
+**Status:** `NOT_RUN_HARDWARE_NOT_AUTHORIZED_THIS_SESSION`
+
+No `west flash` was performed in this session. The implementation is
+build-validated only. Per RobotOS evidence discipline, the phase is
+**not** marked CLOSED; it is `READY_BUT_NOT_CLOSED_PENDING_RTT`.
+
+Suggested RTT validation steps when hardware is available:
+
+1. `west flash` (manual hardware RESET may be required, per known constraint)
+2. Capture RTT log for at least 6 seconds runtime
+3. Verify at least 1 line matching `ROBOTOS_OBS state=READY ticks=` appears
+   immediately after init banner (baseline log)
+4. Verify at least 1 line at ticks=10 (first periodic log)
+5. Verify subsequent lines at ticks=20, ticks=30, etc.
+6. Verify all fields are parseable integers or 0/1 booleans
+7. Confirm CFSR=0 and HFSR=0 in fault diagnostics
+
+If RTT smoke succeeds, update this section's close status to CLOSED and
+update CURRENT_STATE.md to reflect Phase 6K as the new last-closed phase.
+
+---
+
+### Phase 6K Known Limitations
+
+- **No RTT evidence in this session.** Build-validated only. See section above.
+- **Cadence is compile-time only.** `DEVKIT_OBSERVABILITY_LOG_INTERVAL_TICKS`
+  cannot be changed at runtime. This is a deliberate design choice to
+  prevent runtime config systems from creeping in.
+- **No fault diagnostics in the log line.** CFSR/HFSR/last-fault are not
+  surfaced; that is reserved for a future Phase 6L (Fault Observability).
+- **Single LOG_MODULE_REGISTER added.** `devkit_obs` is a new log module.
+  This is a small one-time RAM cost for the Zephyr log filter table.
+
+---
+
+### Phase 6K Next Recommended Phase
+
+**Team decision required.** Candidates:
+
+- **Phase 6L** Fault Observability Integration (CFSR/HFSR + last fault context)
+- **Phase 6M** Producer Realism / Timer Producer Diagnostic
+- **Phase 7A** Dispatch Budget Evolution Planning
+- **Phase 7B** Execution Domain Boundary Planning

@@ -32,6 +32,7 @@
 #include "devkit_runtime.h"
 #include "devkit_build_info.h"
 #include "devkit_fault.h"
+#include "devkit_observability.h"
 #include "devkit_status_led.h"
 #include "robotos_core.h"
 #include "robotos_platform_critical.h"
@@ -198,6 +199,9 @@ int devkit_runtime_init(void)
 
 	LOG_INF("LED blink loop starting");
 
+	/* Phase 6K: emit one baseline observability snapshot after init */
+	devkit_observability_log_snapshot();
+
 	return 0;
 }
 
@@ -217,6 +221,13 @@ void devkit_runtime_run(void)
 		core_ret = robotos_core_tick();
 		if (core_ret != ROBOTOS_CORE_OK) {
 			LOG_ERR("Core tick failed: %d", (int)core_ret);
+		}
+
+		/* Phase 6K: periodic observability snapshot.
+		 * tick_count was post-incremented in the LOG_INF above, so it
+		 * already reflects the next iteration index here. Fire every N. */
+		if ((tick_count % DEVKIT_OBSERVABILITY_LOG_INTERVAL_TICKS) == 0u) {
+			devkit_observability_log_snapshot();
 		}
 
 		/* Log final summary once after all accepted events are handled */
