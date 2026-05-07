@@ -6384,7 +6384,213 @@ update CURRENT_STATE.md to reflect Phase 6K as the new last-closed phase.
 
 **Team decision required.** Candidates:
 
-- **Phase 6L** Fault Observability Integration (CFSR/HFSR + last fault context)
+- **Phase 6L** Fault Observability Integration (implemented, see below; pending RTT smoke for full close)
 - **Phase 6M** Producer Realism / Timer Producer Diagnostic
+- **Phase 7A** Dispatch Budget Evolution Planning
+- **Phase 7B** Execution Domain Boundary Planning
+
+---
+
+## Phase 6L -- Fault Observability Integration
+
+**Date:** 2026-05-07
+**Branch:** master
+**Phase 6K baseline commit:** `11516d4` (devkit observability surfacing)
+**Commit:** TBD
+**Close status:** `READY_BUT_NOT_CLOSED_PENDING_RTT`
+
+---
+
+### Phase 6L Purpose
+
+Surface Cortex-M fault diagnostic registers (CFSR, HFSR) in the devkit
+RTT log alongside the Phase 6K runtime snapshot. Visibility only --
+no recovery, no reset, no panic, no scheduler influence.
+
+This makes the firmware self-report its own no-fault state during normal
+operation and gives an operator on-board evidence of fault registers
+without requiring a separate GDB session against the SCB memory map.
+
+---
+
+### Phase 6L Files Modified
+
+| File | Change |
+| ---- | ------ |
+| `devkit/src/devkit_observability.h` | Add `devkit_observability_log_fault()` declaration |
+| `devkit/src/devkit_observability.c` | Add CFSR/HFSR memory-mapped addresses; add `devkit_observability_log_fault()` implementation |
+| `devkit/src/devkit_runtime.c` | Add baseline fault log after init; add periodic fault log every 10 ticks alongside snapshot log |
+
+No new files. No core changes. No platform-interface changes.
+
+---
+
+### Phase 6L Log Format
+
+Stable single-line format:
+
+```text
+ROBOTOS_FAULT active=0|1 cfsr=0x........ hfsr=0x........ context=<NAME>
+```
+
+Fields:
+
+- `active`: `(cfsr != 0) || (hfsr != 0)`. 0 in normal no-fault state.
+- `cfsr`: raw 32-bit value of `*(0xE000ED28)` (Configurable Fault Status Register)
+- `hfsr`: raw 32-bit value of `*(0xE000ED2C)` (HardFault Status Register)
+- `context`: coarse hint string. `"none"` when active=0, `"fault"` otherwise.
+
+Bit-level decoding of UFSR/BFSR/MMFSR sub-fields and BFAR/MMFAR fault
+addresses is intentionally out of scope for this phase.
+
+---
+
+### Phase 6L Log Cadence
+
+Aligned with Phase 6K cadence:
+
+- One baseline log immediately after `devkit_runtime_init()` completes.
+- One periodic log every `DEVKIT_OBSERVABILITY_LOG_INTERVAL_TICKS = 10`
+  runtime ticks. At `DEVKIT_TICK_MS = 500`, this is once every ~5 s.
+
+Each periodic event now emits two lines: one `ROBOTOS_OBS` and one
+`ROBOTOS_FAULT`. Total log noise increases by one line per cadence
+window (one per ~5 s).
+
+---
+
+### Phase 6L Implementation Notes
+
+**Why direct SCB memory access instead of CMSIS `SCB->CFSR`:**
+
+- Avoids any CMSIS header path uncertainty across Zephyr versions.
+- The two register addresses are fixed by the ARMv7-M Architecture
+  Reference Manual (B3.2.10) and identical for all Cortex-M3/M4/M7.
+- The same addresses are already documented in `tools/runtime/README.md`
+  and used by the existing `phase6h_read.gdb` external diagnostic.
+- A `volatile uint32_t *` read is well-defined behaviour and does not
+  modify the register (CFSR/HFSR status bits are write-1-to-clear).
+
+**Why no platform-interface extension:**
+
+- The platform fault abstraction (Phase 5C) is severity-graded *report*
+  API, not register-snapshot API. Extending it for one Cortex-M-specific
+  diagnostic would expand a portable contract for marginal benefit.
+- Devkit code is already Zephyr/Cortex-M-bound. Direct register access
+  in `devkit/` does not violate portability discipline.
+- Host tests cannot meaningfully validate hardware-mapped register reads
+  beyond asserting constants, which the command brief explicitly forbids.
+
+**Why no new host tests:**
+
+- The function is Zephyr-LOG-bound and reads memory-mapped Cortex-M
+  registers; no portable formatter exists to test deterministically.
+- Per command brief: "Do NOT create fake tests that only assert constants."
+- Host regression suite still runs in full to detect any unintended
+  cross-impact on portable core. Result: 19/19 PASS, zero regressions.
+
+---
+
+### Phase 6L Behavior Guarantees
+
+- **No core semantics changed.** `core/robotos_core.[ch]` unmodified.
+- **No platform-interface extension.** Phase 5C fault API surface unchanged.
+- **No fault recovery.** Read-only inspection; no register write, no reset,
+  no panic, no auto-retry.
+- **No feedback loop.** CFSR/HFSR values are not consumed by any runtime
+  decision (scheduling, admission, throttle, dispatch, retry).
+- **No new threads, no dynamic allocation, no floating point.**
+- **Handler-outside-lock invariant preserved.** The fault helper holds
+  no lock and is invoked from existing thread-context call sites.
+
+---
+
+### Phase 6L Host Test Evidence
+
+```text
+cmake -S RobotOS_v1.0/tests/host -B build-host-core-phase6l --fresh
+cmake --build build-host-core-phase6l
+ctest --test-dir build-host-core-phase6l --output-on-failure
+```
+
+Result:
+
+```text
+100% tests passed, 0 tests failed out of 19
+Total Test time (real) = 0.31 sec
+```
+
+Test log: `tests/host/logs/host_2026-05-07.log` (overwritten -- same date as 6J/6K).
+
+Pre-existing 16 suites: PASS. Phase 6J 3 suites: PASS. Zero regressions.
+
+---
+
+### Phase 6L Zephyr Build Evidence
+
+```text
+Command: west build -b stm32f411e_disco RobotOS_v1.0/devkit/ --pristine
+Result:  PASS
+FLASH:   29444 B / 524288 B (5.62%)  [+172 B from Phase 6K baseline 29272 B]
+RAM:     12160 B / 131072 B (9.28%)  [unchanged from Phase 6K]
+Errors:  0
+Warnings: 1 pre-existing in robotos_event_queue.c (q_valid unused,
+          unrelated to Phase 6L / Phase 6K / Phase 6J)
+```
+
+FLASH +172 B is consistent with: one new function body, the format
+string literal, and two new call sites in the runtime loop / init.
+
+---
+
+### Phase 6L RTT Smoke
+
+**Status:** `NOT_RUN_HARDWARE_NOT_AUTHORIZED_THIS_SESSION`
+
+No `west flash` was performed in this session. Implementation is
+build-validated only. Per RobotOS evidence discipline, Phase 6L is
+**not** marked CLOSED; it is `READY_BUT_NOT_CLOSED_PENDING_RTT`.
+
+Suggested RTT validation when hardware is available:
+
+1. `west flash` (manual hardware RESET may be required, per known constraint)
+2. Capture RTT log for at least 6 seconds runtime
+3. Verify baseline `ROBOTOS_FAULT active=0 cfsr=0x00000000 hfsr=0x00000000 context=none`
+   line appears immediately after init banner
+4. Verify periodic `ROBOTOS_FAULT ...` lines at `ROBOTOS_OBS ticks=10, 20, 30, ...`
+5. Confirm `cfsr=0x00000000` and `hfsr=0x00000000` throughout normal operation
+6. Confirm no firmware instability introduced (LED still blinking,
+   tick count still incrementing, Phase 6I final summary still appears)
+
+If RTT smoke succeeds, update this section's close status to CLOSED and
+update CURRENT_STATE.md to reflect Phase 6L as the new last-closed phase
+(jointly with Phase 6K if not yet closed).
+
+---
+
+### Phase 6L Known Limitations
+
+- **No bit-level fault decoding.** Sub-fields of CFSR (UFSR/BFSR/MMFSR)
+  and fault address registers (BFAR/MMFAR) are not surfaced. Operators
+  must decode raw register values manually if a fault occurs. A future
+  phase could add structured decoding.
+- **`HFSR.DEBUGEVT` may be set under debugger.** When a debugger has
+  triggered a halt event, HFSR may report non-zero even without a real
+  crash. Raw values are surfaced unfiltered so the operator can inspect.
+- **No platform abstraction.** Direct SCB memory access keeps the
+  observability helper devkit-local and Cortex-M-only. Non-Cortex-M
+  ports would need a different fault diagnostic strategy.
+- **No RTT evidence in this session.** Build-validated only.
+
+---
+
+### Phase 6L Next Recommended Phase
+
+**Team decision required.** Candidates:
+
+- **Phase 6M** Producer Realism / Timer Producer Diagnostic
+- **Phase 6N** Fault Decoder Helper (UFSR/BFSR/MMFSR sub-field decoding,
+  BFAR/MMFAR address surfacing) -- only if real fault diagnosis becomes
+  needed; not speculative.
 - **Phase 7A** Dispatch Budget Evolution Planning
 - **Phase 7B** Execution Domain Boundary Planning

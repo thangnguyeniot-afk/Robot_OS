@@ -20,9 +20,20 @@
 #include "devkit_observability.h"
 #include "robotos_core.h"
 
+#include <stdbool.h>
+#include <stdint.h>
 #include <zephyr/logging/log.h>
 
 LOG_MODULE_REGISTER(devkit_obs, LOG_LEVEL_INF);
+
+/*
+ * ARMv7-M System Control Block fault registers (ARMv7-M ARM, B3.2.10).
+ * Memory-mapped at fixed addresses for all Cortex-M3/M4/M7 devices.
+ * Read is passive; status bits are write-1-to-clear, so reading does
+ * not modify them.
+ */
+#define DEVKIT_OBS_SCB_CFSR_ADDR 0xE000ED28u
+#define DEVKIT_OBS_SCB_HFSR_ADDR 0xE000ED2Cu
 
 /* Map core state enum to a stable, short, parser-friendly name. */
 static const char *state_name(robotos_core_state_t s)
@@ -61,4 +72,33 @@ void devkit_observability_log_snapshot(void)
 		snap.unhandled_event_count,
 		(int)snap.backpressure_active,
 		(int)snap.producer_throttle_active);
+}
+
+/*
+ * Phase 6L: read CFSR/HFSR directly from the SCB and emit a ROBOTOS_FAULT line.
+ *
+ * Sticky bits in these registers are write-1-to-clear; a plain read does
+ * not modify them and is therefore safe to call repeatedly. No fault
+ * recovery, no panic, no register clearing, no scheduling influence.
+ *
+ * Note: HFSR.DEBUGEVT may be set when a debugger has triggered a halt
+ * event, even in the absence of an actual crash. Raw register values
+ * are surfaced unfiltered so the operator can inspect the situation.
+ */
+void devkit_observability_log_fault(void)
+{
+	const volatile uint32_t *cfsr_reg =
+		(const volatile uint32_t *)DEVKIT_OBS_SCB_CFSR_ADDR;
+	const volatile uint32_t *hfsr_reg =
+		(const volatile uint32_t *)DEVKIT_OBS_SCB_HFSR_ADDR;
+
+	uint32_t cfsr = *cfsr_reg;
+	uint32_t hfsr = *hfsr_reg;
+	bool     active = (cfsr != 0u) || (hfsr != 0u);
+
+	LOG_INF("ROBOTOS_FAULT active=%d cfsr=0x%08x hfsr=0x%08x context=%s",
+		(int)active,
+		(unsigned int)cfsr,
+		(unsigned int)hfsr,
+		active ? "fault" : "none");
 }

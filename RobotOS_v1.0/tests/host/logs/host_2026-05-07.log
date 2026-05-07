@@ -1,6 +1,6 @@
-UpdateCTestConfiguration  from :/mnt/d/Robot_OS/build-host-core-phase6k/DartConfiguration.tcl
-UpdateCTestConfiguration  from :/mnt/d/Robot_OS/build-host-core-phase6k/DartConfiguration.tcl
-Test project /mnt/d/Robot_OS/build-host-core-phase6k
+UpdateCTestConfiguration  from :/mnt/d/Robot_OS/build-host-core-phase6l/DartConfiguration.tcl
+UpdateCTestConfiguration  from :/mnt/d/Robot_OS/build-host-core-phase6l/DartConfiguration.tcl
+Test project /mnt/d/Robot_OS/build-host-core-phase6l
 Constructing a list of tests
 Done constructing a list of tests
 Updating test list for fixtures
@@ -10,8 +10,8 @@ Checking test dependency graph end
 test 1
       Start  1: robotos_core_contract
 
-1: Test command: /mnt/d/Robot_OS/build-host-core-phase6k/robotos_core_contract_test
-1: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6k
+1: Test command: /mnt/d/Robot_OS/build-host-core-phase6l/robotos_core_contract_test
+1: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6l
 1: Test timeout computed to be: 10000000
 1: === robotos_core contract tests (Phase 4C) ===
 1: 
@@ -67,8 +67,8 @@ test 1
 test 2
       Start  2: robotos_event_queue_contract
 
-2: Test command: /mnt/d/Robot_OS/build-host-core-phase6k/robotos_event_queue_contract_test
-2: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6k
+2: Test command: /mnt/d/Robot_OS/build-host-core-phase6l/robotos_event_queue_contract_test
+2: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6l
 2: Test timeout computed to be: 10000000
 2: === robotos_event_queue contract tests (Phase 4D) ===
 2: 
@@ -155,8 +155,8 @@ test 2
 test 3
       Start  3: robotos_event_dispatcher_contract
 
-3: Test command: /mnt/d/Robot_OS/build-host-core-phase6k/robotos_event_dispatcher_contract_test
-3: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6k
+3: Test command: /mnt/d/Robot_OS/build-host-core-phase6l/robotos_event_dispatcher_contract_test
+3: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6l
 3: Test timeout computed to be: 10000000
 3: === robotos_event_dispatcher contract tests (Phase 4E) ===
 3: 
@@ -244,8 +244,8 @@ test 3
 test 4
       Start  4: robotos_core_ingestion_contract
 
-4: Test command: /mnt/d/Robot_OS/build-host-core-phase6k/robotos_core_ingestion_contract_test
-4: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6k
+4: Test command: /mnt/d/Robot_OS/build-host-core-phase6l/robotos_core_ingestion_contract_test
+4: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6l
 4: Test timeout computed to be: 10000000
 4: === robotos_core ingestion contract tests (Phase 4F) ===
 4: 
@@ -325,8 +325,8 @@ test 4
 test 5
       Start  5: robotos_core_tick_policy_contract
 
-5: Test command: /mnt/d/Robot_OS/build-host-core-phase6k/robotos_core_tick_policy_contract_test
-5: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6k
+5: Test command: /mnt/d/Robot_OS/build-host-core-phase6l/robotos_core_tick_policy_contract_test
+5: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6l
 5: Test timeout computed to be: 10000000
 5: === robotos_core tick policy contract tests (Phase 4G) ===
 5: 
@@ -411,8 +411,8 @@ test 5
 test 6
       Start  6: robotos_core_handler_policy_contract
 
-6: Test command: /mnt/d/Robot_OS/build-host-core-phase6k/robotos_core_handler_policy_contract_test
-6: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6k
+6: Test command: /mnt/d/Robot_OS/build-host-core-phase6l/robotos_core_handler_policy_contract_test
+6: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6l
 6: Test timeout computed to be: 10000000
 6: === robotos_core handler policy contract tests (Phase 4H) ===
 6: 
@@ -497,8 +497,8 @@ test 6
 test 7
       Start  7: robotos_platform_fault_contract
 
-7: Test command: /mnt/d/Robot_OS/build-host-core-phase6k/robotos_platform_fault_contract_test
-7: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6k
+7: Test command: /mnt/d/Robot_OS/build-host-core-phase6l/robotos_platform_fault_contract_test
+7: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6l
 7: Test timeout computed to be: 10000000
 7: PASS: TC01 report_count starts at 0 after reset
 7: PASS: TC02 fault_report INFO increments report_count
@@ -518,8 +518,8 @@ test 7
 test 8
       Start  8: robotos_platform_critical_contract
 
-8: Test command: /mnt/d/Robot_OS/build-host-core-phase6k/robotos_platform_critical_contract_test
-8: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6k
+8: Test command: /mnt/d/Robot_OS/build-host-core-phase6l/robotos_platform_critical_contract_test
+8: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6l
 8: Test timeout computed to be: 10000000
 8: === Phase 5D: Platform Critical Section Contract Tests ===
 8: 
@@ -562,8 +562,8 @@ test 8
 test 9
       Start  9: robotos_core_critical_boundary_contract
 
-9: Test command: /mnt/d/Robot_OS/build-host-core-phase6k/robotos_core_critical_boundary_contract_test
-9: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6k
+9: Test command: /mnt/d/Robot_OS/build-host-core-phase6l/robotos_core_critical_boundary_contract_test
+9: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6l
 9: Test timeout computed to be: 10000000
 9: === Phase 5E: Core Critical Boundary Contract Tests ===
 9: 
@@ -622,8 +622,8 @@ test 9
 test 10
       Start 10: robotos_scheduler_admission_contract
 
-10: Test command: /mnt/d/Robot_OS/build-host-core-phase6k/robotos_scheduler_admission_contract_test
-10: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6k
+10: Test command: /mnt/d/Robot_OS/build-host-core-phase6l/robotos_scheduler_admission_contract_test
+10: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6l
 10: Test timeout computed to be: 10000000
 10: === Phase 4I: Scheduler Admission Policy Contract Tests ===
 10: 
@@ -671,8 +671,8 @@ test 10
 test 11
       Start 11: robotos_scheduler_backpressure_contract
 
-11: Test command: /mnt/d/Robot_OS/build-host-core-phase6k/robotos_scheduler_backpressure_contract_test
-11: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6k
+11: Test command: /mnt/d/Robot_OS/build-host-core-phase6l/robotos_scheduler_backpressure_contract_test
+11: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6l
 11: Test timeout computed to be: 10000000
 11: === Phase 4J: Scheduler Budget/Backpressure Contract Tests ===
 11: 
@@ -739,8 +739,8 @@ test 11
 test 12
       Start 12: robotos_scheduler_throttle_contract
 
-12: Test command: /mnt/d/Robot_OS/build-host-core-phase6k/robotos_scheduler_throttle_contract_test
-12: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6k
+12: Test command: /mnt/d/Robot_OS/build-host-core-phase6l/robotos_scheduler_throttle_contract_test
+12: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6l
 12: Test timeout computed to be: 10000000
 12: === Phase 4K: Scheduler Producer Throttle Contract Tests ===
 12: 
@@ -818,8 +818,8 @@ test 12
 test 13
       Start 13: robotos_core_dispatch_critical_contract
 
-13: Test command: /mnt/d/Robot_OS/build-host-core-phase6k/robotos_core_dispatch_critical_contract_test
-13: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6k
+13: Test command: /mnt/d/Robot_OS/build-host-core-phase6l/robotos_core_dispatch_critical_contract_test
+13: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6l
 13: Test timeout computed to be: 10000000
 13: === Phase 5F: Dispatch Critical Split Contract Tests ===
 13: 
@@ -882,8 +882,8 @@ test 13
 test 14
       Start 14: robotos_scheduler_retry_policy_contract
 
-14: Test command: /mnt/d/Robot_OS/build-host-core-phase6k/robotos_scheduler_retry_policy_contract_test
-14: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6k
+14: Test command: /mnt/d/Robot_OS/build-host-core-phase6l/robotos_scheduler_retry_policy_contract_test
+14: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6l
 14: Test timeout computed to be: 10000000
 14: === robotos_scheduler_retry_policy_contract ===
 14:   PASS: TC01: NULL out -> ERR_NULL
@@ -949,8 +949,8 @@ test 14
 test 15
       Start 15: robotos_mixed_event_policy_contract
 
-15: Test command: /mnt/d/Robot_OS/build-host-core-phase6k/robotos_mixed_event_policy_contract_test
-15: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6k
+15: Test command: /mnt/d/Robot_OS/build-host-core-phase6l/robotos_mixed_event_policy_contract_test
+15: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6l
 15: Test timeout computed to be: 10000000
 15: === Phase 6F: Mixed Event Policy Smoke Contract Tests ===
 15: 
@@ -1020,8 +1020,8 @@ test 15
 test 16
       Start 16: robotos_queue_pressure_contract
 
-16: Test command: /mnt/d/Robot_OS/build-host-core-phase6k/robotos_queue_pressure_contract_test
-16: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6k
+16: Test command: /mnt/d/Robot_OS/build-host-core-phase6l/robotos_queue_pressure_contract_test
+16: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6l
 16: Test timeout computed to be: 10000000
 16: === Phase 6I: Queue Pressure Producer Contract Tests ===
 16: 
@@ -1090,8 +1090,8 @@ test 16
 test 17
       Start 17: robotos_handler_routing_stress_contract
 
-17: Test command: /mnt/d/Robot_OS/build-host-core-phase6k/robotos_handler_routing_stress_contract_test
-17: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6k
+17: Test command: /mnt/d/Robot_OS/build-host-core-phase6l/robotos_handler_routing_stress_contract_test
+17: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6l
 17: Test timeout computed to be: 10000000
 17: === Phase 6J-A: Handler Routing Stress Contract Tests ===
 17: 
@@ -1169,8 +1169,8 @@ test 17
 test 18
       Start 18: robotos_handler_lifecycle_contract
 
-18: Test command: /mnt/d/Robot_OS/build-host-core-phase6k/robotos_handler_lifecycle_contract_test
-18: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6k
+18: Test command: /mnt/d/Robot_OS/build-host-core-phase6l/robotos_handler_lifecycle_contract_test
+18: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6l
 18: Test timeout computed to be: 10000000
 18: === Phase 6J-B: Handler Lifecycle Edge Cases ===
 18: 
@@ -1248,8 +1248,8 @@ test 18
 test 19
       Start 19: robotos_snapshot_coherence_contract
 
-19: Test command: /mnt/d/Robot_OS/build-host-core-phase6k/robotos_snapshot_coherence_contract_test
-19: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6k
+19: Test command: /mnt/d/Robot_OS/build-host-core-phase6l/robotos_snapshot_coherence_contract_test
+19: Working Directory: /mnt/d/Robot_OS/build-host-core-phase6l
 19: Test timeout computed to be: 10000000
 19: === Phase 6J-C/D: Snapshot Coherence + Peak Depth Validation ===
 19: 
@@ -1474,4 +1474,4 @@ test 19
 
 100% tests passed, 0 tests failed out of 19
 
-Total Test time (real) =   0.34 sec
+Total Test time (real) =   0.30 sec

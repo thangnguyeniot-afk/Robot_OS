@@ -201,6 +201,8 @@ int devkit_runtime_init(void)
 
 	/* Phase 6K: emit one baseline observability snapshot after init */
 	devkit_observability_log_snapshot();
+	/* Phase 6L: emit one baseline fault diagnostic after init */
+	devkit_observability_log_fault();
 
 	return 0;
 }
@@ -223,11 +225,12 @@ void devkit_runtime_run(void)
 			LOG_ERR("Core tick failed: %d", (int)core_ret);
 		}
 
-		/* Phase 6K: periodic observability snapshot.
+		/* Phase 6K/6L: periodic observability snapshot + fault log.
 		 * tick_count was post-incremented in the LOG_INF above, so it
 		 * already reflects the next iteration index here. Fire every N. */
 		if ((tick_count % DEVKIT_OBSERVABILITY_LOG_INTERVAL_TICKS) == 0u) {
 			devkit_observability_log_snapshot();
+			devkit_observability_log_fault();
 		}
 
 		/* Log final summary once after all accepted events are handled */
