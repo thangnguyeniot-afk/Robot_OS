@@ -11,7 +11,7 @@
 
 ### Phase 6N — Documentation / Navigation Consolidation
 
-- **Commit:** (this commit)
+- **Commit:** `ad52de5`
 - **Date:** 2026-05-08
 - **Branch:** master
 - **Type:** Docs-only. No source, test, CMake, Kconfig, or runtime change.
@@ -96,7 +96,7 @@ to `DEVKIT_PROGRESS.md` for the full history.
 
 | Phase | Description | Commit |
 | ----- | ----------- | ------ |
-| 6N | Documentation / Navigation Consolidation (docs-only) | (this commit) |
+| 6N | Documentation / Navigation Consolidation (docs-only) | `ad52de5` |
 | 6Z | RTT closeout for 6K/6L/6M (docs/evidence only) | `4ec5b86` |
 | 6M | Producer Realism / Timer Producer Diagnostic | `a6b253b` |
 | 6L | Fault Observability Integration | `d3759a7` |
