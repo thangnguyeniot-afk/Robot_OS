@@ -6396,7 +6396,7 @@ update CURRENT_STATE.md to reflect Phase 6K as the new last-closed phase.
 **Date:** 2026-05-07
 **Branch:** master
 **Phase 6K baseline commit:** `11516d4` (devkit observability surfacing)
-**Commit:** TBD
+**Commit:** `d3759a7`
 **Close status:** `READY_BUT_NOT_CLOSED_PENDING_RTT`
 
 ---
