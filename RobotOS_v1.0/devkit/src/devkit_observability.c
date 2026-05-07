@@ -18,6 +18,7 @@
  */
 
 #include "devkit_observability.h"
+#include "devkit_timer_producer.h"
 #include "robotos_core.h"
 
 #include <stdbool.h>
@@ -101,4 +102,28 @@ void devkit_observability_log_fault(void)
 		(unsigned int)cfsr,
 		(unsigned int)hfsr,
 		active ? "fault" : "none");
+}
+
+/*
+ * Phase 6M: emit ROBOTOS_PROD summary line.
+ *
+ * Field name discipline matches Phase 6I/6K conventions: integer counters,
+ * one-line, stable key=value shape, grep-friendly. The "type=USER+1"
+ * suffix is a literal string identifying the event type used by the
+ * producer; it is stable across builds because the producer's event type
+ * is a compile-time constant.
+ */
+void devkit_observability_log_producer_stats(void)
+{
+	devkit_timer_producer_stats_t st;
+	devkit_timer_producer_get_stats(&st);
+
+	LOG_INF("ROBOTOS_PROD attempted=%u ok=%u throttled=%u dropped=%u "
+		"invalid=%u other=%u type=USER+1",
+		st.attempted,
+		st.ok,
+		st.throttled,
+		st.dropped,
+		st.invalid,
+		st.other);
 }

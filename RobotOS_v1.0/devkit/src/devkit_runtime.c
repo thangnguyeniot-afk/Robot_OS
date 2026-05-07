@@ -34,6 +34,7 @@
 #include "devkit_fault.h"
 #include "devkit_observability.h"
 #include "devkit_status_led.h"
+#include "devkit_timer_producer.h"
 #include "robotos_core.h"
 #include "robotos_platform_critical.h"
 #include "robotos_platform_time.h"
@@ -199,10 +200,28 @@ int devkit_runtime_init(void)
 
 	LOG_INF("LED blink loop starting");
 
+	/* Phase 6M: register the periodic producer's USER+1 handler.
+	 * Distinct from the Phase 6I producer's USER handler so the two
+	 * coexist without routing conflict. Failure is logged and ignored:
+	 * the rest of the runtime continues without the diagnostic producer. */
+	{
+		robotos_core_status_t prod_ret = devkit_timer_producer_init();
+		if (prod_ret != ROBOTOS_CORE_OK) {
+			LOG_ERR("Phase 6M producer init failed: %d", (int)prod_ret);
+		} else {
+			LOG_INF("Phase 6M producer init: type=USER+1 marker=0x%x "
+				"cadence=every %u ticks",
+				(unsigned)DEVKIT_TIMER_PRODUCER_MARKER,
+				(unsigned)DEVKIT_TIMER_PRODUCER_TICK_PERIOD);
+		}
+	}
+
 	/* Phase 6K: emit one baseline observability snapshot after init */
 	devkit_observability_log_snapshot();
 	/* Phase 6L: emit one baseline fault diagnostic after init */
 	devkit_observability_log_fault();
+	/* Phase 6M: emit one baseline producer stats line after init */
+	devkit_observability_log_producer_stats();
 
 	return 0;
 }
@@ -225,12 +244,17 @@ void devkit_runtime_run(void)
 			LOG_ERR("Core tick failed: %d", (int)core_ret);
 		}
 
-		/* Phase 6K/6L: periodic observability snapshot + fault log.
+		/* Phase 6M: cadence-driven post. on_tick is a no-op when the
+		 * cadence predicate is false; one post at most per call. */
+		devkit_timer_producer_on_tick(tick_count);
+
+		/* Phase 6K/6L/6M: periodic observability snapshot + fault + producer log.
 		 * tick_count was post-incremented in the LOG_INF above, so it
 		 * already reflects the next iteration index here. Fire every N. */
 		if ((tick_count % DEVKIT_OBSERVABILITY_LOG_INTERVAL_TICKS) == 0u) {
 			devkit_observability_log_snapshot();
 			devkit_observability_log_fault();
+			devkit_observability_log_producer_stats();
 		}
 
 		/* Log final summary once after all accepted events are handled */

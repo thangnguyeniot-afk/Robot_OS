@@ -6588,9 +6588,220 @@ update CURRENT_STATE.md to reflect Phase 6L as the new last-closed phase
 
 **Team decision required.** Candidates:
 
-- **Phase 6M** Producer Realism / Timer Producer Diagnostic
+- **Phase 6M** Producer Realism / Timer Producer Diagnostic (implemented, see below; pending RTT smoke for full close)
 - **Phase 6N** Fault Decoder Helper (UFSR/BFSR/MMFSR sub-field decoding,
   BFAR/MMFAR address surfacing) -- only if real fault diagnosis becomes
   needed; not speculative.
 - **Phase 7A** Dispatch Budget Evolution Planning
 - **Phase 7B** Execution Domain Boundary Planning
+
+---
+
+## Phase 6M -- Producer Realism / Timer Producer Diagnostic
+
+**Date:** 2026-05-07
+**Branch:** master
+**Phase 6L baseline commit:** `d3759a7`
+**Commit:** TBD
+**Close status:** `READY_BUT_NOT_CLOSED_PENDING_RTT`
+
+---
+
+### Phase 6M Purpose
+
+Add a controlled periodic devkit producer that posts admissible RobotOS
+events at a known low-pressure cadence in thread context. The intent is
+purely diagnostic: demonstrate realistic steady-state producer/consumer
+interaction in RTT logs and prove that the Phase 6K/6L observability
+surfaces respond coherently to actual ongoing event traffic.
+
+This is **not** scheduler evolution. The producer adds traffic; it does
+not change how the scheduler treats traffic.
+
+---
+
+### Phase 6M Files Added
+
+| File | Role |
+| ---- | ---- |
+| `devkit/src/devkit_timer_producer.h` | Pure-C producer interface: cadence constant, event type, marker, stats struct, init/should_post/on_tick/get_stats |
+| `devkit/src/devkit_timer_producer.c` | Pure-C producer implementation with no Zephyr dependency (so it host-tests against the real core) |
+| `tests/host/test_robotos_timer_producer_contract.c` | 59 host contract tests across 10 sections covering pre-init guards, cadence predicate, single/multi posts, dispatch routing, queue fill, drain recovery, type isolation |
+
+### Phase 6M Files Modified
+
+| File | Change |
+| ---- | ------ |
+| `devkit/src/devkit_observability.h` | Add `devkit_observability_log_producer_stats()` declaration |
+| `devkit/src/devkit_observability.c` | Add `<devkit_timer_producer.h>` include and ROBOTOS_PROD log helper (Zephyr LOG_INF emission separated from the pure-C producer module) |
+| `devkit/src/devkit_runtime.c` | Include producer header; init producer with banner; call `devkit_timer_producer_on_tick(tick_count)` once per run-loop iteration; add baseline producer log after init and periodic log every 10 ticks alongside ROBOTOS_OBS / ROBOTOS_FAULT |
+| `devkit/CMakeLists.txt` | Add `src/devkit_timer_producer.c` to `target_sources` |
+| `tests/host/CMakeLists.txt` | Add `robotos_timer_producer_contract_test` target compiling the producer module against the real core sources and platform host stubs |
+
+No core changes. No platform-interface changes.
+
+---
+
+### Phase 6M Producer Policy
+
+| Decision | Value | Rationale |
+| -------- | ----- | --------- |
+| Event type | `ROBOTOS_EVENT_USER + 1` (= 101) | Distinct from Phase 6I's USER (= 100). Both producers coexist without handler-routing conflict. Both types are admissible per the Phase 4I gate (USER+ accepted). |
+| arg0 marker | `0x6D00` | Phase 6M tag, follows the per-phase marker convention (6E=0x6E, 6F=0x6F00, 6I=0x6900). |
+| Cadence | 1 event every 2 devkit ticks (~1 event/sec at `DEVKIT_TICK_MS = 500`) | Producer rate < consumer rate (budget = 1/tick), so steady-state queue stays at or near zero after the Phase 6I startup burst drains. Demonstrates healthy non-pressured runtime. |
+| Post API | `robotos_core_post_event()` (raw) | Phase 6M demonstrates raw producer success/drop visibility. Throttle visibility is already covered by Phase 4K/6E/6I. |
+| Caller context | Thread context (devkit run loop) | No new Zephyr task/thread, no ISR semantics expansion. |
+| Bound | None (continuous) | Bounded by the cadence rate, not by a max-attempt cap. The Phase 6I producer remains the bounded-burst demonstration. |
+
+---
+
+### Phase 6M Log Format
+
+Stable single-line, integer fields only:
+
+```text
+ROBOTOS_PROD attempted=N ok=N throttled=N dropped=N invalid=N other=N type=USER+1
+```
+
+- `attempted`: total cadence-driven post attempts since process start
+- `ok`: post returned `ROBOTOS_CORE_OK`
+- `throttled`: post returned `ERR_THROTTLED` (always 0 under `post_event` -- field reserved for future try_post_event variant)
+- `dropped`: post returned `ERR_FULL`
+- `invalid`: post returned `ERR_INVALID_ARG` (defensive; should always be 0)
+- `other`: any other non-OK return (defensive; should always be 0)
+- `type`: literal string `USER+1` -- the producer's event type
+
+---
+
+### Phase 6M Log Cadence
+
+Aligned with the Phase 6K/6L cadence (no new log axis introduced):
+
+- One baseline `ROBOTOS_PROD` line immediately after `devkit_runtime_init()` completes.
+- One periodic `ROBOTOS_PROD` line every `DEVKIT_OBSERVABILITY_LOG_INTERVAL_TICKS = 10`
+  runtime ticks, alongside `ROBOTOS_OBS` and `ROBOTOS_FAULT`.
+
+The producer itself logs nothing per post; only the periodic stats line.
+
+---
+
+### Phase 6M Behavior Guarantees
+
+- **No core semantics changed.** `core/` is unmodified.
+- **No platform-interface change.** Phase 5C / 6L surfaces unchanged.
+- **No scheduler / dispatch / queue / retry / admission semantic mutation.**
+- **No producer feedback loop.** Producer cadence is fixed at compile time.
+  The producer never reads core counters and never consumes its own log
+  output.
+- **Producer cannot starve the run loop.** At most one post per tick;
+  on_tick is a no-op on the cadence-skip half of ticks.
+- **Counters are passive.** Producer counters never feed back into
+  scheduling/admission/throttle/retry/dispatch decisions.
+- **No new threads, no dynamic allocation, no floating point.**
+- **Handler-outside-lock invariant preserved.** Producer's handler runs
+  outside any critical section, like every other registered handler.
+
+---
+
+### Phase 6M Host Test Evidence
+
+```text
+cmake -S RobotOS_v1.0/tests/host -B build-host-core-phase6m --fresh
+cmake --build build-host-core-phase6m
+ctest --test-dir build-host-core-phase6m --output-on-failure
+```
+
+Result:
+
+```text
+20/20 Test #20: robotos_timer_producer_contract ...........   Passed    0.01 sec
+
+100% tests passed, 0 tests failed out of 20
+
+Total Test time (real) = 0.34 sec
+```
+
+Per-suite case totals (Phase 6M new suite):
+
+- Phase 6M (timer producer): 59 passed, 0 failed
+
+Pre-existing 19 suites: PASS (zero regressions).
+
+Test log: `tests/host/logs/host_2026-05-07.log` (overwritten -- same date as 6J/6K/6L).
+
+---
+
+### Phase 6M Zephyr Build Evidence
+
+```text
+Command: west build -b stm32f411e_disco RobotOS_v1.0/devkit/ --pristine
+Result:  PASS
+FLASH:   30032 B / 524288 B (5.73%)  [+588 B from Phase 6L baseline 29444 B]
+RAM:     12160 B / 131072 B (9.28%)  [unchanged from Phase 6L]
+Errors:  0
+Warnings: 1 pre-existing in robotos_event_queue.c (q_valid unused,
+          unrelated to Phase 6J/6K/6L/6M)
+```
+
+FLASH +588 B is consistent with: producer module body (init/should_post/
+on_tick/get_stats/handler), ROBOTOS_PROD log helper in observability,
+init banner LOG_INF, and four new call sites in devkit_runtime.
+
+---
+
+### Phase 6M RTT Smoke
+
+**Status:** `NOT_RUN_HARDWARE_NOT_AUTHORIZED_THIS_SESSION`
+
+No `west flash` was performed in this session. Implementation is
+build-validated only. Phase 6M is **not** marked CLOSED; it is
+`READY_BUT_NOT_CLOSED_PENDING_RTT`.
+
+Suggested RTT validation steps when hardware is available:
+
+1. `west flash` (manual hardware RESET may be required)
+2. Capture RTT log for at least 20-30 seconds runtime
+3. Verify the init banner: `Phase 6M producer init: type=USER+1 marker=0x6d00 cadence=every 2 ticks`
+4. Verify baseline `ROBOTOS_PROD attempted=0 ok=0 ...` line right after init
+5. Verify the Phase 6I burst settles cleanly (queue drains over ~9 s)
+6. Verify periodic `ROBOTOS_PROD` lines at `ROBOTOS_OBS ticks=10, 20, 30, ...`
+   showing `attempted` increasing by ~5 per ROBOTOS_OBS interval (10 ticks =
+   5 producer cadence hits at the 1-event-per-2-ticks rate)
+7. Verify `dispatched_event_count` in `ROBOTOS_OBS` keeps increasing
+8. Verify `ROBOTOS_FAULT active=0 cfsr=0x00000000 hfsr=0x00000000` throughout
+9. Verify no log spam, no reset loops, no LED stalling
+10. Verify the steady-state queue oscillates between 0 and 1 in `ROBOTOS_OBS pending=`
+
+If RTT smoke succeeds, update Phase 6K, 6L, and 6M close status to CLOSED
+together and refresh `CURRENT_STATE.md` to reflect Phase 6M as the new
+last-closed phase.
+
+---
+
+### Phase 6M Known Limitations
+
+- **No RTT evidence in this session.** Build-validated only.
+- **No max-attempt cap.** The producer is unbounded by attempt count.
+  This was an explicit design choice (continuous low-pressure realism).
+  Bounding the producer would re-create the Phase 6I behaviour, which
+  already exists. If the team prefers a bounded variant for hardware
+  demos, a compile-time cap could be added in a follow-up.
+- **Producer interacts with Phase 6I burst at startup.** During the
+  first ~9 s, Phase 6I has the queue full and the producer will record
+  ERR_FULL until the burst drains. This is intentional and explainable;
+  RTT analysis should confirm `dropped` is bounded and stable.
+- **`HFSR.DEBUGEVT` ambiguity** (carried forward from Phase 6L).
+
+---
+
+### Phase 6M Next Recommended Phase
+
+**Team decision required.** Candidates:
+
+- **Phase 6N** Runtime Diagnostic Consolidation -- unify ROBOTOS_OBS /
+  ROBOTOS_FAULT / ROBOTOS_PROD into a single configurable diagnostic
+  cadence module if RTT bandwidth becomes constrained.
+- **Phase 6O** Fault Decoder Planning -- only if real fault diagnosis
+  becomes needed.
+- **Phase 7A** Dispatch Budget Evolution Planning.
+- **Phase 7B** Execution Domain Boundary Planning.

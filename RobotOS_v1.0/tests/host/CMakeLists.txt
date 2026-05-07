@@ -376,6 +376,32 @@ target_include_directories(robotos_snapshot_coherence_contract_test PRIVATE
 add_test(NAME robotos_snapshot_coherence_contract
          COMMAND robotos_snapshot_coherence_contract_test)
 
+# ---- Devkit timer producer contract test (Phase 6M) -------------------------
+# Tests the pure-C devkit_timer_producer module against the real core sources:
+# pre-init guards, cadence predicate, single/multi posts, queue fill,
+# drain recovery, type isolation. The producer module compiles cleanly on
+# host because it has no Zephyr dependency; the Zephyr LOG_INF emission for
+# ROBOTOS_PROD lives in devkit_observability.c which is NOT compiled here.
+# Needs all three core sources + platform log stub + platform critical stub
+# + the producer module itself.
+set(DEVKIT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../devkit")
+add_executable(robotos_timer_producer_contract_test
+    test_robotos_timer_producer_contract.c
+    "${DEVKIT_DIR}/src/devkit_timer_producer.c"
+    ${CORE_SRCS}
+    ${PLATFORM_HOST_STUB}
+)
+
+target_include_directories(robotos_timer_producer_contract_test PRIVATE
+    "${CORE_DIR}"
+    "${PLATFORM_DIR}"
+    "${DEVKIT_DIR}/src"
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+)
+
+add_test(NAME robotos_timer_producer_contract
+         COMMAND robotos_timer_producer_contract_test)
+
 # ---- Log persistence target --------------------------------------------------
 # Saves ctest output to a timestamped file in the version-controlled logs/
 # directory alongside this CMakeLists.txt.

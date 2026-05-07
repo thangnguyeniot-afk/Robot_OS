@@ -41,6 +41,19 @@
 void devkit_observability_log_snapshot(void);
 
 /*
+ * Phase 6M: emit one ROBOTOS_PROD log line summarising the
+ * devkit_timer_producer counters.
+ *
+ * Stable single-line format (integer fields only):
+ *   ROBOTOS_PROD attempted=N ok=N throttled=N dropped=N invalid=N other=N type=USER+1
+ *
+ * Read-only: queries the producer's stats snapshot and logs them. Does
+ * not reset counters, does not affect the producer's cadence, does not
+ * influence runtime decisions. Thread-context only.
+ */
+void devkit_observability_log_producer_stats(void);
+
+/*
  * Phase 6L: capture and log Cortex-M fault diagnostic registers.
  *
  * Reads CFSR (0xE000ED28) and HFSR (0xE000ED2C) directly from the

@@ -24,6 +24,7 @@ target_sources(app PRIVATE
     src/devkit_build_info.c
     src/devkit_fault.c
     src/devkit_observability.c
+    src/devkit_timer_producer.c
     ../core/robotos_core.c
     ../core/robotos_event_queue.c
     ../core/robotos_event_dispatcher.c
