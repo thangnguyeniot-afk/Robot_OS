@@ -9,16 +9,22 @@
 
 ## Last Closed Phase
 
-### Phase 6M — Producer Realism / Timer Producer Diagnostic
+### Phase 6N — Documentation / Navigation Consolidation
 
-- **Commit:** `a6b253b` (Phase 6M implementation)
-- **Closed by:** Phase 6Z RTT evidence (joint closeout for 6K/6L/6M)
-- **Date:** 2026-05-07
+- **Commit:** (this commit)
+- **Date:** 2026-05-08
 - **Branch:** master
-- **Remote:** `https://github.com/thangnguyeniot-afk/Robot_OS` (confirmed linked)
+- **Type:** Docs-only. No source, test, CMake, Kconfig, or runtime change.
+- **Prior hardware baseline:** Phase 6M (`a6b253b`), closed by Phase 6Z RTT evidence (`4ec5b86`)
 
-Phase 6K (`11516d4`) and Phase 6L (`d3759a7`) were closed jointly with
-Phase 6M under the same Phase 6Z RTT capture session.
+**Phase 6N delivered:**
+
+- Phase Index table added to `DEVKIT_PROGRESS.md` top (one-click navigation for all 37+ phases)
+- `RobotOS_v1.0/README.md` Repository Orientation section (active vs legacy tree clarified)
+- `RobotOS_v1.0/core/README.md` Phase 6J/6K/6L/6M/6Z summaries appended; Next Phase updated
+- `RobotOS_v1.0/devkit/README.md` Expected Serial Output refreshed from Phase 6Z RTT evidence
+- `RobotOS_v1.0/devkit/logs/INDEX.md` (new) — RTT evidence index with host-log duplicate note
+- `RobotOS_v1.0/devkit/docs/TELEMETRY_REFERENCE.md` (new) — telemetry field → canonical-doc links
 
 ---
 
@@ -90,7 +96,8 @@ to `DEVKIT_PROGRESS.md` for the full history.
 
 | Phase | Description | Commit |
 | ----- | ----------- | ------ |
-| 6Z | RTT closeout for 6K/6L/6M (docs/evidence only) | (this commit) |
+| 6N | Documentation / Navigation Consolidation (docs-only) | (this commit) |
+| 6Z | RTT closeout for 6K/6L/6M (docs/evidence only) | `4ec5b86` |
 | 6M | Producer Realism / Timer Producer Diagnostic | `a6b253b` |
 | 6L | Fault Observability Integration | `d3759a7` |
 | 6K | Runtime Observability Surfacing | `11516d4` |
@@ -113,9 +120,8 @@ to `DEVKIT_PROGRESS.md` for the full history.
 | Phase | Description | Status |
 | ----- | ----------- | ------ |
 | Phase 7B-1 | Dispatch Budget Test Parameterization (preparation only; no behavior change) | Candidate |
-| Phase 6N | Runtime Diagnostic Consolidation / DEVKIT_PROGRESS.md split | Candidate (only if RTT bandwidth or doc navigation cost rises) |
-| Phase 7A | Dispatch Budget Evolution Planning | DEFER (no workload-driven reason; Phase 6Z confirms `MAX_EVENTS_PER_TICK=1` is sufficient for current Phase 6I + Phase 6M workload) |
-| Custom STM32F407 target | Migration / validation | Pending / Unknown — not exercised by Phase 6Z; remains a separate validation activity |
+| Phase 7A | Dispatch Budget Evolution Planning | DEFER (no workload-driven reason; Phase 6Z confirms `MAX_EVENTS_PER_TICK=1` is sufficient for current workload) |
+| Custom STM32F407 target | Migration / validation | Pending / Unknown — not exercised by Phase 6Z; separate validation activity |
 
 Dispatch budget remains `ROBOTOS_CORE_MAX_EVENTS_PER_TICK = 1`. Any
 mutation requires explicit team decision and a workload-driven

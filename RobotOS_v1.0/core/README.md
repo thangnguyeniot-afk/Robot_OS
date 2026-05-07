@@ -179,13 +179,15 @@ The shim is local to `robotos_core.c`. `robotos_core.h` has no Zephyr types.
 
 ## Next Phase
 
-Candidates for team decision:
+Current status as of Phase 6N (2026-05-08):
 
-- **Phase 4K** — Scheduler Producer Throttle Policy
-- **Phase 5D** — Platform Critical Section Boundary
-- **Phase 6A** — Devkit Event Smoke Integration
+- Phase 6N (Documentation / Navigation Consolidation) — **CLOSED**
+- Phase 7B-1 (Dispatch Budget Test Parameterization) — **Candidate**
+- Phase 7A (Dispatch Budget Evolution Planning) — **DEFER** (no workload-driven reason)
+- Custom STM32F407 target validation — **Pending / Unknown**
 
-Do not implement without explicit assignment.
+Dispatch budget remains `ROBOTOS_CORE_MAX_EVENTS_PER_TICK = 1`.
+See [`CURRENT_STATE.md`](../../CURRENT_STATE.md) for the latest decision.
 
 ---
 
@@ -676,3 +678,117 @@ the appropriate follow-on to address this.
 
 All existing public API return values, counters, and behavior are identical
 to pre-5E. Phase 5E is a structural improvement only.
+
+---
+
+## Phase 6J — Observability and Contract Stress Expansion
+
+**Commit:** `8a1af69` **Type:** HOST-ONLY
+
+Added `peak_queue_depth` to `robotos_core_snapshot_t` (Phase 6J-D):
+
+- New static `s_peak_queue_depth`, updated inside `post_event_internal` on every
+  successful push (under existing lock).
+- Monotonically non-decreasing. Not reset by repeated `robotos_core_init()`.
+- New getter: `uint32_t robotos_core_peak_queue_depth(void)`.
+- Zero behavioral impact — read-only diagnostic field.
+
+New snapshot field in `robotos_core_snapshot_t`:
+
+```c
+uint32_t peak_queue_depth;  /* high-water queue depth since first init */
+```
+
+Host test suites added: 6J-A (handler routing stress, 55 cases), 6J-B (lifecycle
+contract, 52 cases), 6J-C/D (snapshot coherence + peak, 192 cases). Total: 19 suites.
+
+`ROBOTOS_CORE_MAX_EVENTS_PER_TICK` and all scheduler/queue semantics unchanged.
+
+Full phase narrative: `devkit/docs/DEVKIT_PROGRESS.md` Phase 6J section.
+
+---
+
+## Phase 6K — Runtime Observability Surfacing (devkit)
+
+**Commit:** `11516d4` **Type:** DEVKIT — no core change
+
+Phase 6K added `devkit_observability.c/.h` which reads the core snapshot via
+`robotos_core_snapshot()` and emits a periodic `ROBOTOS_OBS` RTT log line.
+
+Core impact: **none**. The observability surface is read-only over the snapshot
+API. It does not participate in scheduling, admission, dispatch, throttle, or
+retry decisions. No new mutable state was added to `core/`.
+
+`ROBOTOS_OBS` log cadence and field semantics:
+→ `devkit/docs/TELEMETRY_REFERENCE.md` section ROBOTOS_OBS
+→ `devkit/docs/DEVKIT_PROGRESS.md` Phase 6K
+
+RTT confirmed by Phase 6Z (2026-05-07): ROBOTOS_OBS present at baseline and
+12 periodic emissions over 60 s, all fields coherent with snapshot invariants.
+
+---
+
+## Phase 6L — Fault Observability Integration (devkit)
+
+**Commit:** `d3759a7` **Type:** DEVKIT — no core change
+
+Phase 6L added `devkit_observability_log_fault()` which reads ARMv7-M SCB
+fault registers (CFSR at `0xE000ED28`, HFSR at `0xE000ED2C`) and emits a
+periodic `ROBOTOS_FAULT` RTT log line.
+
+Core impact: **none**. Direct SCB memory access is devkit-local. No platform
+interface extension. No fault recovery, no reset, no scheduler influence.
+
+`ROBOTOS_FAULT` log shape: `ROBOTOS_FAULT active=0|1 cfsr=0x........ hfsr=0x........ context=<NAME>`
+
+RTT confirmed by Phase 6Z: `cfsr=0x00000000 hfsr=0x00000000 active=0 context=none`
+across all 13 fault emissions (1 baseline + 12 periodic) in the 60 s capture.
+
+Field details: `devkit/docs/TELEMETRY_REFERENCE.md` section ROBOTOS_FAULT.
+
+---
+
+## Phase 6M — Producer Realism / Timer Producer Diagnostic (devkit)
+
+**Commit:** `a6b253b` **Type:** DEVKIT — no core change
+
+Phase 6M added `devkit_timer_producer.c/.h` — a pure-C periodic producer
+(no Zephyr dependency, host-testable) that posts one `ROBOTOS_EVENT_USER + 1`
+event every 2 devkit ticks (~1/s). Distinct event type from Phase 6I's `USER`
+to prevent routing conflict.
+
+Core impact: **none**. The producer uses only the public `robotos_core_post_event()`
+API. Producer cadence is compile-time fixed. No new core mutable state.
+
+New host test suite: `robotos_timer_producer_contract` (59 cases). Total: 20 suites.
+
+`ROBOTOS_PROD` log shape: `ROBOTOS_PROD attempted=N ok=N throttled=N dropped=N invalid=N other=N type=USER+1`
+
+RTT confirmed by Phase 6Z: `attempted` grew exactly +5 per 10 ticks over 60 s;
+`ok=attempted`, `dropped=0` throughout; cross-check at ticks=120 confirmed
+`accepted(77) = Phase-6I-ok(17) + Phase-6M-ok(60)`.
+
+Field details: `devkit/docs/TELEMETRY_REFERENCE.md` section ROBOTOS_PROD.
+
+---
+
+## Phase 6Z — RTT Closeout for Phase 6K / 6L / 6M
+
+**Commit:** `4ec5b86` **Type:** EVIDENCE + DOC — no source change
+
+Phase 6Z is hardware-evidence closeout only. No core, platform, or devkit source
+was modified. Fresh Zephyr build (FLASH 30032 B, RAM 12160 B — matches Phase 6M
+baseline), `west flash`, and 60 s OpenOCD streaming RTT capture confirmed all
+three telemetry streams active on STM32F411E-DISCO.
+
+Core invariants confirmed by Phase 6Z hardware evidence:
+
+- `ROBOTOS_CORE_MAX_EVENTS_PER_TICK = 1` (scheduler dispatches exactly 1 event/tick
+  in steady state; `pending` oscillates 0/1 under Phase 6M low-cadence producer).
+- `ROBOTOS_EVENT_QUEUE_CAPACITY = 16` (`peak=16` reached during Phase 6I burst; never
+  exceeded).
+- Handler-outside-lock invariant preserved (no `herr` increments, no fault).
+- All CFSR/HFSR readings zero for the full 60 s capture.
+
+RTT evidence log: `devkit/logs/phase_6Z_rtt_2026-05-07.txt`
+Full Phase 6Z narrative: `devkit/docs/DEVKIT_PROGRESS.md` Phase 6Z section.

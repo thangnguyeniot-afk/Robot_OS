@@ -1,5 +1,28 @@
 # RobotOS v1.0
 
+---
+
+## Repository Orientation
+
+**Active runtime/evidence track** (Phase 4–7 work, hardware-validated):
+
+- `core/` — portable RobotOS core (event queue, scheduler, dispatcher)
+- `platform/` — platform abstraction layer (log, time, fault, critical section)
+- `devkit/` — Zephyr bringup application (STM32F411E-DISCO)
+- `tests/host/` — host-native contract test suite (20 suites, 358+ cases)
+
+These directories contain the live implementation that runs on hardware.
+See [`CURRENT_STATE.md`](../CURRENT_STATE.md) for the latest validated state and
+[`devkit/docs/DEVKIT_PROGRESS.md`](devkit/docs/DEVKIT_PROGRESS.md) for full phase history.
+
+**Historical reference tree** (`src/`, `include/`, `boards/`):
+The 4-layer adapter/framework/application architecture described below was the
+original design intent and is preserved here as historical context.
+It is **not the active runtime path**. Per `platform/README.md`:
+"Legacy `RobotOS_v1.0/src/` must never be compiled or included."
+
+---
+
 Firmware điều khiển robot đa trục chạy trên **Zephyr RTOS**, thiết kế theo kiến trúc **4-layer** với khả năng test trên PC (host build).
 
 ---

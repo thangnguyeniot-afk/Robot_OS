@@ -1,0 +1,59 @@
+# RobotOS Devkit RTT Evidence Index
+
+Indexed evidence logs for hardware validation sessions on STM32F411E-DISCO
+(unless noted otherwise). One row per captured RTT log file.
+
+For host-test logs see `tests/host/logs/` — a note on duplicates appears at
+the bottom of this file.
+
+---
+
+## RTT Logs
+
+| Phase | Commit | Log File | Date | Capture Method | Result Summary |
+|-------|--------|----------|------|----------------|----------------|
+| 5D — Platform Critical Section | `4187bb3` | [phase_5D_rtt_2026-05-02.txt](phase_5D_rtt_2026-05-02.txt) | 2026-05-02 | OpenOCD RTT dump (4 KB) | PASS — critical-section smoke, no fault |
+| 5E — Critical Boundary to Core Queue | `ff24147` | [phase_5E_rtt_2026-05-02.txt](phase_5E_rtt_2026-05-02.txt) | 2026-05-02 | OpenOCD RTT dump (4 KB) | PASS — no fault |
+| 5F — Dispatcher Pop / Handler Split | `460b9f1` | [phase_5F_rtt_2026-05-02.txt](phase_5F_rtt_2026-05-02.txt) | 2026-05-02 | OpenOCD RTT dump (4 KB) | PASS — handler outside lock confirmed |
+| 6A — Devkit Event Smoke | (early) | [phase_6A_rtt_2026-05-02.txt](phase_6A_rtt_2026-05-02.txt) | 2026-05-02 | OpenOCD RTT dump (4 KB) | PASS — single USER event handled |
+| 6B — Event Burst / Backpressure | (early) | [phase_6B_rtt_2026-05-02.txt](phase_6B_rtt_2026-05-02.txt) | 2026-05-02 | OpenOCD RTT dump (4 KB) | PASS — burst of 3, backpressure asserted |
+| 6C — Queue Full / Drop | (early) | [phase_6C_rtt_2026-05-02.txt](phase_6C_rtt_2026-05-02.txt) | 2026-05-02 | OpenOCD RTT dump (4 KB) | PASS — 17 events, 1 dropped (queue full) |
+| 6D — Invalid / Rejection | (early) | [phase_6D_rtt_2026-05-02.txt](phase_6D_rtt_2026-05-02.txt) | 2026-05-02 | OpenOCD RTT dump (4 KB) | PASS — ERR_INVALID_ARG, admission_rejected confirmed |
+| 6E — Throttled Producer | (early) | [phase_6E_rtt_2026-05-02.txt](phase_6E_rtt_2026-05-02.txt) | 2026-05-02 | OpenOCD RTT dump (4 KB) | PASS — seq=3 ERR_THROTTLED confirmed |
+| 6G — ISR/Timer Producer Smoke | `335ee29` | [phase_6G_rtt_2026-05-02.txt](phase_6G_rtt_2026-05-02.txt) | 2026-05-02 | OpenOCD RTT dump (4 KB) | PASS — 2 events from ISR timer, CFSR=0 HFSR=0 |
+| 6H — ISR Timer Stress-Lite | `22edfee` | [phase_6H_rtt_2026-05-03.txt](phase_6H_rtt_2026-05-03.txt) | 2026-05-03 | OpenOCD RTT dump / GDB fallback | PASS — attempted=8 ok=8 handled=8 CFSR=0 HFSR=0 |
+| 6F — Mixed Event Policy | `5bca62f` | [phase_6F_rtt_2026-05-03.txt](phase_6F_rtt_2026-05-03.txt) | 2026-05-03 | OpenOCD RTT dump (4 KB) | PASS — accept/reject/drop in one run |
+| 6I — Timer Queue-Pressure Stress | `e78e503` | [phase_6I_rtt_2026-05-03.txt](phase_6I_rtt_2026-05-03.txt) | 2026-05-03 | OpenOCD RTT dump (4 KB) | PASS — attempted=24 ok=16 full=8 handled=16 CFSR=0 HFSR=0 |
+| 6Z — RTT Closeout (6K/6L/6M) | `4ec5b86` | [phase_6Z_rtt_2026-05-07.txt](phase_6Z_rtt_2026-05-07.txt) | 2026-05-07 | OpenOCD streaming RTT TCP server (60 s) | PASS — ROBOTOS_OBS/FAULT/PROD baseline+12 periodic; CFSR=0 HFSR=0 throughout; accepted=77 dispatched=76 pending=1 |
+
+---
+
+## Notes
+
+### Phases without a standalone RTT log
+
+The following phases were validated via host tests only (no hardware session required
+per their approved scope):
+
+| Phase | Commit | Validation |
+|-------|--------|------------|
+| 4A–4L | see git log | Host-only; each phase has a corresponding `tests/host/logs/` entry |
+| 5A–5C | see git log | Host-only (platform boundary definitions) |
+| 5G | `e4ab853` | Audit-only (no source change, no new RTT required) |
+| 6J | `8a1af69` | Host-only (contract tests for snapshot/peak); no devkit smoke needed per scope |
+| 6K | `11516d4` | Build+host validated; RTT confirmed by Phase 6Z log above |
+| 6L | `d3759a7` | Build+host validated; RTT confirmed by Phase 6Z log above |
+| 6M | `a6b253b` | Build+host validated; RTT confirmed by Phase 6Z log above |
+
+---
+
+### Host log duplicate note
+
+`tests/host/logs/host_2026-05-02.log` and `phase_6H_host_2026-05-02.log` are
+byte-identical (MD5: `31FC67382B2F8590CC15D5777E15805A`, 39,868 bytes). One is
+a copy of the other from a double-commit; both are preserved to avoid breaking
+any references. Neither is deleted.
+
+The three 27,755-byte files (`phase_6B_`, `phase_6C_`, `phase_6D_`) have
+different MD5 hashes despite identical sizes — they are genuinely different
+per-phase captures.

@@ -1,5 +1,60 @@
 ﻿# DEVKIT_PROGRESS.md — RobotOS Devkit Phase Log
 
+---
+
+## Phase Index
+
+Sections appear in **insertion / session order**, not in phase-number order.
+Use the anchor links below for one-click navigation, or `Ctrl+F` for `## Phase X`.
+
+**Note:** Phase 6H and Phase 4L each appear **twice** in this document (duplicate
+sections from non-linear editing history). Index entries marked `†` link to the
+first occurrence; the second occurrence is accessible via the `‑1` anchor suffix
+or by searching for the heading manually.
+
+| Phase | Title | Status | Jump |
+|-------|-------|--------|------|
+| 3A | Runtime Skeleton | CLOSED | [→](#phase-3a--runtime-skeleton) |
+| 3B | Devkit Hardening | CLOSED | [→](#phase-3b--devkit-hardening) |
+| 4A | Core Bootstrap | CLOSED | [→](#phase-4a--core-bootstrap) |
+| 4B | Core Contract Hardening | CLOSED | [→](#phase-4b--core-contract-hardening) |
+| 4C | Host/Core Contract Tests | CLOSED | [→](#phase-4c--hostcore-contract-tests) |
+| 4D | Core Event Queue Contract Stub | CLOSED | [→](#phase-4d--core-event-queue-contract-stub) |
+| 4E | Core Event Dispatch Stub | CLOSED | [→](#phase-4e--core-event-dispatch-stub) |
+| 4F | Core Event Ingestion API | CLOSED | [→](#phase-4f--core-event-ingestion-api) |
+| 4G | Scheduler Tick Policy Stub | CLOSED | [→](#phase-4g--scheduler-tick-policy-stub) |
+| 4H | Handler Policy / Registration Boundary | CLOSED | [→](#phase-4h--handler-policy--handler-registration-boundary) |
+| 4I | Scheduler Admission Policy Stub | CLOSED | [→](#phase-4i--scheduler-admission-policy-stub) |
+| 4J | Scheduler Budget / Backpressure Policy | CLOSED | [→](#phase-4j--scheduler-budget--backpressure-policy) |
+| 4K | Scheduler Producer Throttle Policy | CLOSED | [→](#phase-4k--scheduler-producer-throttle-policy) |
+| 4L † | Scheduler Advisory Retry Decision Policy | CLOSED | [→](#phase-4l--scheduler-advisory-retry-decision-policy) |
+| 5A | Zephyr / Platform Adapter Boundary Seed | CLOSED | [→](#phase-5a--zephyr--platform-adapter-boundary-seed) |
+| 5B | Platform Time Boundary | CLOSED | [→](#phase-5b--platform-time-boundary) |
+| 5C | Platform Assert/Fault Boundary | CLOSED | [→](#phase-5c--platform-assertfault-boundary) |
+| 5D | Platform Critical Section / ISR Lock Boundary | CLOSED | [→](#phase-5d--platform-critical-section--isr-lock-boundary) |
+| 5E | Apply Critical Boundary to Core Queue State | CLOSED | [→](#phase-5e--apply-critical-boundary-to-core-queue-state) |
+| 5F | Dispatcher Pop / Handler Split | CLOSED | [→](#phase-5f--dispatcher-pop--handler-split) |
+| 5G | ISR-Safe Producer Contract Audit | CLOSED | [→](#phase-5g--isr-safe-producer-contract-audit) |
+| 6A | Devkit Event Smoke Integration | CLOSED | [→](#phase-6a--devkit-event-smoke-integration) |
+| 6B | Devkit Event Burst / Backpressure Smoke | CLOSED | [→](#phase-6b--devkit-event-burst--backpressure-smoke) |
+| 6C | Devkit Queue Full / Drop Smoke | CLOSED | [→](#phase-6c--devkit-queue-full--drop-smoke) |
+| 6D | Devkit Invalid / Rejection Smoke | CLOSED | [→](#phase-6d--devkit-invalid--rejection-smoke) |
+| 6E | Devkit Throttled Producer Smoke | CLOSED | [→](#phase-6e--devkit-throttled-producer-smoke) |
+| 6F | Devkit Mixed Event Policy Smoke | CLOSED | [→](#phase-6f----devkit-mixed-event-policy-smoke) |
+| 6G | ISR/Timer Producer Smoke | CLOSED | [→](#phase-6g--isrtimer-producer-smoke) |
+| 6H † | ISR / Timer Producer Stress-Lite | CLOSED | [→](#phase-6h--isr--timer-producer-stress-lite) |
+| 6I | Timer Producer Queue-Pressure Stress | CLOSED | [→](#phase-6i----timer-producer-queue-pressure-stress) |
+| 6J | Observability and Contract Stress Expansion | CLOSED | [→](#phase-6j----observability-and-contract-stress-expansion) |
+| 6K | Runtime Observability Surfacing | CLOSED via 6Z | [→](#phase-6k----runtime-observability-surfacing) |
+| 6L | Fault Observability Integration | CLOSED via 6Z | [→](#phase-6l----fault-observability-integration) |
+| 6M | Producer Realism / Timer Producer Diagnostic | CLOSED via 6Z | [→](#phase-6m----producer-realism--timer-producer-diagnostic) |
+| 6N | Documentation / Navigation Consolidation | CLOSED | see `CURRENT_STATE.md` |
+| 6Z | RTT Closeout for Phase 6K / 6L / 6M | CLOSED | [→](#phase-6z----rtt-closeout-for-phase-6k--6l--6m) |
+| 7A | Dispatch Budget Evolution Planning | DEFER | see `CURRENT_STATE.md` |
+| 7B-1 | Dispatch Budget Test Parameterization | Candidate | see `CURRENT_STATE.md` |
+
+---
+
 ## Phase 3A — Runtime Skeleton
 
 **Date:** 2026-04-30
