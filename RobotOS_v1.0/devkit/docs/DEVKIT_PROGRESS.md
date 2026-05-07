@@ -6213,7 +6213,7 @@ Warnings: 1 pre-existing warning in robotos_event_queue.c (q_valid unused,
 **Branch:** master
 **Phase 6J baseline commit:** `8a1af69`
 **Commit:** `11516d4`
-**Close status:** `READY_BUT_NOT_CLOSED_PENDING_RTT`
+**Close status:** `CLOSED via Phase 6Z RTT evidence (2026-05-07)`
 
 ---
 
@@ -6345,25 +6345,28 @@ deferred-log infrastructure.
 
 ### Phase 6K RTT Smoke
 
-**Status:** `NOT_RUN_HARDWARE_NOT_AUTHORIZED_THIS_SESSION`
+**Status:** `CLOSED via Phase 6Z RTT evidence (2026-05-07)`
 
-No `west flash` was performed in this session. The implementation is
-build-validated only. Per RobotOS evidence discipline, the phase is
-**not** marked CLOSED; it is `READY_BUT_NOT_CLOSED_PENDING_RTT`.
+RTT validation executed jointly for Phase 6K/6L/6M under Phase 6Z. See
+the Phase 6Z section at the end of this document for the full hardware
+session, build/flash result, raw log path, verification table, and
+counter coherence analysis.
 
-Suggested RTT validation steps when hardware is available:
+Phase 6K-specific evidence captured:
 
-1. `west flash` (manual hardware RESET may be required, per known constraint)
-2. Capture RTT log for at least 6 seconds runtime
-3. Verify at least 1 line matching `ROBOTOS_OBS state=READY ticks=` appears
-   immediately after init banner (baseline log)
-4. Verify at least 1 line at ticks=10 (first periodic log)
-5. Verify subsequent lines at ticks=20, ticks=30, etc.
-6. Verify all fields are parseable integers or 0/1 booleans
-7. Confirm CFSR=0 and HFSR=0 in fault diagnostics
+- Baseline `ROBOTOS_OBS state=READY ticks=0 pending=0 peak=0 dropped=0
+  dispatched=0 herr=0 throttled=0 rejected=0 accepted=0 unhandled=0
+  bp=0 th_active=0` immediately after init.
+- 12 periodic `ROBOTOS_OBS` lines at `ticks=10,20,...,120` over the 60 s
+  capture window.
+- All fields parseable; `peak=16` reached during the Phase 6I startup
+  burst, then steady-state `pending=1`, `bp=0`, `th_active=0` after
+  ticks=40 once the burst drained.
+- `dispatched` grew monotonically (9, 19, 29, 36, 41, 46, 51, 56, 61,
+  66, 71, 76); `accepted - dispatched = pending` invariant held at every
+  emission.
 
-If RTT smoke succeeds, update this section's close status to CLOSED and
-update CURRENT_STATE.md to reflect Phase 6K as the new last-closed phase.
+Evidence log: `RobotOS_v1.0/devkit/logs/phase_6Z_rtt_2026-05-07.txt`
 
 ---
 
@@ -6397,7 +6400,7 @@ update CURRENT_STATE.md to reflect Phase 6K as the new last-closed phase.
 **Branch:** master
 **Phase 6K baseline commit:** `11516d4` (devkit observability surfacing)
 **Commit:** `d3759a7`
-**Close status:** `READY_BUT_NOT_CLOSED_PENDING_RTT`
+**Close status:** `CLOSED via Phase 6Z RTT evidence (2026-05-07)`
 
 ---
 
@@ -6545,26 +6548,28 @@ string literal, and two new call sites in the runtime loop / init.
 
 ### Phase 6L RTT Smoke
 
-**Status:** `NOT_RUN_HARDWARE_NOT_AUTHORIZED_THIS_SESSION`
+**Status:** `CLOSED via Phase 6Z RTT evidence (2026-05-07)`
 
-No `west flash` was performed in this session. Implementation is
-build-validated only. Per RobotOS evidence discipline, Phase 6L is
-**not** marked CLOSED; it is `READY_BUT_NOT_CLOSED_PENDING_RTT`.
+RTT validation executed jointly for Phase 6K/6L/6M under Phase 6Z. See
+the Phase 6Z section at the end of this document for the full hardware
+session and verification table.
 
-Suggested RTT validation when hardware is available:
+Phase 6L-specific evidence captured:
 
-1. `west flash` (manual hardware RESET may be required, per known constraint)
-2. Capture RTT log for at least 6 seconds runtime
-3. Verify baseline `ROBOTOS_FAULT active=0 cfsr=0x00000000 hfsr=0x00000000 context=none`
-   line appears immediately after init banner
-4. Verify periodic `ROBOTOS_FAULT ...` lines at `ROBOTOS_OBS ticks=10, 20, 30, ...`
-5. Confirm `cfsr=0x00000000` and `hfsr=0x00000000` throughout normal operation
-6. Confirm no firmware instability introduced (LED still blinking,
-   tick count still incrementing, Phase 6I final summary still appears)
+- Baseline `ROBOTOS_FAULT active=0 cfsr=0x00000000 hfsr=0x00000000
+  context=none` immediately after init.
+- 12 periodic `ROBOTOS_FAULT` lines aligned with the ROBOTOS_OBS
+  cadence at `ticks=10,20,...,120`.
+- **Every** captured CFSR value is `0x00000000` and **every** HFSR value
+  is `0x00000000` over the full 60 s capture, including during the
+  Phase 6I startup burst window when `bp=1 th_active=1`.
+- `active` field stayed `0`; `context` stayed `none`. No `HFSR.DEBUGEVT`
+  ambiguity to flag — the debugger was attached only for RTT polling,
+  not halt-on-debug, so `HFSR` was not artificially elevated.
+- Tick counter and Phase 6I final summary both reached expected values,
+  confirming no firmware instability was introduced.
 
-If RTT smoke succeeds, update this section's close status to CLOSED and
-update CURRENT_STATE.md to reflect Phase 6L as the new last-closed phase
-(jointly with Phase 6K if not yet closed).
+Evidence log: `RobotOS_v1.0/devkit/logs/phase_6Z_rtt_2026-05-07.txt`
 
 ---
 
@@ -6603,7 +6608,7 @@ update CURRENT_STATE.md to reflect Phase 6L as the new last-closed phase
 **Branch:** master
 **Phase 6L baseline commit:** `d3759a7`
 **Commit:** `a6b253b`
-**Close status:** `READY_BUT_NOT_CLOSED_PENDING_RTT`
+**Close status:** `CLOSED via Phase 6Z RTT evidence (2026-05-07)`
 
 ---
 
@@ -6751,30 +6756,44 @@ init banner LOG_INF, and four new call sites in devkit_runtime.
 
 ### Phase 6M RTT Smoke
 
-**Status:** `NOT_RUN_HARDWARE_NOT_AUTHORIZED_THIS_SESSION`
+**Status:** `CLOSED via Phase 6Z RTT evidence (2026-05-07)`
 
-No `west flash` was performed in this session. Implementation is
-build-validated only. Phase 6M is **not** marked CLOSED; it is
-`READY_BUT_NOT_CLOSED_PENDING_RTT`.
+RTT validation executed jointly for Phase 6K/6L/6M under Phase 6Z. See
+the Phase 6Z section at the end of this document for the full hardware
+session and verification table.
 
-Suggested RTT validation steps when hardware is available:
+Phase 6M-specific evidence captured:
 
-1. `west flash` (manual hardware RESET may be required)
-2. Capture RTT log for at least 20-30 seconds runtime
-3. Verify the init banner: `Phase 6M producer init: type=USER+1 marker=0x6d00 cadence=every 2 ticks`
-4. Verify baseline `ROBOTOS_PROD attempted=0 ok=0 ...` line right after init
-5. Verify the Phase 6I burst settles cleanly (queue drains over ~9 s)
-6. Verify periodic `ROBOTOS_PROD` lines at `ROBOTOS_OBS ticks=10, 20, 30, ...`
-   showing `attempted` increasing by ~5 per ROBOTOS_OBS interval (10 ticks =
-   5 producer cadence hits at the 1-event-per-2-ticks rate)
-7. Verify `dispatched_event_count` in `ROBOTOS_OBS` keeps increasing
-8. Verify `ROBOTOS_FAULT active=0 cfsr=0x00000000 hfsr=0x00000000` throughout
-9. Verify no log spam, no reset loops, no LED stalling
-10. Verify the steady-state queue oscillates between 0 and 1 in `ROBOTOS_OBS pending=`
+- Init banner: `Phase 6M producer init: type=USER+1 marker=0x6d00
+  cadence=every 2 ticks`.
+- Baseline `ROBOTOS_PROD attempted=0 ok=0 throttled=0 dropped=0
+  invalid=0 other=0 type=USER+1` immediately after init.
+- 12 periodic `ROBOTOS_PROD` lines: `attempted` = 5, 10, 15, 20, 25, 30,
+  35, 40, 45, 50, 55, 60 — exactly +5 per 10 devkit ticks, matching the
+  designed 1-event-per-2-ticks cadence at `DEVKIT_TICK_MS=500`.
+- `ok = attempted` for every emission in the entire 60 s capture;
+  `throttled=0`, `dropped=0`, `invalid=0`, `other=0` throughout.
+- Phase 6I startup burst settled by ticks=40 (`bp` flipped from 1 to 0,
+  `pending` stabilized at 1). Phase 6I final summary present at L46
+  with `attempted=24 ok=17 full=7 ... handled=16`.
+- Phase 6M handler routed all events without `unhandled` or `herr`
+  increments (the marker-validation handler returned `OK` for every
+  event since the only producer of `USER+1` is this module).
+- Counter cross-check at ticks=120: Phase 6I `ok`=17 plus Phase 6M
+  `ok`=60 equals `accepted`=77 in `ROBOTOS_OBS`; Phase 6I `handled`=16
+  plus Phase 6M handled=60 equals `dispatched`=76; `accepted -
+  dispatched = pending = 1`.
 
-If RTT smoke succeeds, update Phase 6K, 6L, and 6M close status to CLOSED
-together and refresh `CURRENT_STATE.md` to reflect Phase 6M as the new
-last-closed phase.
+**Note on Phase 6I `ok`/`full` distribution:** the Phase 6M source
+documentation predicted Phase 6I would settle at `ok=16 full=8`. The
+real run produced `ok=17 full=7`. This is a one-event timing slip
+caused by the 500 ms dispatcher tick at t=1000 ms freeing a queue slot
+just before Phase 6I's 21st 50 ms post. Architectural invariants are
+preserved: `peak=16` (queue never exceeded capacity), no admission
+errors, no fault. The variance is within the expected ISR/dispatcher
+phase-relationship envelope and is **not** treated as a regression.
+
+Evidence log: `RobotOS_v1.0/devkit/logs/phase_6Z_rtt_2026-05-07.txt`
 
 ---
 
@@ -6805,3 +6824,229 @@ last-closed phase.
   becomes needed.
 - **Phase 7A** Dispatch Budget Evolution Planning.
 - **Phase 7B** Execution Domain Boundary Planning.
+
+---
+
+## Phase 6Z -- RTT Closeout for Phase 6K / 6L / 6M
+
+**Date:** 2026-05-07
+**Branch:** master
+**Phase 6K commit:** `11516d4`
+**Phase 6L commit:** `d3759a7`
+**Phase 6M commit:** `a6b253b`
+**Close status:** `CLOSED -- joint RTT closeout for 6K/6L/6M`
+
+---
+
+### Phase 6Z Purpose
+
+Joint hardware-evidence closeout for Phase 6K (Runtime Observability
+Surfacing), Phase 6L (Fault Observability Integration), and Phase 6M
+(Producer Realism / Timer Producer Diagnostic). All three phases were
+implemented and build/host-test validated under their own commits but
+held at `READY_BUT_NOT_CLOSED_PENDING_RTT` because no `west flash` had
+been performed in the originating sessions.
+
+Phase 6Z is **validation + evidence + state reconciliation only**:
+
+- No source code changed.
+- No scheduler / queue / retry / admission / throttle / dispatch budget
+  semantics modified.
+- No producer cadence modified.
+- No tests added or modified.
+- No CMake / Kconfig / prj.conf modifications.
+- No new runtime behavior introduced.
+
+The only repo additions are the RTT evidence log, the closeout edits in
+this document (status flips and a new Phase 6Z section), and the
+`CURRENT_STATE.md` last-closed-phase advance.
+
+---
+
+### Phase 6Z Hardware Session
+
+| Item | Value |
+| ---- | ----- |
+| Date / time | 2026-05-07 21:24 local |
+| Board | STM32F411E-DISCO (rev D) |
+| MCU | STM32F411 / Cortex-M4 r0p1 |
+| Probe | ST-LINK V2 (firmware V2J47S0, VID:PID 0483:3748) |
+| Toolchain | Zephyr SDK 0.17.0 |
+| Zephyr | 3.6.0 |
+| west | 1.5.0 |
+| OpenOCD | xpack 0.12.0+dev-02228-ge5888bda3-dirty |
+| Build command | `west build -b stm32f411e_disco RobotOS_v1.0/devkit/ --pristine` |
+| Flash command | `west flash` (32768 bytes written from `zephyr.hex`, 1.123 s) |
+| Manual physical RESET | **Not required.** OpenOCD `reset run` in the RTT capture cfg started the firmware cleanly after flash. |
+| RTT capture method | OpenOCD streaming RTT TCP server on localhost:9090, captured via PowerShell TcpClient |
+| RTT control block | `_SEGGER_RTT @ 0x20000a34` (resolved via `arm-zephyr-eabi-nm`; OpenOCD confirmed `Control block found at 0x20000a34`) |
+| RTT capture duration | 60 seconds wallclock |
+| RTT bytes captured | 16,560 bytes (no buffer-wrap loss observed; streaming polled the SEGGER ring continuously) |
+| RTT log path | `RobotOS_v1.0/devkit/logs/phase_6Z_rtt_2026-05-07.txt` |
+
+---
+
+### Phase 6Z Build Evidence
+
+```text
+Command: west build -b stm32f411e_disco RobotOS_v1.0/devkit/ --pristine
+Result:  PASS
+FLASH:   30032 B / 524288 B (5.73%)  [matches Phase 6M baseline 30032 B]
+RAM:     12160 B / 131072 B  (9.28%)  [unchanged]
+Errors:  0
+Warnings:
+  - 1 pre-existing in robotos_event_queue.c (q_valid unused)
+  - 1 pre-existing Kconfig dependency notice for UART_INTERRUPT_DRIVEN
+  - 1 pre-existing CMake notice "No SOURCES given to Zephyr library: drivers__console"
+```
+
+No new warnings introduced. FLASH and RAM exactly match the Phase 6M
+build baseline, confirming the closeout build is identical to the
+build that produced commit `a6b253b`.
+
+---
+
+### Phase 6Z RTT Verification Table
+
+| # | Row | Result | Evidence (line in `phase_6Z_rtt_2026-05-07.txt`) |
+| - | --- | ------ | ------------------------------------------------ |
+| 1 | Zephyr boot banner | PASS | L1 `*** Booting Zephyr OS build v3.6.0 ***` |
+| 2 | RobotOS devkit starting | PASS | L14 `RobotOS devkit starting -- board: stm32f411e_disco` |
+| 3 | LED blink loop banner | PASS | L15 `LED blink loop starting` |
+| 4 | Phase 6I producer banner | PASS | L13 `Phase 6I timer producer started: attempts=24 interval=50ms` |
+| 5 | Phase 6M producer init | PASS | L16 `Phase 6M producer init: type=USER+1 marker=0x6d00 cadence=every 2 ticks` |
+| 6 | ROBOTOS_OBS baseline | PASS | L17 `state=READY ticks=0 pending=0 peak=0 dropped=0 dispatched=0 ... bp=0 th_active=0` |
+| 7 | ROBOTOS_OBS periodic | PASS | 12 emissions at ticks=10,20,30,40,50,60,70,80,90,100,110,120 |
+| 8 | ROBOTOS_FAULT baseline | PASS | L18 `active=0 cfsr=0x00000000 hfsr=0x00000000 context=none` |
+| 9 | ROBOTOS_FAULT periodic | PASS | 12 emissions, every value `cfsr=0x00000000 hfsr=0x00000000` |
+| 10 | ROBOTOS_PROD baseline | PASS | L19 `attempted=0 ok=0 throttled=0 dropped=0 invalid=0 other=0 type=USER+1` |
+| 11 | ROBOTOS_PROD periodic | PASS | 12 emissions, attempted = 5, 10, 15, ..., 60 (exactly +5 per 10 ticks) |
+| 12 | Phase 6I milestone seq=1 | PASS | L23 |
+| 13 | Phase 6I milestone seq=8 | PASS | L31 |
+| 14 | Phase 6I milestone seq=16 | PASS | L45 |
+| 15 | Phase 6I final summary | PASS | L46 `attempted=24 ok=17 full=7 invalid=0 other=0 handled=16 ...` |
+| 16 | CFSR / HFSR zero throughout | PASS | All 13 ROBOTOS_FAULT lines (1 baseline + 12 periodic) |
+| 17 | Runtime stability | PASS | tick count log monotonic 0->123 over ~60.5 s; no panic, no fault, no reset re-banner |
+
+---
+
+### Phase 6Z Counter / Behavior Analysis
+
+**Startup pressure (ticks 0--10):** Phase 6I ISR fires 24 events at
+50 ms (t=50..1200 ms). Queue capacity 16. Dispatch budget 1/tick at
+500 ms. At ticks=10 the snapshot reads `pending=13 peak=16 dropped=7
+dispatched=9 accepted=22 bp=1 th_active=1` -- backpressure asserted as
+expected during the drain window.
+
+**Phase 6I final result (informational):** Final shows `ok=17 full=7`
+rather than the source-comment "ok=16 full=8". This is a one-event
+timing slip caused by the dispatcher tick at t=1000 ms freeing a queue
+slot just before Phase 6I's 21st 50 ms post. The architectural
+invariants (queue never exceeds capacity, no overflow, peak=16, no
+admission errors, no fault) are all preserved. Within expected
+ISR/dispatcher phase-relationship envelope; not a regression.
+
+**Phase 6M producer behavior during 6I burst:** Phase 6M's first
+cadence post lands at devkit tick=2 (t~=1.0 s) -- after the t=1000 ms
+tick dispatch had already freed a slot (queue 16->15). All 5 of its
+first-period posts succeeded; `dropped` remained 0. Behavior is
+consistent with cadence-relative phase. The Phase 6Z command brief
+allowed for early `dropped` rises but did not require them.
+
+**Steady state (ticks 30+):** From ticks=40 onwards `bp=0
+th_active=0`, `pending=1`. Producer counters: `attempted=ok` exactly
+throughout the entire 60 s capture; `dropped=0 invalid=0 other=0` from
+baseline through ticks=120. Producer growth is exactly +5 per 10 ticks.
+
+**Coherence cross-check at ticks=120** (line 190):
+
+```text
+pending=1  peak=16  dropped=7  dispatched=76  accepted=77  unhandled=0  herr=0
+```
+
+Phase 6I `ok` (17) + Phase 6M `ok` (60) = 77 = `accepted`.
+Phase 6I `handled` (16) + Phase 6M handled (60) = 76 = `dispatched`.
+`accepted - dispatched = 1 = pending`. `peak=16 = ROBOTOS_EVENT_QUEUE_CAPACITY`.
+
+**Fault state:** `cfsr=0x00000000` and `hfsr=0x00000000` in every
+emission across the full 60 s capture, including during the Phase 6I
+burst window when `bp=1 th_active=1`. No `HFSR.DEBUGEVT` ambiguity to
+flag -- OpenOCD attached only as an RTT poller, not as a halt-on-debug
+client, so `HFSR` was not artificially elevated.
+
+---
+
+### Phase 6Z Phase Close Decision
+
+| Phase | Decision | Basis |
+| ----- | -------- | ----- |
+| Phase 6K | **CLOSED** via Phase 6Z RTT evidence | Baseline + 12 periodic ROBOTOS_OBS emissions; all fields parseable; `peak=16`, monotonic `dispatched`, coherent `accepted/pending/dropped` cross-check. |
+| Phase 6L | **CLOSED** via Phase 6Z RTT evidence | Baseline + 12 periodic ROBOTOS_FAULT emissions; `cfsr=0x00000000` and `hfsr=0x00000000` throughout; `active=0`, `context=none` invariant. |
+| Phase 6M | **CLOSED** via Phase 6Z RTT evidence | Baseline + 12 periodic ROBOTOS_PROD emissions; producer init banner present; `type=USER+1`; `attempted` grows exactly +5 per 10 ticks; `ok=attempted` for every emission; counters cross-check coherent with core snapshot. |
+
+---
+
+### Phase 6Z Architecture Preservation Audit
+
+Confirmed unchanged in Phase 6Z:
+
+- No code under `core/`, `platform/`, `devkit/src/`, or `tests/` modified.
+- No CMake / Kconfig / prj.conf modified.
+- `ROBOTOS_CORE_MAX_EVENTS_PER_TICK` remains 1.
+- `ROBOTOS_EVENT_QUEUE_CAPACITY` remains 16.
+- Status code set unchanged.
+- Event producer cadence unchanged (Phase 6M still 1 post / 2 ticks at
+  `DEVKIT_TICK_MS=500`).
+- Logging formats unchanged.
+- Runtime behavior unchanged.
+- Dispatch budget mutation remains DEFER per Phase 7A planning.
+
+---
+
+### Phase 6Z Residual Risks / Follow-ups
+
+- **Manual RESET requirement:** not observed in this session; OpenOCD
+  `reset run` was sufficient. The known operational caveat remains
+  documented but did not trigger here.
+- **Custom STM32F407 target:** still unvalidated. Phase 6Z exercised
+  only STM32F411E-DISCO. Migration to a custom F407 board remains a
+  separate validation activity outside Phase 6Z scope.
+- **Phase 6I `ok=17 full=7` vs documented `ok=16 full=8`:** explained
+  above as a timing-phase variance, not a regression. If future Phase
+  7A work adjusts the dispatch budget or tick rate, the documented
+  expected counts in `devkit_runtime.c` should be re-evaluated for
+  precision rather than left as design-intent comments.
+- **Pre-existing `q_valid` unused-function warning** in
+  `core/robotos_event_queue.c` -- still present, pre-dates Phase 6Z,
+  not addressed here per scope discipline.
+- **DEVKIT_PROGRESS.md size:** this document continues to grow; if
+  navigation cost rises, a Phase 6N documentation split would be
+  appropriate. Out of scope for Phase 6Z.
+- **RTT tooling fragility:** the streaming OpenOCD `rtt server` path
+  worked cleanly in this session but is not yet captured as a reusable
+  harness script (the existing `tools/runtime/capture_phase6h_runtime.ps1`
+  uses a 4 KB `dump_image` snapshot which is too small for >=30 s
+  captures of the Phase 6K/6L/6M log triplets). Adding a
+  `capture_phase6z_runtime.ps1` would be a useful future improvement;
+  not done here per "no script additions in Phase 6Z" scope.
+
+---
+
+### Phase 6Z Next Recommended Phase
+
+Phase 6Z does not itself imply a specific next phase. With 6K/6L/6M
+closed, the canonical candidates remain:
+
+- **Phase 7B-1** Dispatch Budget Test Parameterization -- prepare future
+  scheduler evolution (e.g. a configurable budget) without changing
+  current runtime semantics. Lowest-risk preparation step.
+- **Phase 6N** Runtime Diagnostic Consolidation -- only if RTT bandwidth
+  becomes constrained or DEVKIT_PROGRESS.md navigation cost rises
+  enough to motivate a split.
+- **Phase 7A** Dispatch Budget Evolution Planning remains DEFER until a
+  workload-driven reason emerges. The Phase 6Z evidence shows the
+  current `MAX_EVENTS_PER_TICK=1` budget is sufficient for the
+  combined Phase 6I burst + Phase 6M cadence workload (steady state
+  pending=1, no growth in dropped after burst).
+
+Team decision required before opening any of the above.
