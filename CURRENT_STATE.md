@@ -11,7 +11,7 @@
 
 ### Phase 9A-B — Devkit Button Debounce Refinement
 
-- **Commit:** pending
+- **Commit:** `92de5e0`
 - **Date:** 2026-05-08
 - **Branch:** master
 - **Type:** Devkit workload refinement. Devkit-local debounce guard; no core/platform change.
@@ -106,7 +106,7 @@ to `DEVKIT_PROGRESS.md` for the full history.
 
 | Phase | Description | Commit |
 | ----- | ----------- | ------ |
-| 9A-B | Devkit Button Debounce Refinement (30 ms time-guard; full 98→4) | pending |
+| 9A-B | Devkit Button Debounce Refinement (30 ms time-guard; full 98→4) | `92de5e0` |
 | 9A-A | Devkit Button EXTI Producer (first real hardware workload) | `2068180` |
 | 6O | Reusable RTT Streaming Capture Harness (tooling) | `6cb979f` |
 | 6N | Documentation / Navigation Consolidation (docs-only) | `ad52de5` |

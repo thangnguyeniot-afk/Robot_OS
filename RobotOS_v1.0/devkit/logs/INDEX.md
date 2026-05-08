@@ -27,7 +27,7 @@ the bottom of this file.
 | 6Z — RTT Closeout (6K/6L/6M) | `4ec5b86` | [phase_6Z_rtt_2026-05-07.txt](phase_6Z_rtt_2026-05-07.txt) | 2026-05-07 | OpenOCD streaming RTT TCP server (60 s) | PASS — ROBOTOS_OBS/FAULT/PROD baseline+12 periodic; CFSR=0 HFSR=0 throughout; accepted=77 dispatched=76 pending=1 |
 | 6O — Harness smoke | `6cb979f` | [phase_6O_harness_smoke_2026-05-08.txt](phase_6O_harness_smoke_2026-05-08.txt) | 2026-05-08 | `capture_devkit_rtt.ps1` Phase 6O harness (30 s) | PASS — all 4 patterns found; CFSR=0 HFSR=0 (7 occurrences); 9558 bytes; exit 0 |
 | 9A-A — Button EXTI workload | `2068180` | [phase_9A_button_rtt_2026-05-08.txt](phase_9A_button_rtt_2026-05-08.txt) | 2026-05-08 | Phase 6O harness (60 s) with manual button presses | CLOSED with BOUNCE_OBSERVED — 37 button events handled; CFSR=0 HFSR=0 (13 occurrences); 21961 bytes; bounce caused "Phase 6I final:" miss — see DEVKIT_PROGRESS.md Phase 9A-A |
-| 9A-B — Button debounce | pending commit | [phase_9B_debounce_rtt_2026-05-08.txt](phase_9B_debounce_rtt_2026-05-08.txt) | 2026-05-08 | Phase 6O harness (90 s) with manual button presses | PASS — attempted=94 ok=36 full=4 debounce=54; conservation 36+4+54=94 ✓; full 98→4 vs Phase 9A-A; 36 handled; CFSR=0 HFSR=0 (19 occurrences); 29160 bytes; Phase 6I final: miss due to early press (non-regression) |
+| 9A-B — Button debounce | `92de5e0` | [phase_9B_debounce_rtt_2026-05-08.txt](phase_9B_debounce_rtt_2026-05-08.txt) | 2026-05-08 | Phase 6O harness (90 s) with manual button presses | PASS — attempted=94 ok=36 full=4 debounce=54; conservation 36+4+54=94 ✓; full 98→4 vs Phase 9A-A; 36 handled; CFSR=0 HFSR=0 (19 occurrences); 29160 bytes; Phase 6I final: miss due to early press (non-regression) |
 
 ---
 
