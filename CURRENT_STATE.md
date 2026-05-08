@@ -11,7 +11,7 @@
 
 ### Phase 9B — Devkit UART RX Producer
 
-- **Commit:** pending
+- **Commit:** `85389f4`
 - **Date:** 2026-05-08
 - **Branch:** master
 - **Type:** Devkit workload expansion. Second real hardware event source (UART RX); devkit-local; no core/platform/scheduler change.
@@ -114,7 +114,7 @@ to `DEVKIT_PROGRESS.md` for the full history.
 
 | Phase | Description | Commit |
 | ----- | ----------- | ------ |
-| 9B | Devkit UART RX Producer (second real hardware event source; USER+3; rx=7 ok=7 full=0 handled=7) | pending |
+| 9B | Devkit UART RX Producer (second real hardware event source; USER+3; rx=7 ok=7 full=0 handled=7) | `85389f4` |
 | 9A-C | Gate Phase 6I Startup Burst (devkit-local compile-time gate; default disabled; full 4→0, dropped 13→0) | `3989ff9` |
 | 9A-B | Devkit Button Debounce Refinement (30 ms time-guard; full 98→4) | `92de5e0` |
 | 9A-A | Devkit Button EXTI Producer (first real hardware workload) | `2068180` |

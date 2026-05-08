@@ -8135,7 +8135,7 @@ rate alone, not by the synthetic burst.
 
 **Date:** 2026-05-08
 **Branch:** master
-**Commit:** pending
+**Commit:** `85389f4`
 **Baseline commit:** `3989ff9` (Phase 9A-C)
 **Type:** Devkit workload expansion. Second real hardware event source; devkit-local; no core/platform/scheduler change.
 **Close status:** CLOSED
