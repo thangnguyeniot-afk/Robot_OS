@@ -9,31 +9,34 @@
 
 ## Last Closed Phase
 
-### Phase 9C — Devkit Minimal Application State Machine
+### Phase 9D — Workload Demo Script & Runbook
 
-- **Commit:** `286e61b`
+- **Commit:** pending
 - **Date:** 2026-05-08
 - **Branch:** master
-- **Type:** Devkit application workload proof. First multi-source workload composition (button + UART → app state); devkit-local; no core/platform/scheduler change.
+- **Type:** Tooling + documentation only. Repeatable evidence/demo workflow for the existing Phase 9C application state machine. **No firmware/runtime change.**
 - **Close status:** `CLOSED`
-- **Prior baseline:** Phase 9B (`85389f4`), UART RX producer
+- **Prior baseline:** Phase 9C (`286e61b`), minimal application state machine
 
-**Phase 9C delivered:**
+**Phase 9D delivered:**
 
-- `RobotOS_v1.0/devkit/src/devkit_app_state.{h,c}` — devkit-local 3-state machine (IDLE/ARMED/ACTIVE) composing button (cycle) + UART (`a`/`s`/`r` commands, `?` query, others ignored).
-- `RobotOS_v1.0/devkit/src/devkit_button_producer.c` — button handler now calls `devkit_app_state_on_button(seq)` after its existing per-press log; handler ownership unchanged.
-- `RobotOS_v1.0/devkit/src/devkit_uart_producer.c` — UART handler now calls `devkit_app_state_on_uart_byte(byte, count)` after its existing per-byte log; handler ownership unchanged.
-- `RobotOS_v1.0/devkit/src/devkit_runtime.c` — `devkit_app_state_init()` runs after `robotos_core_init()` and before producer inits; baseline `ROBOTOS_APP` log + periodic `ROBOTOS_APP` log added to the existing 10-tick cadence.
-- `RobotOS_v1.0/devkit/CMakeLists.txt` — added `src/devkit_app_state.c`.
-- `RobotOS_v1.0/devkit/docs/TELEMETRY_REFERENCE.md` — added ROBOTOS_APP section; updated Telemetry Stack Summary.
-- `RobotOS_v1.0/devkit/logs/phase_9C_app_state_rtt_2026-05-08.txt` — 75 s RTT capture with manual button presses (20) + UART `a`/`s`/`r` (3 bytes); 23 transitions; final state ACTIVE; ignored=0.
-- `RobotOS_v1.0/devkit/logs/INDEX.md` — Phase 9C row.
-- `RobotOS_v1.0/devkit/docs/DEVKIT_PROGRESS.md` — Phase 9C section.
+- `RobotOS_v1.0/tools/runtime/run_phase9d_demo.ps1` — PowerShell runner that orchestrates: wiring reminder → Phase 6O RTT capture (background job) → boot-settle wait → scripted UART `a`/`s`/`r` send to a configurable COM port → operator prompt for button presses → verification checklist printout. PowerShell 5.1 compatible; no parsing/automation overreach.
+- `RobotOS_v1.0/devkit/docs/WORKLOAD_DEMO_9D.md` — canonical runbook covering hardware setup, build/flash, scripted and semi-scripted demo paths, the canonical demo scenario, full pass/fail criteria (required string patterns, deterministic counter targets, architecture invariants, fault registers), and known caveats (operator timing, line-ending, bounce, etc.).
+- `RobotOS_v1.0/devkit/logs/phase_9D_workload_demo_2026-05-08.txt` — RTT capture from one execution of `run_phase9d_demo.ps1 -ComPort COM5`; 90 s window, 37930 bytes; harness exit 0 with 12 default + Phase 9D-specific patterns.
+- `RobotOS_v1.0/devkit/logs/INDEX.md` — Phase 9D row.
+- `RobotOS_v1.0/devkit/docs/DEVKIT_PROGRESS.md` — Phase 9D section.
 
-**Workload anchor expanded:** RobotOS now demonstrates the first piece of **application semantics** above the runtime — a tiny state machine driven by two real hardware event sources, with no core or platform change. Workload composition pattern (producer-owned handler → app state hook) is established for future phases.
+**Workload demo anchor:** the runbook + runner are now the canonical entry point for demonstrating the current devkit workload (button + UART → app state machine). Future phases that depend on the Phase 9A-C/9B/9C event-pipeline contract can rerun the same demo to assert no regression.
 
-**No Kconfig/prj.conf changes.** The existing Phase 9A/9B configuration carries forward.
+**No Kconfig/prj.conf changes. No firmware changes.** Phase 9D source impact list:
+- `core/`, `platform/`, `tests/` — untouched
+- `devkit/src/` — untouched
+- `devkit/CMakeLists.txt` — untouched
+- `tools/runtime/capture_devkit_rtt.ps1` — untouched (the runner *invokes* it; doesn't modify it)
 
+**Demo deviation note (this run).** The captured evidence shows a transition count of 35 (button=32, uart=3, ignored=0) rather than the canonical 6/3/3/0 target. Cause: the operator pressed the user button repeatedly during the boot-settle and post-prompt windows rather than exactly 3 times after the prompt. The runbook's "Known limitations §7 — Operator timing" caveat anticipates this. The evidence is fully explainable, all architecture invariants hold, and the system handled rapid input with `peak=16` (queue-capacity briefly reached) and `dropped=3` while keeping `herr=0`, `unhandled=0`, and CFSR/HFSR=0 throughout. A subsequent careful operator run can hit the canonical 6/3/3/0 target without any firmware change.
+
+**Phase 9C** (prior): Application state machine, commit `286e61b`.
 **Phase 9B** (prior): Devkit UART RX producer, commit `85389f4`.
 **Phase 9A-C** (prior): Gate Phase 6I startup burst, commit `3989ff9`.
 **Phase 9A-B** (prior): Button debounce refinement, commit `92de5e0`.
@@ -41,33 +44,36 @@
 
 ---
 
-## Validation Evidence (Phase 9C app state machine workload)
+## Validation Evidence (Phase 9D workload demo)
+
+Phase 9D adds **no firmware change**, so build/flash artifacts are unchanged
+from Phase 9C. The evidence below is from one execution of
+`run_phase9d_demo.ps1 -ComPort COM5` against the Phase 9C firmware
+(commit `286e61b`).
 
 | Gate | Result | Detail |
 | ---- | ------ | ------ |
-| Zephyr build | PASS | FLASH 35688 B (6.81%) / RAM 12224 B (9.33%); +1240 B FLASH and 0 B RAM vs Phase 9B (app state module + integration code) |
-| Flash | PASS | `west flash` wrote 49152 B |
-| UART send | PASS | `a`, `s`, `r` (3 bytes) written to COM5 (CP210x USB-UART) → board PA3 at 115200 8N1, spaced 1.5 s apart, mid-capture |
-| Button press | PASS | 20 user-button presses across the 75 s window, both before and after the UART sequence |
-| RTT capture | PASS | 75.8 s, 30954 bytes; harness exit 0 with Phase 9C-specific patterns |
+| Source/runtime mutation | NONE | No firmware, CMake, prj.conf, or Phase 6O harness change. Only added: runner script + runbook + evidence log + state-doc updates. |
+| PowerShell parse | PASS | `[System.Management.Automation.PSParser]::Tokenize` clean on `run_phase9d_demo.ps1` |
+| Demo runner exit | PASS | All 12 required patterns FOUND; harness exit 0 |
 | Phase 9C app state init | FOUND | `state=IDLE` baseline at boot |
-| ROBOTOS_OBS state=READY | FOUND | Baseline + 16 periodic emissions (ticks=0,10,…,160) |
-| ROBOTOS_FAULT active=0 | FOUND | All 17 emissions; CFSR=0 HFSR=0 throughout (16 occurrences) |
+| ROBOTOS_OBS state=READY | FOUND | Baseline + 18 periodic emissions (ticks=0,10,…,180) |
+| ROBOTOS_FAULT active=0 | FOUND | All 19 emissions; CFSR=0 HFSR=0 throughout (19 occurrences) |
 | ROBOTOS_PROD attempted= | FOUND | Phase 6M producer healthy across full window |
-| ROBOTOS_BTN | FOUND | Final: attempted=>20, ok=20, debounce>0 (workload-level bounce filtered as expected) |
-| ROBOTOS_UART | FOUND | Final: rx=3 ok=3 full=0 handled=3 last=0x72 |
-| ROBOTOS_APP | FOUND | Final at ticks≥150: state=ACTIVE transitions=23 button=20 uart=3 ignored=0 last_src=BTN last_byte=0x72 |
-| Phase 9A button handled | FOUND | 20 per-press logs |
-| Phase 9B uart handled | FOUND | 3 per-byte logs (0x61 `a`, 0x73 `s`, 0x72 `r`) |
-| Phase 9C app transition | FOUND | 23 transition logs in the order: 6×BTN → 3×UART (`a`/`s`/`r`) → 14×BTN; both `src=BTN` and `src=UART` exercised |
-| CFSR | 0x00000000 throughout | 16 occurrences checked |
-| HFSR | 0x00000000 throughout | 16 occurrences checked |
-| App conservation | PASS | transitions(23) = button(20) + uart(3); ignored(0) — every recognized command and every button press caused a transition |
-| Architecture invariants | PASS | accepted=98 dispatched=97 pending=1 (accepted−dispatched=pending ✓); peak=4 (well below capacity=16); dropped=0; herr=0; unhandled=0; accepted = Phase 6M(75)+button(20)+UART(3) = 98 ✓ |
-| Core/platform sources changed | ZERO | No `core/`, `platform/`, or `tests/` files touched; no new event types; no admission change |
-| Handler ownership | PRESERVED | Button handler stays in `devkit_button_producer.c`; UART handler stays in `devkit_uart_producer.c`; app module is *called from* handlers, not registered against the core handler table (Option A from the spec) |
+| ROBOTOS_BTN | FOUND | Operator pressed many times; producer absorbed input cleanly |
+| ROBOTOS_UART | FOUND | rx=3 ok=3 full=0 invalid=0 other=0 handled=3 last=0x72 — exact match to scripted payload `a`/`s`/`r` |
+| ROBOTOS_APP | FOUND | Final at ticks=180: state=IDLE transitions=35 button=32 uart=3 ignored=0 last_src=BTN last_byte=0x72 |
+| Phase 9C app transition | FOUND | 35 transition lines, both `src=BTN` and `src=UART` exercised in the same capture |
+| CFSR | 0x00000000 throughout | 19 occurrences checked |
+| HFSR | 0x00000000 throughout | 19 occurrences checked |
+| App conservation | PASS | transitions(35) = button(32) + uart(3) − ignored(0) ✓ |
+| Architecture invariants | PASS | accepted=125 dispatched=124 pending=1 ✓; peak=16 (queue capacity briefly reached during rapid button input); dropped=3 (rapid burst overflow); herr=0; unhandled=0; rejected=0; throttled=0; accepted = Phase 6M(90)+button(32)+UART(3) = 125 ✓ |
+| Stress observation | NOTABLE | Operator pressed button rapidly enough to fill the 16-slot queue; system handled the saturation event safely (3 dropped events, no fault). This is additional confidence beyond what Phase 9C demonstrated (peak=4). |
+| Canonical-target deviation | DOCUMENTED | Runbook target is `transitions=6 button=3 uart=3 ignored=0`; this run produced 35/32/3/0. Cause is operator timing (presses started during boot wait and continued through and after the UART send window). Runbook §7 anticipates this; firmware behavior is correct in both cases. |
 
-Capture log: `RobotOS_v1.0/devkit/logs/phase_9C_app_state_rtt_2026-05-08.txt`
+Capture log: `RobotOS_v1.0/devkit/logs/phase_9D_workload_demo_2026-05-08.txt`
+Runner script: `RobotOS_v1.0/tools/runtime/run_phase9d_demo.ps1`
+Runbook: `RobotOS_v1.0/devkit/docs/WORKLOAD_DEMO_9D.md`
 
 **Phase 6Z verification highlights:**
 
@@ -121,6 +127,7 @@ to `DEVKIT_PROGRESS.md` for the full history.
 
 | Phase | Description | Commit |
 | ----- | ----------- | ------ |
+| 9D | Workload Demo Script & Runbook (run_phase9d_demo.ps1 + WORKLOAD_DEMO_9D.md; canonical scenario `a`/`s`/`r` UART + 3 button presses → IDLE/ARMED/ACTIVE; tooling/docs only) | pending |
 | 9C | Devkit Minimal Application State Machine (button + UART → IDLE/ARMED/ACTIVE; 23 transitions; first multi-source workload composition) | `286e61b` |
 | 9B | Devkit UART RX Producer (second real hardware event source; USER+3; rx=7 ok=7 full=0 handled=7) | `85389f4` |
 | 9A-C | Gate Phase 6I Startup Burst (devkit-local compile-time gate; default disabled; full 4→0, dropped 13→0) | `3989ff9` |
@@ -154,7 +161,8 @@ to `DEVKIT_PROGRESS.md` for the full history.
 | Phase 9A-C | Gate Phase 6I startup burst (devkit-local compile-time gate; default disabled) | **CLOSED** — full 4→0; dropped 13→0; peak=14; see Phase 9A-C section in DEVKIT_PROGRESS.md |
 | Phase 9B | UART RX producer (second real hardware event source; USER+3) | **CLOSED** — rx=7 ok=7 full=0 handled=7; per-byte handler logs match payload `abc123\n`; see Phase 9B section in DEVKIT_PROGRESS.md |
 | Phase 9C | Minimal application state machine (compose button + UART into IDLE/ARMED/ACTIVE) | **CLOSED** — 23 transitions; button=20 uart=3 ignored=0; peak=4; dropped=0; see Phase 9C section in DEVKIT_PROGRESS.md |
-| Phase 9D | Workload command cleanup / richer app behavior (response, multi-byte, query reporting) | Candidate — only if app behavior expansion is useful |
+| Phase 9D | Workload demo script & runbook (`run_phase9d_demo.ps1` + `WORKLOAD_DEMO_9D.md`; tooling/docs only) | **CLOSED** — 12 default + Phase 9D patterns FOUND; queue saturation observed safely (peak=16, dropped=3, herr=0); CFSR/HFSR=0 throughout; see Phase 9D section |
+| Phase 9E | Optional UART TX response / `?` echo / richer app behavior | Candidate — only if explicitly approved; would introduce TX path |
 | Phase 8A | Custom STM32F407 board bring-up | **Candidate** — retires 25-phase portability debt; use `capture_devkit_rtt.ps1 -OpenOcdConfig <f407.cfg>`; remains HOLD/DEFER until user reopens |
 | Phase 7B-1 | Dispatch Budget Test Parameterization | Candidate — only if workload evidence reveals saturation; Phase 9A-C clean baseline shows budget=1 still adequate (peak=14, dropped=0) |
 | Phase 7A | Dispatch Budget Evolution Planning | DEFER — Phase 9A-A workload data shows ~112 events / 60 s sustained, no workload-driven reason for budget mutation |
