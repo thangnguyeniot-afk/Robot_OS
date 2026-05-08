@@ -56,20 +56,31 @@
 #define DEVKIT_BUTTON_PRODUCER_MARKER 0x9A0Au
 
 /*
+ * Minimum elapsed time (ms) between two accepted button events.
+ * ISR firings arriving within this window after an accepted event are counted
+ * in the 'debounce' counter and discarded — no post to core queue.
+ * Devkit-local compile-time constant; no core change required.
+ * 30 ms comfortably spans typical STM32 mechanical contact bounce.
+ */
+#define DEVKIT_BUTTON_DEBOUNCE_MS 30u
+
+/*
  * Producer-local counters. Distinct from core admission/drop counters
  * so the two views can be cross-checked in RTT.
  *
- *   attempted: every ISR firing increments this once
- *   ok       : robotos_core_post_event returned OK
- *   full     : returned ERR_FULL (queue at capacity)
- *   invalid  : returned ERR_INVALID_ARG (defensive; should always be 0)
- *   other    : any other non-OK return (defensive; should always be 0)
- *   handled  : button handler invocations (thread context)
+ *   attempted : every ISR firing increments this once
+ *   ok        : robotos_core_post_event returned OK
+ *   full      : returned ERR_FULL (queue at capacity)
+ *   debounce  : ISR firings suppressed by the time-guard (Phase 9A-B)
+ *   invalid   : returned ERR_INVALID_ARG (defensive; should always be 0)
+ *   other     : any other non-OK return (defensive; should always be 0)
+ *   handled   : button handler invocations (thread context)
  */
 typedef struct {
 	uint32_t attempted;
 	uint32_t ok;
 	uint32_t full;
+	uint32_t debounce;
 	uint32_t invalid;
 	uint32_t other;
 	uint32_t handled;
@@ -112,7 +123,7 @@ void devkit_button_producer_get_stats(devkit_button_producer_stats_t *out);
  * Emit one ROBOTOS_BTN log line via Zephyr LOG_INF.
  *
  * Stable single-line format (integer fields only):
- *   ROBOTOS_BTN attempted=N ok=N full=N invalid=N other=N handled=N type=USER+2
+ *   ROBOTOS_BTN attempted=N ok=N full=N debounce=N invalid=N other=N handled=N type=USER+2
  *
  * Read-only: queries the producer's stats and logs them. Does not reset
  * counters or affect the producer. Thread-context only (Zephyr LOG_INF

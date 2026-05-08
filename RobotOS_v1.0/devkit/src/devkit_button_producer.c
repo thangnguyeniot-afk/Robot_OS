@@ -9,7 +9,9 @@
  * Implementation notes:
  *   - Zephyr GPIO/devicetree/interrupt usage is contained in this file only.
  *   - core/ and platform/ remain Zephyr-free and button-agnostic.
- *   - No software debounce in 9A-A (deliberate; first proof; document only).
+ *   - Phase 9A-B: timestamp guard (k_uptime_get_32) rejects ISR firings arriving
+ *     within DEVKIT_BUTTON_DEBOUNCE_MS of the last accepted event. Purely devkit-
+ *     local; no core API changed.
  *   - Counters are simple volatile uint32 in ISR; benign torn-read tolerated
  *     under the existing single-CPU model. Reads occur in thread context
  *     during periodic RTT cadence — single-tick skew is acceptable for a
@@ -52,8 +54,17 @@ static struct gpio_callback     s_button_cb_data;
 static volatile uint32_t s_attempted;
 static volatile uint32_t s_ok;
 static volatile uint32_t s_full;
+static volatile uint32_t s_debounce_filtered; /* Phase 9A-B: firings suppressed by time-guard */
 static volatile uint32_t s_invalid;
 static volatile uint32_t s_other;
+
+/*
+ * Phase 9A-B: debounce timestamp. Holds the k_uptime_get_32() value from the
+ * last accepted ISR firing. Initialised to 0; the first firing is always
+ * accepted (elapsed = now - 0 >= DEVKIT_BUTTON_DEBOUNCE_MS at any real uptime).
+ * Written only from ISR context; read only from ISR context — no torn-read risk.
+ */
+static volatile uint32_t s_last_accepted_ms;
 
 /* Thread context only (handler runs from core dispatch in tick context). */
 static uint32_t s_handled;
@@ -88,14 +99,28 @@ static void devkit_button_isr_cb(const struct device *dev,
 	(void)cb;
 	(void)pins;
 
+	s_attempted++;
+
+	/*
+	 * Phase 9A-B debounce guard. k_uptime_get_32() is ISR-safe (reads a
+	 * Zephyr kernel uptime counter with no locking / sleeping path).
+	 * Unsigned subtraction wraps correctly on 32-bit rollover; the guard
+	 * degrades gracefully at the ~49-day uptime wrap boundary.
+	 */
+	uint32_t now_ms = k_uptime_get_32();
+	if ((now_ms - s_last_accepted_ms) < DEVKIT_BUTTON_DEBOUNCE_MS) {
+		s_debounce_filtered++;
+		s_seq++;
+		return;
+	}
+	s_last_accepted_ms = now_ms;
+
 	robotos_event_t ev = {
 		.type           = DEVKIT_BUTTON_PRODUCER_TYPE,
-		.timestamp_tick = 0u,                          /* uptime not ISR-claimed */
+		.timestamp_tick = 0u,
 		.arg0           = DEVKIT_BUTTON_PRODUCER_MARKER,
 		.arg1           = s_seq,
 	};
-
-	s_attempted++;
 
 	robotos_core_status_t r = robotos_core_post_event(&ev);
 	switch (r) {
@@ -191,10 +216,11 @@ robotos_core_status_t devkit_button_producer_init(void)
 		return ROBOTOS_CORE_ERR_INVALID_STATE;
 	}
 
-	LOG_INF("Phase 9A-A button producer init: type=USER+2 marker=0x%x pin=%s.%d",
+	LOG_INF("Phase 9A-B button producer init: type=USER+2 marker=0x%x pin=%s.%d debounce=%ums",
 		(unsigned)DEVKIT_BUTTON_PRODUCER_MARKER,
 		s_button.port->name,
-		(int)s_button.pin);
+		(int)s_button.pin,
+		(unsigned)DEVKIT_BUTTON_DEBOUNCE_MS);
 	return ROBOTOS_CORE_OK;
 }
 
@@ -206,6 +232,7 @@ void devkit_button_producer_get_stats(devkit_button_producer_stats_t *out)
 	out->attempted = s_attempted;
 	out->ok        = s_ok;
 	out->full      = s_full;
+	out->debounce  = s_debounce_filtered;
 	out->invalid   = s_invalid;
 	out->other     = s_other;
 	out->handled   = s_handled;
@@ -215,7 +242,7 @@ void devkit_button_producer_log_stats(void)
 {
 	devkit_button_producer_stats_t st;
 	devkit_button_producer_get_stats(&st);
-	LOG_INF("ROBOTOS_BTN attempted=%u ok=%u full=%u invalid=%u other=%u "
+	LOG_INF("ROBOTOS_BTN attempted=%u ok=%u full=%u debounce=%u invalid=%u other=%u "
 		"handled=%u type=USER+2",
-		st.attempted, st.ok, st.full, st.invalid, st.other, st.handled);
+		st.attempted, st.ok, st.full, st.debounce, st.invalid, st.other, st.handled);
 }

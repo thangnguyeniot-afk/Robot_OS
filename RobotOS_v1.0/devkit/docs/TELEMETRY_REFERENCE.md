@@ -136,8 +136,10 @@ Emitted by `devkit_button_producer_log_stats()` in `devkit_button_producer.c`.
 **Literal log shape** (from `devkit_button_producer.c` LOG_INF format string):
 
 ```text
-ROBOTOS_BTN attempted=N ok=N full=N invalid=N other=N handled=N type=USER+2
+ROBOTOS_BTN attempted=N ok=N full=N debounce=N invalid=N other=N handled=N type=USER+2
 ```
+
+> `debounce` field added in Phase 9A-B. Prior Phase 9A-A captures lack this field.
 
 **Cadence:** same as ROBOTOS_OBS / FAULT / PROD (one baseline at init; one
 periodic per cadence window). Each cadence window now emits a 4-line block:
@@ -150,6 +152,7 @@ ROBOTOS_OBS, ROBOTOS_FAULT, ROBOTOS_PROD, ROBOTOS_BTN.
 | `attempted` | uint32 | Every GPIO ISR firing increments this once (includes mechanical bounce) | `DEVKIT_PROGRESS.md` — Phase 9A-A "Counter / Behavior Analysis" |
 | `ok` | uint32 | `robotos_core_post_event()` returned `OK` | `DEVKIT_PROGRESS.md` — Phase 9A-A |
 | `full` | uint32 | Returned `ERR_FULL` (queue at capacity, common during bounce) | `DEVKIT_PROGRESS.md` — Phase 9A-A "BOUNCE_OBSERVED" |
+| `debounce` | uint32 | ISR firings suppressed by the 30 ms time-guard (`DEVKIT_BUTTON_DEBOUNCE_MS`); not posted to core | `DEVKIT_PROGRESS.md` — Phase 9A-B |
 | `invalid` | uint32 | Returned `ERR_INVALID_ARG` (defensive; should always be 0) | `DEVKIT_PROGRESS.md` — Phase 9A-A |
 | `other` | uint32 | Any other non-OK return (defensive; should always be 0) | `DEVKIT_PROGRESS.md` — Phase 9A-A |
 | `handled` | uint32 | Button handler invocations (thread context) | `DEVKIT_PROGRESS.md` — Phase 9A-A |
@@ -160,9 +163,13 @@ ROBOTOS_OBS, ROBOTOS_FAULT, ROBOTOS_PROD, ROBOTOS_BTN.
 - ISR source: STM32F411E-DISCO user button (PA0, alias `sw0`), edge-to-active.
 - API used: `robotos_core_post_event()` (raw, ISR-safe per Phase 5G).
 - arg0 = `0x9A0A` (Phase 9A-A marker).
-- arg1 = monotonic ISR-firing sequence (advances even on ERR_FULL).
-- No software debounce; mechanical bounce produces multiple ISR firings per
-  physical press. `attempted - ok = full` is the bounce-rejection count.
+- arg1 = monotonic ISR-firing sequence (advances even on filtered/full events).
+- **Phase 9A-B debounce guard:** `DEVKIT_BUTTON_DEBOUNCE_MS = 30` ms time-guard
+  using `k_uptime_get_32()` (ISR-safe). ISR firings arriving within 30 ms of the
+  last accepted event increment `debounce` and return without posting.
+  Conservation invariant: `attempted = ok + full + debounce + invalid + other`.
+- Phase 9A-A had no debounce; `full` reached 98/135 on typical press sequence.
+  Phase 9A-B reduced `full` to 4/94 under the same bounce-heavy hardware.
 - Distinct from Phase 6I (USER) and Phase 6M (USER+1) — three producers
   coexist without routing conflict.
 

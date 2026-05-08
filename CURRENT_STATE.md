@@ -9,51 +9,50 @@
 
 ## Last Closed Phase
 
-### Phase 9A-A — Devkit Button EXTI Producer
+### Phase 9A-B — Devkit Button Debounce Refinement
 
-- **Commit:** `2068180`
+- **Commit:** pending
 - **Date:** 2026-05-08
 - **Branch:** master
-- **Type:** Devkit workload proof. First real (non-synthetic) hardware event source.
-- **Close status:** `CLOSED with BOUNCE_OBSERVED`
-- **Prior tooling baseline:** Phase 6O (`6cb979f`), reusable RTT streaming harness
+- **Type:** Devkit workload refinement. Devkit-local debounce guard; no core/platform change.
+- **Close status:** `CLOSED`
+- **Prior baseline:** Phase 9A-A (`2068180`), first real hardware event source
 
-**Phase 9A-A delivered:**
+**Phase 9A-B delivered:**
 
-- `RobotOS_v1.0/devkit/src/devkit_button_producer.{h,c}` — devkit-local user-button GPIO/EXTI event producer
-- `RobotOS_v1.0/devkit/src/devkit_runtime.c` — wired button producer init, baseline log, and periodic ROBOTOS_BTN log
-- `RobotOS_v1.0/devkit/CMakeLists.txt` — added new source file
-- `RobotOS_v1.0/devkit/logs/phase_9A_button_rtt_2026-05-08.txt` — 60 s RTT capture with real button presses (37 events handled, 135 ISR firings due to mechanical bounce, CFSR=0 HFSR=0)
-- `RobotOS_v1.0/devkit/logs/INDEX.md` — Phase 9A-A row
-- `RobotOS_v1.0/devkit/docs/DEVKIT_PROGRESS.md` — Phase 9A-A section (purpose, architecture boundary, bounce analysis, preservation audit)
+- `RobotOS_v1.0/devkit/src/devkit_button_producer.h` — added `DEVKIT_BUTTON_DEBOUNCE_MS = 30u`; added `debounce` field to stats struct
+- `RobotOS_v1.0/devkit/src/devkit_button_producer.c` — ISR time-guard using `k_uptime_get_32()`; `s_debounce_filtered` counter; updated init banner, `get_stats`, `log_stats`
+- `RobotOS_v1.0/devkit/docs/TELEMETRY_REFERENCE.md` — `debounce` field added to ROBOTOS_BTN table and producer design notes
+- `RobotOS_v1.0/devkit/logs/phase_9B_debounce_rtt_2026-05-08.txt` — 90 s RTT capture; 29160 bytes; 36 button events handled; `full` 98→4; `debounce=54`
+- `RobotOS_v1.0/devkit/logs/INDEX.md` — Phase 9A-B row
+- `RobotOS_v1.0/devkit/docs/DEVKIT_PROGRESS.md` — Phase 9A-B section
 
-**Workload anchor:** RobotOS is now confirmed as an event-driven embedded device runtime serving a real hardware input source. Architecture invariants (admission, FIFO, queue capacity, ISR-safety, handler-outside-lock, no fault) all preserved under bounce-heavy concurrent producer load.
-
-**Phase 6O** (prior): Reusable RTT Streaming Capture Harness, commit `6cb979f`, 2026-05-08.
-**Phase 6N** (prior): Documentation / Navigation Consolidation, commit `ad52de5`, 2026-05-08.
+**Phase 9A-A** (prior): Button EXTI producer, commit `2068180`, CLOSED with BOUNCE_OBSERVED.
+**Phase 6O** (prior): Reusable RTT Streaming Capture Harness, commit `6cb979f`.
 
 ---
 
-## Validation Evidence (Phase 9A-A button workload)
+## Validation Evidence (Phase 9A-B debounce workload)
 
 | Gate | Result | Detail |
 | ---- | ------ | ------ |
-| Zephyr build | PASS | FLASH 31208 B (5.95%) / RAM 12224 B (9.33%); +1176 B FLASH and +64 B RAM vs Phase 6Z |
-| Flash | PASS | `west flash` wrote 32768 B; manual RESET not required |
-| RTT capture | PASS | 60.8 s, 21961 bytes captured; ROBOTOS_BTN visible; per-press handler logs visible |
-| ROBOTOS_OBS state=READY | FOUND | Baseline + 12 periodic emissions |
-| ROBOTOS_FAULT active=0 | FOUND | All 13 emissions |
-| ROBOTOS_PROD attempted= | FOUND | Phase 6M producer continues healthy at 60 attempted/60 ok |
-| ROBOTOS_BTN attempted= | FOUND | 13 emissions; final attempted=135 ok=37 full=98 handled=37 |
-| Phase 9A-A button producer init | FOUND | Init banner present in boot sequence |
-| Phase 9A button handled (per-press) | FOUND | 43 occurrences across 60 s |
-| Phase 6I final: | MISSING | Bounce displaced some Phase 6I events from queue → handled count never reached 16 → final summary not emitted. Documented as BOUNCE_OBSERVED, not a regression. See DEVKIT_PROGRESS.md Phase 9A-A. |
-| CFSR | 0x00000000 throughout | 13 occurrences checked |
-| HFSR | 0x00000000 throughout | 13 occurrences checked |
-| Architecture invariants | PASS | accepted=112 dispatched=111 pending=1 (accepted-dispatched=pending) ; peak=16=capacity ; herr=0 ; unhandled=0 |
-| Core/platform sources changed | ZERO | git diff confirmed no `core/`, `platform/`, or `tests/` files touched |
+| Zephyr build | PASS | FLASH 31292 B (5.97%) / RAM 12224 B (9.33%); +84 B FLASH vs Phase 9A-A (debounce guard cost) |
+| Flash | PASS | `west flash` wrote 32768 B |
+| RTT capture | PASS | 90.8 s, 29160 bytes; harness exit 0 |
+| ROBOTOS_OBS state=READY | FOUND | Baseline + 18 periodic emissions (ticks=0,10,…,180) |
+| ROBOTOS_FAULT active=0 | FOUND | All 19 emissions; CFSR=0 HFSR=0 throughout |
+| Phase 9A-B button producer init | FOUND | `debounce=30ms` visible in init banner |
+| ROBOTOS_BTN attempted= | FOUND | 19 emissions; final attempted=94 ok=36 full=4 debounce=54 handled=36 |
+| Phase 9A button handled (per-press) | FOUND | 36 occurrences |
+| Phase 6I final: | MISSING | Button pressed during Phase 6I burst window (first ~5 s); same mechanism as Phase 9A-A BOUNCE_OBSERVED; non-regression; architectural invariants preserved |
+| CFSR | 0x00000000 throughout | 19 occurrences checked |
+| HFSR | 0x00000000 throughout | 19 occurrences checked |
+| Debounce conservation | PASS | ok(36)+full(4)+debounce(54)+invalid(0)+other(0) = attempted(94) ✓ |
+| Debounce effectiveness | PASS | ERR_FULL reduced from 98 (Phase 9A-A) to 4 (Phase 9A-B); 96% reduction |
+| Architecture invariants | PASS | accepted=141 dispatched=140 pending=1 (accepted−dispatched=pending ✓); peak=16; herr=0; unhandled=0 |
+| Core/platform sources changed | ZERO | No `core/`, `platform/`, or `tests/` files touched |
 
-Capture log: `RobotOS_v1.0/devkit/logs/phase_9A_button_rtt_2026-05-08.txt`
+Capture log: `RobotOS_v1.0/devkit/logs/phase_9B_debounce_rtt_2026-05-08.txt`
 
 **Phase 6Z verification highlights:**
 
@@ -107,6 +106,7 @@ to `DEVKIT_PROGRESS.md` for the full history.
 
 | Phase | Description | Commit |
 | ----- | ----------- | ------ |
+| 9A-B | Devkit Button Debounce Refinement (30 ms time-guard; full 98→4) | pending |
 | 9A-A | Devkit Button EXTI Producer (first real hardware workload) | `2068180` |
 | 6O | Reusable RTT Streaming Capture Harness (tooling) | `6cb979f` |
 | 6N | Documentation / Navigation Consolidation (docs-only) | `ad52de5` |
@@ -132,7 +132,7 @@ to `DEVKIT_PROGRESS.md` for the full history.
 
 | Phase | Description | Status |
 | ----- | ----------- | ------ |
-| Phase 9A-B | Devkit button debounce refinement (devkit-local time-guard, no core change) | **Optional** — only if bounce traffic is operationally noisy |
+| Phase 9A-B | Devkit button debounce refinement (30 ms time-guard, no core change) | **CLOSED** — full 98→4; debounce=54; see Phase 9A-B section in DEVKIT_PROGRESS.md |
 | Phase 8A | Custom STM32F407 board bring-up | **Candidate** — retires 25-phase portability debt; use `capture_devkit_rtt.ps1 -OpenOcdConfig <f407.cfg>`; remains HOLD/DEFER until user reopens |
 | Phase 9B | Second real event source (UART or sensor) | Candidate — depends on application direction |
 | Phase 7B-1 | Dispatch Budget Test Parameterization | Candidate — only if Phase 9A-A workload evidence reveals saturation; current data shows budget=1 still adequate |

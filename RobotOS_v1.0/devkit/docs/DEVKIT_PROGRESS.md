@@ -49,7 +49,10 @@ or by searching for the heading manually.
 | 6L | Fault Observability Integration | CLOSED via 6Z | [→](#phase-6l----fault-observability-integration) |
 | 6M | Producer Realism / Timer Producer Diagnostic | CLOSED via 6Z | [→](#phase-6m----producer-realism--timer-producer-diagnostic) |
 | 6N | Documentation / Navigation Consolidation | CLOSED | see `CURRENT_STATE.md` |
+| 6O | Reusable RTT Streaming Capture Harness | CLOSED | see `CURRENT_STATE.md` |
 | 6Z | RTT Closeout for Phase 6K / 6L / 6M | CLOSED | [→](#phase-6z----rtt-closeout-for-phase-6k--6l--6m) |
+| 9A-A | Devkit Button EXTI Producer | CLOSED with BOUNCE_OBSERVED | [→](#phase-9a-a----devkit-button-exti-producer) |
+| 9A-B | Devkit Button Debounce Refinement | CLOSED | [→](#phase-9a-b----devkit-button-debounce-refinement) |
 | 7A | Dispatch Budget Evolution Planning | DEFER | see `CURRENT_STATE.md` |
 | 7B-1 | Dispatch Budget Test Parameterization | Candidate | see `CURRENT_STATE.md` |
 
@@ -7618,7 +7621,216 @@ Adapter (platform/) remain workload-agnostic.
 
 | Phase | Description | Priority |
 | ----- | ----------- | -------- |
-| **9A-B** Devkit button debounce refinement | Add devkit-local time-guard debounce; validate with relaxed harness patterns; quantify bounce reduction | Optional — only if bounce traffic is operationally noisy |
+| **9A-B** Devkit button debounce refinement | CLOSED — see Phase 9A-B section below | — |
 | **8A** Custom STM32F407 bring-up | Flash current Phase 9A-A firmware on F407; capture RTT with `-OpenOcdConfig <f407.cfg>`; retires 25-phase portability debt | High — independent of further workload work |
 | **9B** Second real event source (UART or sensor) | Add a second non-button real event source; validate multi-input coexistence | Medium — depends on application direction |
 | **7A** Dispatch Budget Evolution Planning | Phase 9A-A workload evidence shows budget=1 handles 60 Phase 6M + 37 button + ~15 Phase 6I = 112 events / 60 s = ~1.9 events/s sustained; bounce-window peak briefly saturates the queue but recovers; **no workload-driven evidence yet that budget=1 is insufficient** | DEFER (still) |
+
+---
+
+## Phase 9A-B -- Devkit Button Debounce Refinement
+
+**Date:** 2026-05-08
+**Branch:** master
+**Commit:** pending
+**Baseline commit:** `2068180` (Phase 9A-A)
+**Type:** Devkit workload refinement — devkit-local only, no core/platform change.
+**Close status:** CLOSED
+
+---
+
+### Purpose
+
+Phase 9A-A proved the first real hardware event source (user-button EXTI) works
+end-to-end through the RobotOS event pipeline. It deliberately omitted software
+debounce, documenting mechanical bounce as BOUNCE_OBSERVED (135 ISR firings for
+37 accepted presses in 60 s; 98 ERR_FULL drops caused by bounce-burst queue
+saturation).
+
+Phase 9A-B adds a minimal devkit-local time-guard to suppress bounce ISR firings
+before they reach the core queue. The goal is:
+
+1. Reduce ERR_FULL events (bounce no longer saturates the queue on every press).
+2. Add `debounce=N` counter so bounce-filtered events are visible in telemetry.
+3. Confirm architecture invariants and CFSR/HFSR zero are preserved under the new guard.
+4. Provide a clean workload baseline for future phases (Phase 9B, Phase 8A, Phase 7B-1).
+
+This phase makes **no change to core/, platform/, or tests/**. All changes are
+confined to `devkit/src/devkit_button_producer.{h,c}`.
+
+---
+
+### Architecture Boundary (Phase 9A-B)
+
+Same boundary as Phase 9A-A, plus the debounce guard:
+
+```text
+PA0 user button rising edge
+  -> Zephyr GPIO ISR callback
+  -> [NEW] 30 ms time-guard: elapsed < DEVKIT_BUTTON_DEBOUNCE_MS?
+       yes -> s_debounce_filtered++; s_seq++; return   (no post)
+       no  -> s_last_accepted_ms = now_ms; continue to post
+  -> robotos_core_post_event()           [Phase 5G ISR-safe contract, unchanged]
+  -> core queue
+  -> robotos_core_tick() dispatcher      [thread context, budget=1/tick, unchanged]
+  -> button handler (devkit-local)
+  -> ROBOTOS_BTN telemetry
+```
+
+`k_uptime_get_32()` is the Zephyr uptime function used for the timestamp. It is
+ISR-safe (reads a kernel counter, no lock/sleep) and returns milliseconds as
+`uint32_t`. Unsigned subtraction wraps correctly at the ~49-day boundary.
+
+`DEVKIT_BUTTON_DEBOUNCE_MS = 30` is a compile-time constant defined in
+`devkit_button_producer.h`. It is not configurable at runtime and has no core
+representation.
+
+---
+
+### Files Changed (Phase 9A-B)
+
+| File | Change |
+| ---- | ------ |
+| `RobotOS_v1.0/devkit/src/devkit_button_producer.h` | Added `DEVKIT_BUTTON_DEBOUNCE_MS = 30u`; added `debounce` field to `devkit_button_producer_stats_t`; updated log format comment |
+| `RobotOS_v1.0/devkit/src/devkit_button_producer.c` | Added `s_last_accepted_ms` and `s_debounce_filtered` volatiles; added debounce guard in `devkit_button_isr_cb`; updated `get_stats` and `log_stats`; updated init banner to `Phase 9A-B` |
+| `RobotOS_v1.0/devkit/docs/TELEMETRY_REFERENCE.md` | Added `debounce` field row to ROBOTOS_BTN table; updated log shape; added Phase 9A-B producer design note |
+| `RobotOS_v1.0/devkit/logs/phase_9B_debounce_rtt_2026-05-08.txt` | New — 90 s RTT capture with button presses; 29160 bytes |
+| `RobotOS_v1.0/devkit/logs/INDEX.md` | Phase 9A-B row added |
+| `RobotOS_v1.0/devkit/docs/DEVKIT_PROGRESS.md` | This section; Phase 9A-A next-phases table updated; index updated |
+| `CURRENT_STATE.md` | Last-closed phase advanced to Phase 9A-B |
+
+No changes to `core/`, `platform/`, `tests/`, `CMakeLists.txt`, `prj.conf`,
+`Kconfig`, or any tooling scripts.
+
+---
+
+### Build Evidence
+
+| Gate | Result | Detail |
+| ---- | ------ | ------ |
+| `west build --pristine` | PASS | FLASH 31292 B (5.97%) / RAM 12224 B (9.33%); +84 B FLASH vs Phase 9A-A (31208 B); debounce guard + timestamp variable cost |
+| `west flash` | PASS | 32768 bytes written |
+| Compiler warnings | none new | Pre-existing `q_valid` unused-function warning in `robotos_event_queue.c` (unchanged from prior phases) |
+
+---
+
+### RTT Evidence (Phase 9A-B)
+
+**Log:** `RobotOS_v1.0/devkit/logs/phase_9B_debounce_rtt_2026-05-08.txt`
+**Capture:** Phase 6O harness (`capture_devkit_rtt.ps1`), 90 s, 29160 bytes
+**_SEGGER_RTT:** `0x20000a68`
+**Button presses:** manual, throughout the 90 s window
+
+#### Pattern verification (harness exit 0)
+
+| Pattern | Result |
+| ------- | ------ |
+| `ROBOTOS_OBS state=READY` | FOUND — baseline + 18 periodic emissions (ticks=0,10,…,180) |
+| `ROBOTOS_FAULT active=0` | FOUND — all 19 emissions; CFSR=0 HFSR=0 throughout |
+| `Phase 9A-B button producer init` | FOUND — `debounce=30ms` visible in init banner |
+| `Phase 9A button handled` | FOUND — 36 occurrences (count=1…36) |
+| CFSR | `0x00000000` — 19 occurrences checked |
+| HFSR | `0x00000000` — 19 occurrences checked |
+
+#### Counter evidence (final snapshot, ticks=180)
+
+| Metric | Value | Notes |
+| ------ | ----- | ----- |
+| ROBOTOS_OBS `accepted` | 141 | Phase 6I(~15) + Phase 6M(90) + BTN(36) = 141 ✓ |
+| ROBOTOS_OBS `dispatched` | 140 | `accepted − dispatched = pending = 1` ✓ |
+| ROBOTOS_OBS `pending` | 1 | Architecture invariant preserved |
+| ROBOTOS_OBS `dropped` | 13 | Queue-full drops (early burst; higher than baseline 7 due to button press during Phase 6I burst) |
+| ROBOTOS_OBS `peak` | 16 | Queue capacity reached during Phase 6I burst |
+| ROBOTOS_OBS `herr` | 0 | No handler errors |
+| ROBOTOS_OBS `unhandled` | 0 | All dispatched events had registered handlers |
+| ROBOTOS_PROD `attempted` | 90 | 90 ticks / 2 = 45 cadence windows × 2 posts = 90 (wait, 1 post per 2 ticks × 90 ticks = 45... actually 90/2=45 cadence hits × 1 post = 45? No — let me recheck: DEVKIT_TIMER_PRODUCER_TICK_PERIOD=2, so 1 post every 2 ticks; 180 ticks → 90 posts) ✓ |
+| ROBOTOS_PROD `ok` | 90 | All timer producer posts succeeded |
+| ROBOTOS_BTN `attempted` | 94 | Every ISR firing (accepted + filtered + full) |
+| ROBOTOS_BTN `ok` | 36 | Posted successfully; all dispatched and handled |
+| ROBOTOS_BTN `full` | 4 | ERR_FULL — **reduced from 98 (Phase 9A-A) to 4 (Phase 9A-B)** |
+| ROBOTOS_BTN `debounce` | 54 | ISR firings suppressed by 30 ms guard |
+| ROBOTOS_BTN `invalid` | 0 | As expected |
+| ROBOTOS_BTN `other` | 0 | As expected |
+| ROBOTOS_BTN `handled` | 36 | Handler invocations; `ok = handled` ✓ |
+| Conservation | 36+4+54+0+0 = 94 | `ok + full + debounce + invalid + other = attempted` ✓ |
+
+#### Phase 6I final
+
+`Phase 6I final:` is **missing** from this capture. The user pressed the button
+during the first ~5 seconds (Phase 6I burst window), which increased queue
+contention and caused Phase 6I to complete fewer than 16 handler invocations —
+the final-summary guard (`handled_count == 16`) was never satisfied.
+
+This is the same mechanism as Phase 9A-A's BOUNCE_OBSERVED, but caused by
+intentional early button press rather than mechanical bounce. It is a documented
+non-regression: the architecture invariants (accepted−dispatched=pending,
+herr=0, unhandled=0, CFSR/HFSR=0) are fully preserved. Phase 6I is a synthetic
+diagnostic; its final summary line is not a correctness gate for Phase 9A-B.
+
+---
+
+### Debounce Effectiveness Summary
+
+| Metric | Phase 9A-A (no debounce) | Phase 9A-B (30 ms guard) | Delta |
+| ------ | ------------------------ | ------------------------ | ----- |
+| `attempted` (ISR firings) | 135 | 94 | −41 |
+| `ok` (accepted) | 37 | 36 | −1 |
+| `full` (ERR_FULL) | 98 | 4 | **−94** |
+| `debounce` | N/A | 54 | +54 |
+| `handled` | 37 | 36 | −1 |
+
+Key finding: the 30 ms guard reduced ERR_FULL from 98 → 4 (a 96% reduction).
+The debounce counter absorbs 54 of the bounce ISR firings that previously
+competed for queue slots. The small residual `full=4` reflects button presses
+that arrived while the queue was already at capacity from Phase 6I burst (first
+5 s); after that burst, the queue drains and `full` stops growing.
+
+---
+
+### Architecture Preservation Audit (Phase 9A-B)
+
+- **Core API unchanged.** `robotos_core_post_event()` signature and semantics
+  are identical. No new core functions or types.
+- **Platform boundary unchanged.** `k_uptime_get_32()` is called only inside
+  `devkit_button_producer.c`; no Zephyr types enter `core/` or `platform/`.
+- **ISR-safe producer contract** (Phase 5G): preserved. The debounce guard
+  adds only `k_uptime_get_32()` (ISR-safe read) and counter increments before
+  the existing `robotos_core_post_event()` call. No logging, sleeping,
+  dispatching, or allocation inside ISR.
+- **Handler-outside-lock invariant** (Phase 5F): unchanged.
+- **Admission policy unchanged.** USER+2 events still pass the Phase 4I
+  admission gate; the debounce filter operates before the post attempt, not
+  inside the admission path.
+- **Scheduler semantics unchanged.** `ROBOTOS_CORE_MAX_EVENTS_PER_TICK = 1`
+  unchanged.
+- **No new status codes.** `ROBOTOS_CORE_ERR_THROTTLED = -7` remains highest.
+- **Observability surfaces passive.** ROBOTOS_BTN `debounce` counter is
+  read-only from outside ISR; it does not feed into any scheduling, admission,
+  throttle, dispatch, or retry decision.
+- **Three producers coexist without conflict.** Phase 6I (USER/100), Phase 6M
+  (USER+1/101), Phase 9A-B button (USER+2/102) — no handler routing conflict.
+
+---
+
+### Phase 9A-B Known Limitations
+
+- **Residual full=4.** Four ERR_FULL events remain; all occur during the Phase
+  6I burst window (first ~8 s) when multiple producers compete for the 16-slot
+  queue. This is acceptable: after ticks≈30 the queue is no longer under
+  pressure and `full` stops growing. No change is warranted.
+- **Debounce window is fixed.** `DEVKIT_BUTTON_DEBOUNCE_MS = 30` is a
+  compile-time constant. Runtime configuration is not implemented and is not
+  needed at the current workload scale.
+- **Phase 6I final still suppressible.** If the button is pressed during the
+  first 8 s of a capture, Phase 6I may not emit its final summary. Callers
+  running future captures should be aware of this interaction window.
+
+---
+
+### Phase 9A-B Next Recommended Phases
+
+| Phase | Description | Priority |
+| ----- | ----------- | -------- |
+| **8A** Custom STM32F407 bring-up | Flash Phase 9A-B firmware on F407; retires 25-phase portability debt | HOLD/DEFER until reopened |
+| **9B** Second real event source | Add UART or sensor producer using the button producer as template | Candidate |
+| **7B-1** Dispatch budget test parameterization | Only if workload evidence reveals saturation; current data shows budget=1 adequate | Candidate |
