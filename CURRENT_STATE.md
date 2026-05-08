@@ -9,14 +9,21 @@
 
 ## Last Closed Phase
 
-### Phase 9D — Workload Demo Script & Runbook
+### Phase 9Z — Workload-Branch Checkpoint Review
 
-- **Commit:** `8e8c801`
+- **Commit:** `8e8c801` (HEAD at checkpoint; no new source commit — docs-only)
 - **Date:** 2026-05-08
 - **Branch:** master
-- **Type:** Tooling + documentation only. Repeatable evidence/demo workflow for the existing Phase 9C application state machine. **No firmware/runtime change.**
+- **Type:** Audit-only / checkpoint. No firmware, CMake, Kconfig, or runtime change.
 - **Close status:** `CLOSED`
-- **Prior baseline:** Phase 9C (`286e61b`), minimal application state machine
+- **Tag:** `v0.9d-workload-baseline`
+- **Full audit:** `RobotOS_v1.0/devkit/docs/PHASE_9Z_CHECKPOINT.md`
+- **Prior phase:** Phase 9D (`8e8c801`), Workload Demo Script & Runbook
+
+**Phase 9Z verdict:** ON_TRACK_WITH_WATCHPOINTS. Core/platform boundaries intact.
+All Phase 9A-A through 9D sub-phases closed with hardware RTT evidence on
+STM32F411E-DISCO. Scheduler (7A/7B-1) DEFER — no workload-driven justification.
+Phase 8A (F407) HOLD/DEFER. Next step: user product-direction decision.
 
 **Phase 9D delivered:**
 
@@ -127,6 +134,7 @@ to `DEVKIT_PROGRESS.md` for the full history.
 
 | Phase | Description | Commit |
 | ----- | ----------- | ------ |
+| 9Z | Workload-Branch Checkpoint Review (audit-only; ON_TRACK_WITH_WATCHPOINTS; tag v0.9d-workload-baseline; full audit in PHASE_9Z_CHECKPOINT.md) | `8e8c801` |
 | 9D | Workload Demo Script & Runbook (run_phase9d_demo.ps1 + WORKLOAD_DEMO_9D.md; canonical scenario `a`/`s`/`r` UART + 3 button presses → IDLE/ARMED/ACTIVE; tooling/docs only) | `8e8c801` |
 | 9C | Devkit Minimal Application State Machine (button + UART → IDLE/ARMED/ACTIVE; 23 transitions; first multi-source workload composition) | `286e61b` |
 | 9B | Devkit UART RX Producer (second real hardware event source; USER+3; rx=7 ok=7 full=0 handled=7) | `85389f4` |
@@ -162,6 +170,7 @@ to `DEVKIT_PROGRESS.md` for the full history.
 | Phase 9B | UART RX producer (second real hardware event source; USER+3) | **CLOSED** — rx=7 ok=7 full=0 handled=7; per-byte handler logs match payload `abc123\n`; see Phase 9B section in DEVKIT_PROGRESS.md |
 | Phase 9C | Minimal application state machine (compose button + UART into IDLE/ARMED/ACTIVE) | **CLOSED** — 23 transitions; button=20 uart=3 ignored=0; peak=4; dropped=0; see Phase 9C section in DEVKIT_PROGRESS.md |
 | Phase 9D | Workload demo script & runbook (`run_phase9d_demo.ps1` + `WORKLOAD_DEMO_9D.md`; tooling/docs only) | **CLOSED** — 12 default + Phase 9D patterns FOUND; queue saturation observed safely (peak=16, dropped=3, herr=0); CFSR/HFSR=0 throughout; see Phase 9D section |
+| Phase 9Z | Workload-branch checkpoint review (audit-only; no source change) | **CLOSED** — ON_TRACK_WITH_WATCHPOINTS; full audit in `PHASE_9Z_CHECKPOINT.md`; tag `v0.9d-workload-baseline` |
 | Phase 9E | Optional UART TX response / `?` echo / richer app behavior | Candidate — only if explicitly approved; would introduce TX path |
 | Phase 8A | Custom STM32F407 board bring-up | **Candidate** — retires 25-phase portability debt; use `capture_devkit_rtt.ps1 -OpenOcdConfig <f407.cfg>`; remains HOLD/DEFER until user reopens |
 | Phase 7B-1 | Dispatch Budget Test Parameterization | Candidate — only if workload evidence reveals saturation; Phase 9A-C clean baseline shows budget=1 still adequate (peak=14, dropped=0) |

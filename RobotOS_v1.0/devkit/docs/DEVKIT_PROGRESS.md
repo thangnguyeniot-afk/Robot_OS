@@ -57,6 +57,7 @@ or by searching for the heading manually.
 | 9B | Devkit UART RX Producer | CLOSED | [→](#phase-9b----devkit-uart-rx-producer) |
 | 9C | Devkit Minimal Application State Machine | CLOSED | [→](#phase-9c----devkit-minimal-application-state-machine) |
 | 9D | Workload Demo Script & Runbook | CLOSED | [→](#phase-9d----workload-demo-script--runbook) |
+| 9Z | Workload-Branch Checkpoint Review (audit-only) | CLOSED | [→](#phase-9z----workload-branch-checkpoint-review) |
 | 7A | Dispatch Budget Evolution Planning | DEFER | see `CURRENT_STATE.md` |
 | 7B-1 | Dispatch Budget Test Parameterization | Candidate | see `CURRENT_STATE.md` |
 
@@ -8896,3 +8897,47 @@ A subsequent operator following the runbook exactly should hit the canonical 6/3
 | **8A** Custom STM32F407 bring-up | Flash current firmware on F407; retires 25-phase portability debt | HOLD/DEFER until reopened |
 | **6O harness improvements** | If multi-source demos like Phase 9D become a recurring pattern with friction (e.g. multi-window orchestration, structured pass/fail reports) | Optional |
 | **7A / 7B-1** Dispatch budget evolution | Phase 9D `peak=16` / `dropped=3` was self-induced by rapid manual input on a 16-slot queue; even there `herr=0` / `unhandled=0` and the queue drained cleanly. No workload-driven justification for budget mutation yet | DEFER |
+
+---
+
+## Phase 9Z — Workload-Branch Checkpoint Review
+
+**Date:** 2026-05-08
+**Branch:** master
+**HEAD at checkpoint:** `8e8c801`
+**Tag:** `v0.9d-workload-baseline`
+**Type:** Audit-only / checkpoint. No source, runtime, test, CMake, or Kconfig change.
+**Close status:** CLOSED
+
+### Purpose
+
+Phase 9Z closes the Phase 9 workload-branch stream with a structured architecture
+audit and direction checkpoint, recorded before any further phase work begins.
+
+### Phases Audited
+
+Phase 9A-A through Phase 9D — all CLOSED. See Phase Index above for individual
+phase sections.
+
+### Verdict
+
+**ON_TRACK_WITH_WATCHPOINTS.** Core/platform boundaries intact. Hardware evidence
+present for all Phase 9 sub-phases. Scheduler (7A/7B-1) remains DEFER — no
+workload-driven justification found. Phase 8A (F407) remains HOLD/DEFER.
+
+Full audit body in `devkit/docs/PHASE_9Z_CHECKPOINT.md`.
+
+### Files Changed
+
+| File | Change |
+| ---- | ------ |
+| `RobotOS_v1.0/devkit/docs/PHASE_9Z_CHECKPOINT.md` | New — full audit document |
+| `RobotOS_v1.0/devkit/docs/DEVKIT_PROGRESS.md` | Phase 9Z index row + section |
+| `CURRENT_STATE.md` | Phase 9Z recorded as last checkpoint; pointer to `PHASE_9Z_CHECKPOINT.md` |
+
+No source, test, CMake, Kconfig, or runtime file changed.
+
+### Next Step
+
+Await user product-direction decision (Phase 9E vs Phase 8A vs Robot Framework
+promotion) before implementing any further phase.
