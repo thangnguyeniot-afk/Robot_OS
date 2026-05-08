@@ -55,6 +55,7 @@ or by searching for the heading manually.
 | 9A-B | Devkit Button Debounce Refinement | CLOSED | [→](#phase-9a-b----devkit-button-debounce-refinement) |
 | 9A-C | Gate Phase 6I Startup Burst | CLOSED | [→](#phase-9a-c----gate-phase-6i-startup-burst) |
 | 9B | Devkit UART RX Producer | CLOSED | [→](#phase-9b----devkit-uart-rx-producer) |
+| 9C | Devkit Minimal Application State Machine | CLOSED | [→](#phase-9c----devkit-minimal-application-state-machine) |
 | 7A | Dispatch Budget Evolution Planning | DEFER | see `CURRENT_STATE.md` |
 | 7B-1 | Dispatch Budget Test Parameterization | Candidate | see `CURRENT_STATE.md` |
 
@@ -8358,7 +8359,293 @@ dispatched and consumed by the registered handler.
 
 | Phase | Description | Priority |
 | ----- | ----------- | -------- |
-| **9C** Minimal application state machine | Compose button + UART into a small agent-style state machine (e.g., button toggles a "mode" that the UART handler interprets) | Candidate (workload composition) |
+| **9C** Minimal application state machine | CLOSED — see Phase 9C section below | — |
 | **9D** Workload mode cleanup | Only if multi-source workload reveals friction or evidence-clarity gaps | Candidate |
 | **8A** Custom STM32F407 bring-up | Flash current firmware on F407; retires 25-phase portability debt | HOLD/DEFER until reopened |
 | **7A / 7B-1** Dispatch budget evolution | Phase 9B baseline still shows budget=1 adequate for current peak burst (peak=8 vs capacity=16); no workload-driven justification yet | DEFER |
+
+---
+
+## Phase 9C -- Devkit Minimal Application State Machine
+
+**Date:** 2026-05-08
+**Branch:** master
+**Commit:** pending
+**Baseline commit:** `85389f4` (Phase 9B)
+**Type:** Devkit application workload proof. First multi-source workload composition; devkit-local; no core/platform/scheduler change.
+**Close status:** CLOSED
+
+---
+
+### Purpose
+
+Phase 9A proved a real GPIO/EXTI button input (USER+2). Phase 9B proved a
+real UART RX byte input (USER+3). Phase 9C proves that RobotOS can
+**compose** these distinct hardware sources into application-level
+behavior — a minimal state machine — without touching the core runtime.
+
+This is the first concrete step from "event-source proof" toward
+application / Robot Framework semantics. It is intentionally tiny: three
+states, two input sources, no parser, no shell, no protocol. The point is
+the composition pattern, not the application.
+
+---
+
+### Relation to 9A / 9B
+
+- **9A-A/9A-B/9A-C** delivered button event source + debounce + clean baseline (Phase 6I burst gated off).
+- **9B** delivered UART RX event source.
+- **9C** does not modify either producer's external contract. It adds a
+  new devkit-local module (`devkit_app_state`) that is *called from* each
+  producer's existing handler at the end of its current per-event work.
+  Handler ownership stays with the producer module; the core handler
+  table is not re-pointed. This avoids the "one handler per type"
+  invariant becoming a refactor risk.
+
+---
+
+### Architecture Boundary
+
+```text
+button ISR (Phase 9A) ──► robotos_core_post_event(USER+2)
+                              │
+                              ▼
+                          core queue
+                              │
+                              ▼
+                      robotos_core_tick() dispatcher (budget=1/tick)
+                              │
+                  ┌───────────┼───────────┐
+                  ▼                       ▼
+        devkit_button_handler    devkit_uart_handler
+        (producer-owned)         (producer-owned)
+                  │                       │
+                  ▼                       ▼
+        devkit_app_state_on_button   devkit_app_state_on_uart_byte
+                  └───────┬───────────────┘
+                          ▼
+                  devkit_app_state (IDLE / ARMED / ACTIVE)
+                          │
+                          ▼
+                  ROBOTOS_APP telemetry +
+                  "Phase 9C app transition" diagnostic
+```
+
+Layers preserved:
+
+- **Application / Workload:** `devkit_app_state.{h,c}` lives in `devkit/src/`. Devkit-local; no Robot Framework abstraction yet.
+- **Robot Framework / Core:** unchanged. No new event types, no new core API, no admission change.
+- **Robot Adapter / Platform:** unchanged. No app abstraction added.
+- **Zephyr Kernel:** the app state module uses only `zephyr/logging/log.h` (logging is acceptable at thread context). No driver dependency.
+- **Hardware:** STM32F411E-DISCO unchanged. F407 migration unchanged (HOLD/DEFER).
+
+---
+
+### State Machine Definition
+
+States: `IDLE` (0), `ARMED` (1), `ACTIVE` (2).
+
+Inputs and transitions:
+
+| Input | From state | To state | Notes |
+| ----- | ---------- | -------- | ----- |
+| Button (any press) | IDLE | ARMED | cycle |
+| Button (any press) | ARMED | ACTIVE | cycle |
+| Button (any press) | ACTIVE | IDLE | cycle |
+| UART `'a'` / `'A'` | IDLE / ACTIVE | ARMED | from any state except ARMED itself; redundant `'a'` from ARMED → `ignored++` |
+| UART `'s'` / `'S'` | IDLE / ARMED | ACTIVE | redundant `'s'` from ACTIVE → `ignored++` |
+| UART `'r'` / `'R'` | ARMED / ACTIVE | IDLE | redundant `'r'` from IDLE → `ignored++` |
+| UART `'?'` | any | (no change) | recognized query; logs current state; not counted as ignored |
+| UART any other byte | any | (no change) | `ignored++` |
+
+The "redundant command from same state" path increments `ignored` rather
+than firing a transition; this keeps `transitions = button + uart_recognized_non_redundant`
+reconcilable from the periodic snapshot.
+
+---
+
+### Input Mapping / Event Sources Used
+
+| Producer | Event type | App API call site | Effect |
+| -------- | ---------- | ----------------- | ------ |
+| Phase 9A button | USER+2 | `devkit_button_handler` (at end of success path) | `devkit_app_state_on_button(seq)` cycles state |
+| Phase 9B UART | USER+3 | `devkit_uart_handler` (at end of success path) | `devkit_app_state_on_uart_byte(byte, count)` interprets command |
+| Phase 6M timer | USER+1 | (not consumed by app) | producer health only |
+| Phase 6I burst | USER (gated off) | (not consumed by app) | dormant |
+
+No new core handler registration. No event-type change. The app module is
+strictly a downstream consumer reachable only from the two existing
+handler thread contexts; it never touches the core directly.
+
+---
+
+### Files Changed (Phase 9C)
+
+| File | Change |
+| ---- | ------ |
+| `RobotOS_v1.0/devkit/src/devkit_app_state.h` | NEW — public interface; states, sources, snapshot struct, init/on_button/on_uart_byte/get_snapshot/log_snapshot prototypes |
+| `RobotOS_v1.0/devkit/src/devkit_app_state.c` | NEW — single-threaded state machine, transition diagnostic logger, ROBOTOS_APP snapshot emitter |
+| `RobotOS_v1.0/devkit/src/devkit_button_producer.c` | Added `#include "devkit_app_state.h"`; appended `devkit_app_state_on_button(seq)` to handler success path |
+| `RobotOS_v1.0/devkit/src/devkit_uart_producer.c` | Added `#include "devkit_app_state.h"`; appended `devkit_app_state_on_uart_byte(byte, s_handled)` to handler success path |
+| `RobotOS_v1.0/devkit/src/devkit_runtime.c` | Added include + `devkit_app_state_init()` after core init; baseline + periodic `devkit_app_state_log_snapshot()` calls |
+| `RobotOS_v1.0/devkit/CMakeLists.txt` | Added `src/devkit_app_state.c` |
+| `RobotOS_v1.0/devkit/docs/TELEMETRY_REFERENCE.md` | New ROBOTOS_APP section + per-transition diagnostic-log description; Telemetry Stack Summary updated |
+| `RobotOS_v1.0/devkit/logs/phase_9C_app_state_rtt_2026-05-08.txt` | New — 75 s RTT capture, 30954 bytes |
+| `RobotOS_v1.0/devkit/logs/INDEX.md` | Phase 9C row |
+| `RobotOS_v1.0/devkit/docs/DEVKIT_PROGRESS.md` | This section + index update |
+| `CURRENT_STATE.md` | Last-closed phase advanced to Phase 9C |
+
+No changes to `core/`, `platform/`, `tests/`, `prj.conf`, `Kconfig`, the
+Phase 6O harness, or the Phase 9A-C gate. The button and UART producers'
+external contracts (event types, markers, log shapes, init banners) are
+unchanged.
+
+---
+
+### Build Evidence
+
+| Gate | Result | Detail |
+| ---- | ------ | ------ |
+| `west build --pristine` | PASS | FLASH 35688 B (6.81%) / RAM 12224 B (9.33%) |
+| Delta vs Phase 9B | +1240 B FLASH, 0 B RAM | app state module + integration code; no new Zephyr subsystems pulled in |
+| `west flash` | PASS | 49152 bytes written |
+| Compiler warnings | none new | Pre-existing `q_valid` unused-function warning in `robotos_event_queue.c` (unchanged) |
+
+---
+
+### RTT Evidence (Phase 9C)
+
+**Log:** `RobotOS_v1.0/devkit/logs/phase_9C_app_state_rtt_2026-05-08.txt`
+**Capture:** Phase 6O harness with Phase 9C-specific `RequirePatterns` (10 patterns)
+**Duration / size:** 75.8 s, 30954 bytes
+**_SEGGER_RTT:** `0x20000a58`
+
+#### User action procedure (this run)
+
+1. RTT capture started; board reset and booted; `state=IDLE` baseline emitted.
+2. From t≈9.5 s to t≈14.5 s: **6 button presses** (driver bounce-filtered to 6 accepted events) drove the first six transitions through two full IDLE→ARMED→ACTIVE→IDLE→ARMED→ACTIVE→IDLE cycles.
+3. From t≈37.5 s to t≈40.5 s: PowerShell `System.IO.Ports.SerialPort` wrote `a`, `s`, `r` to COM5 (CP210x USB-UART) at 115200 8N1, spaced 1.5 s apart. Three transitions: IDLE→ARMED → ARMED→ACTIVE → ACTIVE→IDLE.
+4. From t≈42.5 s to t≈57.5 s: **14 more button presses** drove transitions through additional cycles, ending in ACTIVE.
+
+#### Pattern verification (harness exit 0)
+
+| Pattern | Result |
+| ------- | ------ |
+| `ROBOTOS_OBS state=READY` | FOUND — baseline + 16 periodic emissions (ticks=0,10,…,160) |
+| `ROBOTOS_FAULT active=0` | FOUND — all 17 emissions; CFSR=0 HFSR=0 (16 occurrences) |
+| `ROBOTOS_PROD attempted=` | FOUND — Phase 6M producer healthy throughout |
+| `ROBOTOS_BTN` | FOUND — 17 emissions; final attempted/ok/handled reflect 20 accepted button events |
+| `ROBOTOS_UART` | FOUND — final at ticks=160: `rx=3 ok=3 full=0 handled=3 last=0x72` |
+| `ROBOTOS_APP` | FOUND — baseline (state=IDLE) + 16 periodic emissions tracking state transitions live |
+| `Phase 9C app state init` | FOUND — boot banner |
+| `Phase 9B uart handled` | FOUND — 3 occurrences (`a`/`s`/`r`) |
+| `Phase 9A button handled` | FOUND — 20 occurrences |
+| `src=BTN` | FOUND — 20 transition log lines |
+| `src=UART` | FOUND — 3 transition log lines |
+| CFSR | `0x00000000` — 16 occurrences checked |
+| HFSR | `0x00000000` — 16 occurrences checked |
+
+#### Transition sequence (from RTT log, in causal order)
+
+| # | t (s) | Source | Detail | From → To |
+| - | ----- | ------ | ------ | --------- |
+| 1 | 9.502 | BTN seq=1 | first press | IDLE → ARMED |
+| 2 | 10.003 | BTN seq=3 | | ARMED → ACTIVE |
+| 3 | 11.503 | BTN seq=4 | | ACTIVE → IDLE |
+| 4 | 12.003 | BTN seq=5 | | IDLE → ARMED |
+| 5 | 13.503 | BTN seq=12 | | ARMED → ACTIVE |
+| 6 | 14.504 | BTN seq=14 | | ACTIVE → IDLE |
+| 7 | 37.509 | UART byte=0x61 ('a') | | IDLE → ARMED |
+| 8 | 38.509 | UART byte=0x73 ('s') | | ARMED → ACTIVE |
+| 9 | 40.510 | UART byte=0x72 ('r') | | ACTIVE → IDLE |
+| 10–23 | 42.510 – 57.514 | BTN seq=19…43 | 14 more presses | continuing IDLE↔ARMED↔ACTIVE cycles, ending in ACTIVE |
+
+Each transition is anchored to its producer-side identifier (button `seq=`
+or UART `byte=` + handler `count=`), so the full causality chain
+producer-ISR → core-queue → handler → app-state is reconstructable from
+RTT alone.
+
+---
+
+### State Transition Analysis
+
+**Final ROBOTOS_APP at ticks=150:** `state=ACTIVE transitions=23 button=20 uart=3 ignored=0 last_src=BTN last_byte=0x72`.
+
+Conservation:
+
+- `transitions = button + uart - ignored - queries` → `23 = 20 + 3 - 0 - 0` ✓
+- `ignored = 0` because every UART byte sent in this run was a recognized command from a non-redundant state (`a` from IDLE, `s` from ARMED, `r` from ACTIVE).
+- `last_byte = 0x72` is `'r'`, the last UART byte seen. Subsequent button presses do not overwrite `last_byte` (button has no byte payload), only `last_src`.
+- The 14 button presses after the UART block all flowed through the same handler path as the 6 earlier ones, with no intervening behavior change. The same code path handles both the early IDLE entry and the post-UART IDLE entry.
+
+---
+
+### Counter / Behavior Analysis
+
+Final snapshot (ticks=150, t≈75.0 s):
+
+| Source | Counter | Value | Notes |
+| ------ | ------- | ----- | ----- |
+| ROBOTOS_OBS | `accepted` | 98 | = Phase 6M(75) + button(20) + UART(3) ✓ |
+| ROBOTOS_OBS | `dispatched` | 97 | accepted − dispatched = pending = 1 ✓ |
+| ROBOTOS_OBS | `pending` | 1 | architecture invariant preserved |
+| ROBOTOS_OBS | `peak` | 4 | well below capacity=16; multi-source workload barely loads queue |
+| ROBOTOS_OBS | `dropped` | 0 | no queue overflow |
+| ROBOTOS_OBS | `herr` / `unhandled` | 0 / 0 | clean |
+| ROBOTOS_PROD | attempted / ok | 75 / 75 | Phase 6M cadence intact (1 post / 2 ticks × 150 ticks) |
+| ROBOTOS_BTN | ok / handled | 20 / 20 | every accepted press dispatched; debounce filtered bounce as in 9A-C |
+| ROBOTOS_UART | rx / ok / handled | 3 / 3 / 3 | every byte made it through |
+| ROBOTOS_APP | transitions | 23 | 6 BTN + 3 UART + 14 BTN |
+| ROBOTOS_APP | button / uart / ignored | 20 / 3 / 0 | conservation ✓ |
+| ROBOTOS_APP | last_src / last_byte | BTN / 0x72 | last UART byte preserved across button activity |
+
+The peak queue depth `peak=4` indicates the multi-source workload never
+came close to filling the 16-slot queue, even with two real input sources
+plus the periodic timer producer firing at the same time. Phase 9B alone
+hit `peak=8` because it sent 7 bytes in a single ~1 ms burst; Phase 9C's
+3-byte UART trickle (1.5 s spacing) plus human-paced button presses kept
+the queue shallow.
+
+---
+
+### Architecture Preservation Audit (Phase 9C)
+
+- **No `core/` changes.** `git diff` confirms zero changes under `RobotOS_v1.0/core/`.
+- **No `platform/` changes.** No `robotos_platform_app` introduced.
+- **No `tests/` changes.**
+- **No new event types.** USER+2 (button) and USER+3 (UART) are reused; the app module never calls `robotos_core_post_event()`.
+- **No new core handler registration.** The core handler table still has exactly one handler per type, owned by its respective producer module.
+- **No Zephyr include in core.** All Zephyr usage in `devkit_app_state.c` is limited to `zephyr/logging/log.h`.
+- **No command shell / parser / framing.** The UART input recognition is a five-character switch (`a`/`s`/`r`/`?` plus default-ignore); no buffer, no state, no framing.
+- **No timers, no allocation, no floating point** in the app module.
+- **Scheduler unchanged.** `ROBOTOS_CORE_MAX_EVENTS_PER_TICK = 1`. Queue capacity unchanged.
+- **Phase 5G ISR-safe contract** unchanged — the app module is called only from thread context (handlers).
+- **Phase 5F handler-outside-lock** unchanged.
+- **OBS / FAULT / PROD / BTN / UART telemetry formats stable.** New ROBOTOS_APP line adds a sixth periodic line; no existing format changed.
+- **Phase 9A-C gate (`DEVKIT_PHASE6I_STARTUP_BURST_ENABLED=0`)** still in effect — gated banner present, Phase 6I traces absent.
+- **Four producers + one app consumer coexist.** Phase 6M (USER+1), Phase 9A button (USER+2), Phase 9B UART (USER+3) post events; Phase 6I (USER) is dormant; the app state module consumes from button + UART only.
+- **RTT remains canonical log backend.** No log routing change.
+
+---
+
+### Phase 9C Known Limitations
+
+- **App is devkit demo, not framework.** The state machine is intentionally minimal and lives in `devkit/src/`. No `core/` or `platform/` framework abstraction was added; if a future Robot Framework wants to host state machines, that is a separate larger phase.
+- **Button bounce still observable.** Phase 9A-B's 30 ms guard remains in place; bounce ISR firings show up in `ROBOTOS_BTN debounce=`. The app counts only accepted-and-dispatched events, so bounce does not produce extra transitions.
+- **UART line-ending host-controlled.** This run sent only the 3 command bytes; no LF was appended. If a future capture sends `a\n`, the LF (0x0a) will increment `ignored`.
+- **Single-instance state machine.** No persistence, no reset on the wire (only `'r'`/button), no save/restore.
+- **No echo/response on TX.** The producer is RX-only; the app does not write back. `'?'` query response goes to RTT log only, not to the UART.
+- **Workload still minimal.** Two input sources, one consumer. Phase 9D could add a richer behavior layer if useful.
+- **Scheduler mutation still DEFER.** Combined-input peak=4 is well below capacity=16; Phase 7A/7B-1 remain DEFER.
+- **F407 custom board still HOLD/DEFER.** Phase 8A unchanged.
+
+---
+
+### Phase 9C Next Recommended Phases
+
+| Phase | Description | Priority |
+| ----- | ----------- | -------- |
+| **9D** Workload command cleanup / richer app behavior | Optional follow-up: add `?` response on UART TX, additional commands, or a small mode-driven LED reaction; only if useful for downstream agent demos | Candidate |
+| **8A** Custom STM32F407 bring-up | Flash current firmware on F407; retires 25-phase portability debt | HOLD/DEFER until reopened |
+| **6O harness improvements** | Only if validation friction appears (e.g. multi-source captures with timing scripts becoming a recurring pattern) | Optional |
+| **7A / 7B-1** Dispatch budget evolution | Phase 9C combined-source baseline (peak=4 vs capacity=16) shows budget=1 still ample; no workload-driven justification yet | DEFER |

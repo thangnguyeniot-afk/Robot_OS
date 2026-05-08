@@ -9,58 +9,65 @@
 
 ## Last Closed Phase
 
-### Phase 9B — Devkit UART RX Producer
+### Phase 9C — Devkit Minimal Application State Machine
 
-- **Commit:** `85389f4`
+- **Commit:** pending
 - **Date:** 2026-05-08
 - **Branch:** master
-- **Type:** Devkit workload expansion. Second real hardware event source (UART RX); devkit-local; no core/platform/scheduler change.
+- **Type:** Devkit application workload proof. First multi-source workload composition (button + UART → app state); devkit-local; no core/platform/scheduler change.
 - **Close status:** `CLOSED`
-- **Prior baseline:** Phase 9A-C (`3989ff9`), Phase 6I startup burst gated off
+- **Prior baseline:** Phase 9B (`85389f4`), UART RX producer
 
-**Phase 9B delivered:**
+**Phase 9C delivered:**
 
-- `RobotOS_v1.0/devkit/src/devkit_uart_producer.{h,c}` — devkit-local UART RX event producer using Zephyr `uart_irq_callback_set` + `uart_fifo_read`; one byte → one event (USER+3, marker `0x9B0B`).
-- `RobotOS_v1.0/devkit/src/devkit_runtime.c` — wired UART producer init, baseline log, and periodic `ROBOTOS_UART` log into the existing observability cadence.
-- `RobotOS_v1.0/devkit/CMakeLists.txt` — added `src/devkit_uart_producer.c`.
-- `RobotOS_v1.0/devkit/prj.conf` — enabled `CONFIG_SERIAL=y` and `CONFIG_UART_INTERRUPT_DRIVEN=y`; `CONFIG_UART_CONSOLE=n` and `CONFIG_LOG_BACKEND_UART=n` preserved (RTT remains canonical log backend).
-- `RobotOS_v1.0/devkit/docs/TELEMETRY_REFERENCE.md` — added ROBOTOS_UART section; updated Telemetry Stack Summary.
-- `RobotOS_v1.0/devkit/logs/phase_9B_uart_rtt_2026-05-08.txt` — 60 s RTT capture with `abc123\n` (7 bytes) sent via CP210x USB-UART → PA3 @ 115200; rx=7 ok=7 full=0 handled=7; per-byte handler logs match payload.
-- `RobotOS_v1.0/devkit/logs/INDEX.md` — Phase 9B row.
-- `RobotOS_v1.0/devkit/docs/DEVKIT_PROGRESS.md` — Phase 9B section.
+- `RobotOS_v1.0/devkit/src/devkit_app_state.{h,c}` — devkit-local 3-state machine (IDLE/ARMED/ACTIVE) composing button (cycle) + UART (`a`/`s`/`r` commands, `?` query, others ignored).
+- `RobotOS_v1.0/devkit/src/devkit_button_producer.c` — button handler now calls `devkit_app_state_on_button(seq)` after its existing per-press log; handler ownership unchanged.
+- `RobotOS_v1.0/devkit/src/devkit_uart_producer.c` — UART handler now calls `devkit_app_state_on_uart_byte(byte, count)` after its existing per-byte log; handler ownership unchanged.
+- `RobotOS_v1.0/devkit/src/devkit_runtime.c` — `devkit_app_state_init()` runs after `robotos_core_init()` and before producer inits; baseline `ROBOTOS_APP` log + periodic `ROBOTOS_APP` log added to the existing 10-tick cadence.
+- `RobotOS_v1.0/devkit/CMakeLists.txt` — added `src/devkit_app_state.c`.
+- `RobotOS_v1.0/devkit/docs/TELEMETRY_REFERENCE.md` — added ROBOTOS_APP section; updated Telemetry Stack Summary.
+- `RobotOS_v1.0/devkit/logs/phase_9C_app_state_rtt_2026-05-08.txt` — 75 s RTT capture with manual button presses (20) + UART `a`/`s`/`r` (3 bytes); 23 transitions; final state ACTIVE; ignored=0.
+- `RobotOS_v1.0/devkit/logs/INDEX.md` — Phase 9C row.
+- `RobotOS_v1.0/devkit/docs/DEVKIT_PROGRESS.md` — Phase 9C section.
 
-**Workload anchor expanded:** RobotOS now ingests **two distinct real hardware event sources** — GPIO/EXTI (Phase 9A user button, USER+2) and UART RX (Phase 9B serial bytes, USER+3). Both coexist with Phase 6M timer producer (USER+1). Architecture invariants preserved under combined producer load.
+**Workload anchor expanded:** RobotOS now demonstrates the first piece of **application semantics** above the runtime — a tiny state machine driven by two real hardware event sources, with no core or platform change. Workload composition pattern (producer-owned handler → app state hook) is established for future phases.
 
+**No Kconfig/prj.conf changes.** The existing Phase 9A/9B configuration carries forward.
+
+**Phase 9B** (prior): Devkit UART RX producer, commit `85389f4`.
 **Phase 9A-C** (prior): Gate Phase 6I startup burst, commit `3989ff9`.
 **Phase 9A-B** (prior): Button debounce refinement, commit `92de5e0`.
 **Phase 9A-A** (prior): Button EXTI producer, commit `2068180`, CLOSED with BOUNCE_OBSERVED.
-**Phase 6O** (prior): Reusable RTT Streaming Capture Harness, commit `6cb979f`.
 
 ---
 
-## Validation Evidence (Phase 9B UART workload)
+## Validation Evidence (Phase 9C app state machine workload)
 
 | Gate | Result | Detail |
 | ---- | ------ | ------ |
-| Zephyr build | PASS | FLASH 34448 B (6.57%) / RAM 12224 B (9.33%); +3868 B FLASH and +64 B RAM vs Phase 9A-C (Zephyr serial + STM32 UART driver newly enabled) |
+| Zephyr build | PASS | FLASH 35688 B (6.81%) / RAM 12224 B (9.33%); +1240 B FLASH and 0 B RAM vs Phase 9B (app state module + integration code) |
 | Flash | PASS | `west flash` wrote 49152 B |
-| UART send | PASS | `abc123\n` (7 bytes) written to COM5 (CP210x USB-UART) → board PA3 at 115200 8N1, 12 s into capture |
-| RTT capture | PASS | 60.4 s, 20627 bytes; harness exit 0 with Phase 9B-specific patterns |
-| Phase 9B uart producer init | FOUND | Init banner shows `type=USER+3 marker=0x9b0b dev=serial@40004400` |
-| ROBOTOS_OBS state=READY | FOUND | Baseline + 12 periodic emissions |
-| ROBOTOS_FAULT active=0 | FOUND | All 13 emissions; CFSR=0 HFSR=0 throughout (13 occurrences) |
-| ROBOTOS_PROD attempted= | FOUND | Phase 6M producer healthy: ticks=120 → attempted=60 ok=60 dropped=0 |
-| ROBOTOS_BTN | FOUND | Button producer initialized; idle (no presses): attempted=0 ok=0 |
-| ROBOTOS_UART | FOUND | Final at ticks=120: rx=7 ok=7 full=0 invalid=0 other=0 handled=7 last=0x0a |
-| `DEVKIT_DIAG phase6i_startup_burst=0` | FOUND | Phase 9A-C gate still in effect; no Phase 6I interference |
-| Phase 9B uart handled (per-byte) | FOUND | 7 occurrences in order: 0x61 (`a`), 0x62 (`b`), 0x63 (`c`), 0x31 (`1`), 0x32 (`2`), 0x33 (`3`), 0x0a (LF) — exact match to sent payload |
-| CFSR | 0x00000000 throughout | 13 occurrences checked |
-| HFSR | 0x00000000 throughout | 13 occurrences checked |
-| UART conservation | PASS | ok(7)+full(0)+invalid(0)+other(0) = rx(7) ✓; ok = handled = 7 ✓ |
-| Architecture invariants | PASS | accepted=67 dispatched=66 pending=1 (accepted−dispatched=pending ✓); peak=8 (queue absorbed the 7-byte burst); dropped=0; herr=0; unhandled=0; accepted = Phase 6M(60)+UART(7) = 67 ✓ |
-| Core/platform sources changed | ZERO | No `core/`, `platform/`, or `tests/` files touched; no Zephyr include in core |
+| UART send | PASS | `a`, `s`, `r` (3 bytes) written to COM5 (CP210x USB-UART) → board PA3 at 115200 8N1, spaced 1.5 s apart, mid-capture |
+| Button press | PASS | 20 user-button presses across the 75 s window, both before and after the UART sequence |
+| RTT capture | PASS | 75.8 s, 30954 bytes; harness exit 0 with Phase 9C-specific patterns |
+| Phase 9C app state init | FOUND | `state=IDLE` baseline at boot |
+| ROBOTOS_OBS state=READY | FOUND | Baseline + 16 periodic emissions (ticks=0,10,…,160) |
+| ROBOTOS_FAULT active=0 | FOUND | All 17 emissions; CFSR=0 HFSR=0 throughout (16 occurrences) |
+| ROBOTOS_PROD attempted= | FOUND | Phase 6M producer healthy across full window |
+| ROBOTOS_BTN | FOUND | Final: attempted=>20, ok=20, debounce>0 (workload-level bounce filtered as expected) |
+| ROBOTOS_UART | FOUND | Final: rx=3 ok=3 full=0 handled=3 last=0x72 |
+| ROBOTOS_APP | FOUND | Final at ticks≥150: state=ACTIVE transitions=23 button=20 uart=3 ignored=0 last_src=BTN last_byte=0x72 |
+| Phase 9A button handled | FOUND | 20 per-press logs |
+| Phase 9B uart handled | FOUND | 3 per-byte logs (0x61 `a`, 0x73 `s`, 0x72 `r`) |
+| Phase 9C app transition | FOUND | 23 transition logs in the order: 6×BTN → 3×UART (`a`/`s`/`r`) → 14×BTN; both `src=BTN` and `src=UART` exercised |
+| CFSR | 0x00000000 throughout | 16 occurrences checked |
+| HFSR | 0x00000000 throughout | 16 occurrences checked |
+| App conservation | PASS | transitions(23) = button(20) + uart(3); ignored(0) — every recognized command and every button press caused a transition |
+| Architecture invariants | PASS | accepted=98 dispatched=97 pending=1 (accepted−dispatched=pending ✓); peak=4 (well below capacity=16); dropped=0; herr=0; unhandled=0; accepted = Phase 6M(75)+button(20)+UART(3) = 98 ✓ |
+| Core/platform sources changed | ZERO | No `core/`, `platform/`, or `tests/` files touched; no new event types; no admission change |
+| Handler ownership | PRESERVED | Button handler stays in `devkit_button_producer.c`; UART handler stays in `devkit_uart_producer.c`; app module is *called from* handlers, not registered against the core handler table (Option A from the spec) |
 
-Capture log: `RobotOS_v1.0/devkit/logs/phase_9B_uart_rtt_2026-05-08.txt`
+Capture log: `RobotOS_v1.0/devkit/logs/phase_9C_app_state_rtt_2026-05-08.txt`
 
 **Phase 6Z verification highlights:**
 
@@ -114,6 +121,7 @@ to `DEVKIT_PROGRESS.md` for the full history.
 
 | Phase | Description | Commit |
 | ----- | ----------- | ------ |
+| 9C | Devkit Minimal Application State Machine (button + UART → IDLE/ARMED/ACTIVE; 23 transitions; first multi-source workload composition) | pending |
 | 9B | Devkit UART RX Producer (second real hardware event source; USER+3; rx=7 ok=7 full=0 handled=7) | `85389f4` |
 | 9A-C | Gate Phase 6I Startup Burst (devkit-local compile-time gate; default disabled; full 4→0, dropped 13→0) | `3989ff9` |
 | 9A-B | Devkit Button Debounce Refinement (30 ms time-guard; full 98→4) | `92de5e0` |
@@ -145,8 +153,8 @@ to `DEVKIT_PROGRESS.md` for the full history.
 | Phase 9A-B | Devkit button debounce refinement (30 ms time-guard, no core change) | **CLOSED** — full 98→4; debounce=54; see Phase 9A-B section in DEVKIT_PROGRESS.md |
 | Phase 9A-C | Gate Phase 6I startup burst (devkit-local compile-time gate; default disabled) | **CLOSED** — full 4→0; dropped 13→0; peak=14; see Phase 9A-C section in DEVKIT_PROGRESS.md |
 | Phase 9B | UART RX producer (second real hardware event source; USER+3) | **CLOSED** — rx=7 ok=7 full=0 handled=7; per-byte handler logs match payload `abc123\n`; see Phase 9B section in DEVKIT_PROGRESS.md |
-| Phase 9C | Minimal application state machine (compose button + UART into agent demo) | Candidate — two real input sources now available |
-| Phase 9D | Workload mode cleanup / second-board sanity | Candidate — only if multi-source workload reveals friction |
+| Phase 9C | Minimal application state machine (compose button + UART into IDLE/ARMED/ACTIVE) | **CLOSED** — 23 transitions; button=20 uart=3 ignored=0; peak=4; dropped=0; see Phase 9C section in DEVKIT_PROGRESS.md |
+| Phase 9D | Workload command cleanup / richer app behavior (response, multi-byte, query reporting) | Candidate — only if app behavior expansion is useful |
 | Phase 8A | Custom STM32F407 board bring-up | **Candidate** — retires 25-phase portability debt; use `capture_devkit_rtt.ps1 -OpenOcdConfig <f407.cfg>`; remains HOLD/DEFER until user reopens |
 | Phase 7B-1 | Dispatch Budget Test Parameterization | Candidate — only if workload evidence reveals saturation; Phase 9A-C clean baseline shows budget=1 still adequate (peak=14, dropped=0) |
 | Phase 7A | Dispatch Budget Evolution Planning | DEFER — Phase 9A-A workload data shows ~112 events / 60 s sustained, no workload-driven reason for budget mutation |

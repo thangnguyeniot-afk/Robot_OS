@@ -54,6 +54,7 @@
 #endif
 
 #include "devkit_runtime.h"
+#include "devkit_app_state.h"
 #include "devkit_build_info.h"
 #include "devkit_button_producer.h"
 #include "devkit_fault.h"
@@ -200,6 +201,14 @@ int devkit_runtime_init(void)
 		LOG_ERR("Core init failed: %d -- continuing", (int)core_ret);
 	}
 
+	/* Phase 9C: initialize the devkit application state machine before any
+	 * producer handler can run. Producer handlers fire only from the
+	 * dispatcher in devkit_runtime_run(), so init order between this call
+	 * and the producer inits is logically safe either way; we put it here
+	 * for readability (state machine lives logically above core, below
+	 * producers). */
+	devkit_app_state_init();
+
 	/* Phase 9A-C: announce diagnostic gate state once at boot. Grep targets:
 	 *   "DEVKIT_DIAG phase6i_startup_burst=0|1"
 	 *   "Phase 6I startup burst disabled" (gate=0 only)
@@ -292,6 +301,8 @@ int devkit_runtime_init(void)
 	devkit_button_producer_log_stats();
 	/* Phase 9B: emit one baseline uart stats line after init */
 	devkit_uart_producer_log_stats();
+	/* Phase 9C: emit one baseline app state line after init */
+	devkit_app_state_log_snapshot();
 
 	return 0;
 }
@@ -318,16 +329,17 @@ void devkit_runtime_run(void)
 		 * cadence predicate is false; one post at most per call. */
 		devkit_timer_producer_on_tick(tick_count);
 
-		/* Phase 6K/6L/6M/9A-A/9B: periodic observability snapshot + fault +
-		 * producer + button + uart log. tick_count was post-incremented in
-		 * the LOG_INF above, so it already reflects the next iteration
-		 * index here. Fire every N. */
+		/* Phase 6K/6L/6M/9A-A/9B/9C: periodic observability snapshot + fault
+		 * + producer + button + uart + app log. tick_count was
+		 * post-incremented in the LOG_INF above, so it already reflects
+		 * the next iteration index here. Fire every N. */
 		if ((tick_count % DEVKIT_OBSERVABILITY_LOG_INTERVAL_TICKS) == 0u) {
 			devkit_observability_log_snapshot();
 			devkit_observability_log_fault();
 			devkit_observability_log_producer_stats();
 			devkit_button_producer_log_stats();
 			devkit_uart_producer_log_stats();
+			devkit_app_state_log_snapshot();
 		}
 
 #if DEVKIT_PHASE6I_STARTUP_BURST_ENABLED

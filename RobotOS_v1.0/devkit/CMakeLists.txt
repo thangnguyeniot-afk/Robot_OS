@@ -27,6 +27,7 @@ target_sources(app PRIVATE
     src/devkit_timer_producer.c
     src/devkit_button_producer.c
     src/devkit_uart_producer.c
+    src/devkit_app_state.c
     ../core/robotos_core.c
     ../core/robotos_event_queue.c
     ../core/robotos_event_dispatcher.c

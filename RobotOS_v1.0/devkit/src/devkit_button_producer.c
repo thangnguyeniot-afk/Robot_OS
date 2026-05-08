@@ -29,6 +29,7 @@
 #include <zephyr/logging/log.h>
 
 #include "robotos_core.h"
+#include "devkit_app_state.h"
 
 LOG_MODULE_REGISTER(devkit_btn, LOG_LEVEL_INF);
 
@@ -171,6 +172,11 @@ static robotos_core_status_t devkit_button_handler(
 	/* Per-press milestone log. Cadence is bounded by user button press
 	 * rate (mechanical, far below tick rate) so log noise is small. */
 	LOG_INF("Phase 9A button handled seq=%u count=%u", seq, s_handled);
+
+	/* Phase 9C: drive the devkit application state machine.
+	 * Thread-context only; app state module is single-threaded by
+	 * construction (dispatcher serializes handler invocations). */
+	devkit_app_state_on_button(seq);
 
 	return ROBOTOS_CORE_OK;
 }

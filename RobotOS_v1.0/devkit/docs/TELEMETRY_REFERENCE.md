@@ -235,6 +235,52 @@ wire).
 
 ---
 
+## ROBOTOS_APP — Application State Machine Snapshot (Phase 9C)
+
+Emitted by `devkit_app_state_log_snapshot()` in `devkit_app_state.c`.
+
+**Literal log shape** (from `devkit_app_state.c` LOG_INF format string):
+
+```text
+ROBOTOS_APP state=NAME transitions=N button=N uart=N ignored=N last_src=NAME last_byte=0xNN
+```
+
+**Cadence:** same as ROBOTOS_OBS / FAULT / PROD / BTN / UART (one baseline at
+init; one periodic per cadence window). Each cadence window now emits a 6-line
+block plus any per-transition diagnostic lines.
+
+**Field reference:**
+
+| Field | Type | Meaning | Canonical Definition |
+|-------|------|---------|----------------------|
+| `state` | enum (IDLE/ARMED/ACTIVE) | Current application state | `DEVKIT_PROGRESS.md` — Phase 9C |
+| `transitions` | uint32 | Total state changes since boot (button + UART; excludes `?` queries and ignored bytes) | `DEVKIT_PROGRESS.md` — Phase 9C |
+| `button` | uint32 | Button semantic events received by the app (one per accepted-and-dispatched USER+2 event; each one cycles the state) | `DEVKIT_PROGRESS.md` — Phase 9C |
+| `uart` | uint32 | UART bytes received by the app (every accepted-and-dispatched USER+3 event, regardless of recognition) | `DEVKIT_PROGRESS.md` — Phase 9C |
+| `ignored` | uint32 | UART bytes that did not match any recognized command (`a`/`A`, `s`/`S`, `r`/`R`, `?`) | `DEVKIT_PROGRESS.md` — Phase 9C |
+| `last_src` | enum (NONE/BTN/UART) | Source of the most recent input | `DEVKIT_PROGRESS.md` — Phase 9C |
+| `last_byte` | hex uint8 | Most recent UART byte (0x00 if no UART byte seen) | `DEVKIT_PROGRESS.md` — Phase 9C |
+
+**Conservation invariant:** `transitions ≤ button + uart`. Button events
+always cause a transition (cycle); UART events cause a transition only when
+recognized **and** non-redundant (e.g. 'a' from ARMED is logged ignored, not
+counted as a transition). `transitions + ignored_due_to_redundant_or_unknown
++ query_count = button + uart`.
+
+**Per-transition diagnostic log** (emitted from the app module on every
+state change):
+
+```text
+Phase 9C app transition: <prev>-><next> src=BTN seq=<n> total=<k>
+Phase 9C app transition: <prev>-><next> src=UART byte=0xNN count=<n> total=<k>
+```
+
+Useful for ordering verification: every transition appears with both the
+source and the producer-side sequence/handler-count, so the full causality
+chain (producer ISR → core queue → handler → app state) can be reconstructed.
+
+---
+
 ## Telemetry Stack Summary
 
 ```text
@@ -248,6 +294,8 @@ ROBOTOS_BTN   --- devkit_button_producer_get_stats()  (Phase 9A-A)
                   producer module: devkit_button_producer.c (Zephyr GPIO/EXTI; devkit-local)
 ROBOTOS_UART  --- devkit_uart_producer_get_stats()    (Phase 9B)
                   producer module: devkit_uart_producer.c (Zephyr UART IRQ; devkit-local)
+ROBOTOS_APP   --- devkit_app_state_get_snapshot()     (Phase 9C)
+                  app state module: devkit_app_state.c (composes BTN + UART; pure C)
 ```
 
 All three streams are **passive read-only**. They do not feed back into

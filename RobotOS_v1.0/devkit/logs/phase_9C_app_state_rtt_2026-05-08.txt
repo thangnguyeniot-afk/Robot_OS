@@ -1,0 +1,332 @@
+[00:00:00.000,000] [0m<inf> devkit_build_info:   zephyr=3.6.0[0m
+[00:00:00.000,000] [0m<inf> devkit_build_info:   build=May  8 2026 21:15:11[0m
+[1;31m--- 4 messages dropped ---
+[0m[00:00:00.000,000] [0m<inf> devkit_build_info:   tick_ms=500[0m
+[00:00:00.000,000] [0m<inf> devkit_build_info:   log_backend=RTT[0m
+[00:00:00.000,000] [0m<inf> devkit_runtime: platform critical smoke ok[0m
+[00:00:00.000,000] [0m<inf> robotos_platform: [robotos_core] RobotOS core init -- version=4B-contract state=READY[0m
+[00:00:00.000,000] [0m<inf> robotos_platform: [robotos_core] event queue initialized capacity=16[0m
+[00:00:00.000,000] [0m<inf> robotos_platform: [robotos_core] event dispatcher initialized[0m
+[00:00:00.000,000] [0m<inf> devkit_app: Phase 9C app state init: state=IDLE[0m
+[00:00:00.000,000] [0m<inf> devkit_runtime: DEVKIT_DIAG phase6i_startup_burst=0[0m
+[00:00:00.000,000] [0m<inf> devkit_runtime: Phase 6I startup burst disabled (Phase 9A-C default; -DDEVKIT_PHASE6I_STARTUP_BURST_ENABLED=1 to restore)[0m
+[00:00:00.000,000] [0m<inf> devkit_runtime: RobotOS devkit starting -- board: stm32f411e_disco[0m
+[00:00:00.000,000] [0m<inf> devkit_runtime: LED blink loop starting[0m
+[00:00:00.000,000] [0m<inf> devkit_runtime: Phase 6M producer init: type=USER+1 marker=0x6d00 cadence=every 2 ticks[0m
+[00:00:00.000,000] [0m<inf> devkit_btn: Phase 9A-B button producer init: type=USER+2 marker=0x9a0a pin=gpio@40020000.0 debounce=30ms[0m
+[00:00:00.000,000] [0m<inf> devkit_uart: Phase 9B uart producer init: type=USER+3 marker=0x9b0b dev=serial@40004400[0m
+[00:00:00.000,000] [0m<inf> devkit_obs: ROBOTOS_OBS state=READY ticks=0 pending=0 peak=0 dropped=0 dispatched=0 herr=0 throttled=0 rejected=0 accepted=0 unhandled=0 bp=0 th_active=0[0m
+[00:00:00.000,000] [0m<inf> devkit_obs: ROBOTOS_FAULT active=0 cfsr=0x00000000 hfsr=0x00000000 context=none[0m
+[00:00:00.000,000] [0m<inf> devkit_obs: ROBOTOS_PROD attempted=0 ok=0 throttled=0 dropped=0 invalid=0 other=0 type=USER+1[0m
+[00:00:00.000,000] [0m<inf> devkit_btn: ROBOTOS_BTN attempted=0 ok=0 full=0 debounce=0 invalid=0 other=0 handled=0 type=USER+2[0m
+[00:00:00.000,000] [0m<inf> devkit_uart: ROBOTOS_UART rx=0 ok=0 full=0 invalid=0 other=0 handled=0 last=0x00 type=USER+3[0m
+[00:00:00.000,000] [0m<inf> devkit_app: ROBOTOS_APP state=IDLE transitions=0 button=0 uart=0 ignored=0 last_src=NONE last_byte=0x00[0m
+[00:00:00.000,000] [0m<inf> devkit_runtime: tick count=0[0m
+[00:00:00.000,000] [0m<inf> robotos_platform: [robotos_core] core tick count=1[0m
+[00:00:00.500,000] [0m<inf> devkit_runtime: tick count=1[0m
+[00:00:01.000,000] [0m<inf> devkit_runtime: tick count=2[0m
+[00:00:01.500,000] [0m<inf> devkit_runtime: tick count=3[0m
+[00:00:02.001,000] [0m<inf> devkit_runtime: tick count=4[0m
+[00:00:02.501,000] [0m<inf> devkit_runtime: tick count=5[0m
+[00:00:03.001,000] [0m<inf> devkit_runtime: tick count=6[0m
+[00:00:03.501,000] [0m<inf> devkit_runtime: tick count=7[0m
+[00:00:04.001,000] [0m<inf> devkit_runtime: tick count=8[0m
+[00:00:04.501,000] [0m<inf> devkit_runtime: tick count=9[0m
+[00:00:04.501,000] [0m<inf> robotos_platform: [robotos_core] core tick count=10[0m
+[00:00:04.501,000] [0m<inf> devkit_obs: ROBOTOS_OBS state=READY ticks=10 pending=1 peak=1 dropped=0 dispatched=4 herr=0 throttled=0 rejected=0 accepted=5 unhandled=0 bp=0 th_active=0[0m
+[00:00:04.501,000] [0m<inf> devkit_obs: ROBOTOS_FAULT active=0 cfsr=0x00000000 hfsr=0x00000000 context=none[0m
+[00:00:04.501,000] [0m<inf> devkit_obs: ROBOTOS_PROD attempted=5 ok=5 throttled=0 dropped=0 invalid=0 other=0 type=USER+1[0m
+[00:00:04.501,000] [0m<inf> devkit_btn: ROBOTOS_BTN attempted=0 ok=0 full=0 debounce=0 invalid=0 other=0 handled=0 type=USER+2[0m
+[00:00:04.501,000] [0m<inf> devkit_uart: ROBOTOS_UART rx=0 ok=0 full=0 invalid=0 other=0 handled=0 last=0x00 type=USER+3[0m
+[00:00:04.501,000] [0m<inf> devkit_app: ROBOTOS_APP state=IDLE transitions=0 button=0 uart=0 ignored=0 last_src=NONE last_byte=0x00[0m
+[00:00:05.001,000] [0m<inf> devkit_runtime: tick count=10[0m
+[00:00:05.501,000] [0m<inf> devkit_runtime: tick count=11[0m
+[00:00:06.002,000] [0m<inf> devkit_runtime: tick count=12[0m
+[00:00:06.502,000] [0m<inf> devkit_runtime: tick count=13[0m
+[00:00:07.002,000] [0m<inf> devkit_runtime: tick count=14[0m
+[00:00:07.502,000] [0m<inf> devkit_runtime: tick count=15[0m
+[00:00:08.002,000] [0m<inf> devkit_runtime: tick count=16[0m
+[00:00:08.502,000] [0m<inf> devkit_runtime: tick count=17[0m
+[00:00:09.002,000] [0m<inf> devkit_runtime: tick count=18[0m
+[00:00:09.502,000] [0m<inf> devkit_runtime: tick count=19[0m
+[00:00:09.502,000] [0m<inf> robotos_platform: [robotos_core] core tick count=20[0m
+[00:00:09.502,000] [0m<inf> devkit_btn: Phase 9A button handled seq=1 count=1[0m
+[00:00:09.502,000] [0m<inf> devkit_app: Phase 9C app transition: IDLE->ARMED src=BTN seq=1 total=1[0m
+[00:00:09.502,000] [0m<inf> devkit_obs: ROBOTOS_OBS state=READY ticks=20 pending=2 peak=2 dropped=0 dispatched=10 herr=0 throttled=0 rejected=0 accepted=12 unhandled=0 bp=1 th_active=1[0m
+[00:00:09.502,000] [0m<inf> devkit_obs: ROBOTOS_FAULT active=0 cfsr=0x00000000 hfsr=0x00000000 context=none[0m
+[00:00:09.502,000] [0m<inf> devkit_obs: ROBOTOS_PROD attempted=10 ok=10 throttled=0 dropped=0 invalid=0 other=0 type=USER+1[0m
+[00:00:09.502,000] [0m<inf> devkit_btn: ROBOTOS_BTN attempted=3 ok=2 full=0 debounce=1 invalid=0 other=0 handled=1 type=USER+2[0m
+[00:00:09.502,000] [0m<inf> devkit_uart: ROBOTOS_UART rx=0 ok=0 full=0 invalid=0 other=0 handled=0 last=0x00 type=USER+3[0m
+[00:00:09.502,000] [0m<inf> devkit_app: ROBOTOS_APP state=ARMED transitions=1 button=1 uart=0 ignored=0 last_src=BTN last_byte=0x00[0m
+[00:00:10.003,000] [0m<inf> devkit_runtime: tick count=20[0m
+[00:00:10.003,000] [0m<inf> devkit_btn: Phase 9A button handled seq=3 count=2[0m
+[00:00:10.003,000] [0m<inf> devkit_app: Phase 9C app transition: ARMED->ACTIVE src=BTN seq=3 total=2[0m
+[00:00:10.503,000] [0m<inf> devkit_runtime: tick count=21[0m
+[00:00:11.003,000] [0m<inf> devkit_runtime: tick count=22[0m
+[00:00:11.503,000] [0m<inf> devkit_runtime: tick count=23[0m
+[00:00:11.503,000] [0m<inf> devkit_btn: Phase 9A button handled seq=4 count=3[0m
+[00:00:11.503,000] [0m<inf> devkit_app: Phase 9C app transition: ACTIVE->IDLE src=BTN seq=4 total=3[0m
+[00:00:12.003,000] [0m<inf> devkit_runtime: tick count=24[0m
+[00:00:12.003,000] [0m<inf> devkit_btn: Phase 9A button handled seq=5 count=4[0m
+[00:00:12.003,000] [0m<inf> devkit_app: Phase 9C app transition: IDLE->ARMED src=BTN seq=5 total=4[0m
+[00:00:12.503,000] [0m<inf> devkit_runtime: tick count=25[0m
+[00:00:13.003,000] [0m<inf> devkit_runtime: tick count=26[0m
+[00:00:13.503,000] [0m<inf> devkit_runtime: tick count=27[0m
+[00:00:13.503,000] [0m<inf> devkit_btn: Phase 9A button handled seq=12 count=5[0m
+[00:00:13.503,000] [0m<inf> devkit_app: Phase 9C app transition: ARMED->ACTIVE src=BTN seq=12 total=5[0m
+[00:00:14.003,000] [0m<inf> devkit_runtime: tick count=28[0m
+[00:00:14.503,000] [0m<inf> devkit_runtime: tick count=29[0m
+[00:00:14.503,000] [0m<inf> robotos_platform: [robotos_core] core tick count=30[0m
+[00:00:14.503,000] [0m<inf> devkit_btn: Phase 9A button handled seq=14 count=6[0m
+[00:00:14.504,000] [0m<inf> devkit_app: Phase 9C app transition: ACTIVE->IDLE src=BTN seq=14 total=6[0m
+[00:00:14.504,000] [0m<inf> devkit_obs: ROBOTOS_OBS state=READY ticks=30 pending=1 peak=3 dropped=0 dispatched=20 herr=0 throttled=0 rejected=0 accepted=21 unhandled=0 bp=0 th_active=0[0m
+[00:00:14.504,000] [0m<inf> devkit_obs: ROBOTOS_FAULT active=0 cfsr=0x00000000 hfsr=0x00000000 context=none[0m
+[00:00:14.504,000] [0m<inf> devkit_obs: ROBOTOS_PROD attempted=15 ok=15 throttled=0 dropped=0 invalid=0 other=0 type=USER+1[0m
+[00:00:14.504,000] [0m<inf> devkit_btn: ROBOTOS_BTN attempted=18 ok=6 full=0 debounce=12 invalid=0 other=0 handled=6 type=USER+2[0m
+[00:00:14.504,000] [0m<inf> devkit_uart: ROBOTOS_UART rx=0 ok=0 full=0 invalid=0 other=0 handled=0 last=0x00 type=USER+3[0m
+[00:00:14.504,000] [0m<inf> devkit_app: ROBOTOS_APP state=IDLE transitions=6 button=6 uart=0 ignored=0 last_src=BTN last_byte=0x00[0m
+[00:00:15.004,000] [0m<inf> devkit_runtime: tick count=30[0m
+[00:00:15.504,000] [0m<inf> devkit_runtime: tick count=31[0m
+[00:00:16.004,000] [0m<inf> devkit_runtime: tick count=32[0m
+[00:00:16.504,000] [0m<inf> devkit_runtime: tick count=33[0m
+[00:00:17.004,000] [0m<inf> devkit_runtime: tick count=34[0m
+[00:00:17.504,000] [0m<inf> devkit_runtime: tick count=35[0m
+[00:00:18.004,000] [0m<inf> devkit_runtime: tick count=36[0m
+[00:00:18.504,000] [0m<inf> devkit_runtime: tick count=37[0m
+[00:00:19.005,000] [0m<inf> devkit_runtime: tick count=38[0m
+[00:00:19.505,000] [0m<inf> devkit_runtime: tick count=39[0m
+[00:00:19.505,000] [0m<inf> robotos_platform: [robotos_core] core tick count=40[0m
+[00:00:19.505,000] [0m<inf> devkit_obs: ROBOTOS_OBS state=READY ticks=40 pending=1 peak=3 dropped=0 dispatched=25 herr=0 throttled=0 rejected=0 accepted=26 unhandled=0 bp=0 th_active=0[0m
+[00:00:19.505,000] [0m<inf> devkit_obs: ROBOTOS_FAULT active=0 cfsr=0x00000000 hfsr=0x00000000 context=none[0m
+[00:00:19.505,000] [0m<inf> devkit_obs: ROBOTOS_PROD attempted=20 ok=20 throttled=0 dropped=0 invalid=0 other=0 type=USER+1[0m
+[00:00:19.505,000] [0m<inf> devkit_btn: ROBOTOS_BTN attempted=18 ok=6 full=0 debounce=12 invalid=0 other=0 handled=6 type=USER+2[0m
+[00:00:19.505,000] [0m<inf> devkit_uart: ROBOTOS_UART rx=0 ok=0 full=0 invalid=0 other=0 handled=0 last=0x00 type=USER+3[0m
+[00:00:19.505,000] [0m<inf> devkit_app: ROBOTOS_APP state=IDLE transitions=6 button=6 uart=0 ignored=0 last_src=BTN last_byte=0x00[0m
+[00:00:20.005,000] [0m<inf> devkit_runtime: tick count=40[0m
+[00:00:20.505,000] [0m<inf> devkit_runtime: tick count=41[0m
+[00:00:21.005,000] [0m<inf> devkit_runtime: tick count=42[0m
+[00:00:21.505,000] [0m<inf> devkit_runtime: tick count=43[0m
+[00:00:22.005,000] [0m<inf> devkit_runtime: tick count=44[0m
+[00:00:22.505,000] [0m<inf> devkit_runtime: tick count=45[0m
+[00:00:23.006,000] [0m<inf> devkit_runtime: tick count=46[0m
+[00:00:23.506,000] [0m<inf> devkit_runtime: tick count=47[0m
+[00:00:24.006,000] [0m<inf> devkit_runtime: tick count=48[0m
+[00:00:24.506,000] [0m<inf> devkit_runtime: tick count=49[0m
+[00:00:24.506,000] [0m<inf> robotos_platform: [robotos_core] core tick count=50[0m
+[00:00:24.506,000] [0m<inf> devkit_obs: ROBOTOS_OBS state=READY ticks=50 pending=1 peak=3 dropped=0 dispatched=30 herr=0 throttled=0 rejected=0 accepted=31 unhandled=0 bp=0 th_active=0[0m
+[00:00:24.506,000] [0m<inf> devkit_obs: ROBOTOS_FAULT active=0 cfsr=0x00000000 hfsr=0x00000000 context=none[0m
+[00:00:24.506,000] [0m<inf> devkit_obs: ROBOTOS_PROD attempted=25 ok=25 throttled=0 dropped=0 invalid=0 other=0 type=USER+1[0m
+[00:00:24.506,000] [0m<inf> devkit_btn: ROBOTOS_BTN attempted=18 ok=6 full=0 debounce=12 invalid=0 other=0 handled=6 type=USER+2[0m
+[00:00:24.506,000] [0m<inf> devkit_uart: ROBOTOS_UART rx=0 ok=0 full=0 invalid=0 other=0 handled=0 last=0x00 type=USER+3[0m
+[00:00:24.506,000] [0m<inf> devkit_app: ROBOTOS_APP state=IDLE transitions=6 button=6 uart=0 ignored=0 last_src=BTN last_byte=0x00[0m
+[00:00:25.006,000] [0m<inf> devkit_runtime: tick count=50[0m
+[00:00:25.506,000] [0m<inf> devkit_runtime: tick count=51[0m
+[00:00:26.006,000] [0m<inf> devkit_runtime: tick count=52[0m
+[00:00:26.506,000] [0m<inf> devkit_runtime: tick count=53[0m
+[00:00:27.007,000] [0m<inf> devkit_runtime: tick count=54[0m
+[00:00:27.507,000] [0m<inf> devkit_runtime: tick count=55[0m
+[00:00:28.007,000] [0m<inf> devkit_runtime: tick count=56[0m
+[00:00:28.507,000] [0m<inf> devkit_runtime: tick count=57[0m
+[00:00:29.007,000] [0m<inf> devkit_runtime: tick count=58[0m
+[00:00:29.507,000] [0m<inf> devkit_runtime: tick count=59[0m
+[00:00:29.507,000] [0m<inf> robotos_platform: [robotos_core] core tick count=60[0m
+[00:00:29.507,000] [0m<inf> devkit_obs: ROBOTOS_OBS state=READY ticks=60 pending=1 peak=3 dropped=0 dispatched=35 herr=0 throttled=0 rejected=0 accepted=36 unhandled=0 bp=0 th_active=0[0m
+[00:00:29.507,000] [0m<inf> devkit_obs: ROBOTOS_FAULT active=0 cfsr=0x00000000 hfsr=0x00000000 context=none[0m
+[00:00:29.507,000] [0m<inf> devkit_obs: ROBOTOS_PROD attempted=30 ok=30 throttled=0 dropped=0 invalid=0 other=0 type=USER+1[0m
+[00:00:29.507,000] [0m<inf> devkit_btn: ROBOTOS_BTN attempted=18 ok=6 full=0 debounce=12 invalid=0 other=0 handled=6 type=USER+2[0m
+[00:00:29.507,000] [0m<inf> devkit_uart: ROBOTOS_UART rx=0 ok=0 full=0 invalid=0 other=0 handled=0 last=0x00 type=USER+3[0m
+[00:00:29.507,000] [0m<inf> devkit_app: ROBOTOS_APP state=IDLE transitions=6 button=6 uart=0 ignored=0 last_src=BTN last_byte=0x00[0m
+[00:00:30.007,000] [0m<inf> devkit_runtime: tick count=60[0m
+[00:00:30.507,000] [0m<inf> devkit_runtime: tick count=61[0m
+[00:00:31.008,000] [0m<inf> devkit_runtime: tick count=62[0m
+[00:00:31.508,000] [0m<inf> devkit_runtime: tick count=63[0m
+[00:00:32.008,000] [0m<inf> devkit_runtime: tick count=64[0m
+[00:00:32.508,000] [0m<inf> devkit_runtime: tick count=65[0m
+[00:00:33.008,000] [0m<inf> devkit_runtime: tick count=66[0m
+[00:00:33.508,000] [0m<inf> devkit_runtime: tick count=67[0m
+[00:00:34.008,000] [0m<inf> devkit_runtime: tick count=68[0m
+[00:00:34.508,000] [0m<inf> devkit_runtime: tick count=69[0m
+[00:00:34.508,000] [0m<inf> robotos_platform: [robotos_core] core tick count=70[0m
+[00:00:34.508,000] [0m<inf> devkit_obs: ROBOTOS_OBS state=READY ticks=70 pending=1 peak=3 dropped=0 dispatched=40 herr=0 throttled=0 rejected=0 accepted=41 unhandled=0 bp=0 th_active=0[0m
+[00:00:34.508,000] [0m<inf> devkit_obs: ROBOTOS_FAULT active=0 cfsr=0x00000000 hfsr=0x00000000 context=none[0m
+[00:00:34.508,000] [0m<inf> devkit_obs: ROBOTOS_PROD attempted=35 ok=35 throttled=0 dropped=0 invalid=0 other=0 type=USER+1[0m
+[00:00:34.508,000] [0m<inf> devkit_btn: ROBOTOS_BTN attempted=18 ok=6 full=0 debounce=12 invalid=0 other=0 handled=6 type=USER+2[0m
+[00:00:34.508,000] [0m<inf> devkit_uart: ROBOTOS_UART rx=0 ok=0 full=0 invalid=0 other=0 handled=0 last=0x00 type=USER+3[0m
+[00:00:34.508,000] [0m<inf> devkit_app: ROBOTOS_APP state=IDLE transitions=6 button=6 uart=0 ignored=0 last_src=BTN last_byte=0x00[0m
+[00:00:35.009,000] [0m<inf> devkit_runtime: tick count=70[0m
+[00:00:35.509,000] [0m<inf> devkit_runtime: tick count=71[0m
+[00:00:36.009,000] [0m<inf> devkit_runtime: tick count=72[0m
+[00:00:36.509,000] [0m<inf> devkit_runtime: tick count=73[0m
+[00:00:37.009,000] [0m<inf> devkit_runtime: tick count=74[0m
+[00:00:37.509,000] [0m<inf> devkit_runtime: tick count=75[0m
+[00:00:37.509,000] [0m<inf> devkit_uart: Phase 9B uart handled byte=0x61 ('a') count=1[0m
+[00:00:37.509,000] [0m<inf> devkit_app: Phase 9C app transition: IDLE->ARMED src=UART byte=0x61 count=1 total=7[0m
+[00:00:38.009,000] [0m<inf> devkit_runtime: tick count=76[0m
+[00:00:38.509,000] [0m<inf> devkit_runtime: tick count=77[0m
+[00:00:38.509,000] [0m<inf> devkit_uart: Phase 9B uart handled byte=0x73 ('s') count=2[0m
+[00:00:38.509,000] [0m<inf> devkit_app: Phase 9C app transition: ARMED->ACTIVE src=UART byte=0x73 count=2 total=8[0m
+[00:00:39.009,000] [0m<inf> devkit_runtime: tick count=78[0m
+[00:00:39.509,000] [0m<inf> devkit_runtime: tick count=79[0m
+[00:00:39.509,000] [0m<inf> robotos_platform: [robotos_core] core tick count=80[0m
+[00:00:39.509,000] [0m<inf> devkit_obs: ROBOTOS_OBS state=READY ticks=80 pending=1 peak=3 dropped=0 dispatched=47 herr=0 throttled=0 rejected=0 accepted=48 unhandled=0 bp=0 th_active=0[0m
+[00:00:39.510,000] [0m<inf> devkit_obs: ROBOTOS_FAULT active=0 cfsr=0x00000000 hfsr=0x00000000 context=none[0m
+[00:00:39.510,000] [0m<inf> devkit_obs: ROBOTOS_PROD attempted=40 ok=40 throttled=0 dropped=0 invalid=0 other=0 type=USER+1[0m
+[00:00:39.510,000] [0m<inf> devkit_btn: ROBOTOS_BTN attempted=18 ok=6 full=0 debounce=12 invalid=0 other=0 handled=6 type=USER+2[0m
+[00:00:39.510,000] [0m<inf> devkit_uart: ROBOTOS_UART rx=2 ok=2 full=0 invalid=0 other=0 handled=2 last=0x73 type=USER+3[0m
+[00:00:39.510,000] [0m<inf> devkit_app: ROBOTOS_APP state=ACTIVE transitions=8 button=6 uart=2 ignored=0 last_src=UART last_byte=0x73[0m
+[00:00:40.010,000] [0m<inf> devkit_runtime: tick count=80[0m
+[00:00:40.510,000] [0m<inf> devkit_runtime: tick count=81[0m
+[00:00:40.510,000] [0m<inf> devkit_uart: Phase 9B uart handled byte=0x72 ('r') count=3[0m
+[00:00:40.510,000] [0m<inf> devkit_app: Phase 9C app transition: ACTIVE->IDLE src=UART byte=0x72 count=3 total=9[0m
+[00:00:41.010,000] [0m<inf> devkit_runtime: tick count=82[0m
+[00:00:41.510,000] [0m<inf> devkit_runtime: tick count=83[0m
+[00:00:42.010,000] [0m<inf> devkit_runtime: tick count=84[0m
+[00:00:42.510,000] [0m<inf> devkit_runtime: tick count=85[0m
+[00:00:42.510,000] [0m<inf> devkit_btn: Phase 9A button handled seq=19 count=7[0m
+[00:00:42.510,000] [0m<inf> devkit_app: Phase 9C app transition: IDLE->ARMED src=BTN seq=19 total=10[0m
+[00:00:43.010,000] [0m<inf> devkit_runtime: tick count=86[0m
+[00:00:43.010,000] [0m<inf> devkit_btn: Phase 9A button handled seq=21 count=8[0m
+[00:00:43.010,000] [0m<inf> devkit_app: Phase 9C app transition: ARMED->ACTIVE src=BTN seq=21 total=11[0m
+[00:00:43.510,000] [0m<inf> devkit_runtime: tick count=87[0m
+[00:00:44.011,000] [0m<inf> devkit_runtime: tick count=88[0m
+[00:00:44.011,000] [0m<inf> devkit_btn: Phase 9A button handled seq=23 count=9[0m
+[00:00:44.011,000] [0m<inf> devkit_app: Phase 9C app transition: ACTIVE->IDLE src=BTN seq=23 total=12[0m
+[00:00:44.511,000] [0m<inf> devkit_runtime: tick count=89[0m
+[00:00:44.511,000] [0m<inf> robotos_platform: [robotos_core] core tick count=90[0m
+[00:00:44.511,000] [0m<inf> devkit_btn: Phase 9A button handled seq=24 count=10[0m
+[00:00:44.511,000] [0m<inf> devkit_app: Phase 9C app transition: IDLE->ARMED src=BTN seq=24 total=13[0m
+[00:00:44.511,000] [0m<inf> devkit_obs: ROBOTOS_OBS state=READY ticks=90 pending=2 peak=3 dropped=0 dispatched=56 herr=0 throttled=0 rejected=0 accepted=58 unhandled=0 bp=1 th_active=1[0m
+[00:00:44.511,000] [0m<inf> devkit_obs: ROBOTOS_FAULT active=0 cfsr=0x00000000 hfsr=0x00000000 context=none[0m
+[00:00:44.511,000] [0m<inf> devkit_obs: ROBOTOS_PROD attempted=45 ok=45 throttled=0 dropped=0 invalid=0 other=0 type=USER+1[0m
+[00:00:44.511,000] [0m<inf> devkit_btn: ROBOTOS_BTN attempted=25 ok=10 full=0 debounce=15 invalid=0 other=0 handled=10 type=USER+2[0m
+[00:00:44.511,000] [0m<inf> devkit_uart: ROBOTOS_UART rx=3 ok=3 full=0 invalid=0 other=0 handled=3 last=0x72 type=USER+3[0m
+[00:00:44.511,000] [0m<inf> devkit_app: ROBOTOS_APP state=ARMED transitions=13 button=10 uart=3 ignored=0 last_src=BTN last_byte=0x72[0m
+[00:00:45.011,000] [0m<inf> devkit_runtime: tick count=90[0m
+[00:00:45.511,000] [0m<inf> devkit_runtime: tick count=91[0m
+[00:00:46.011,000] [0m<inf> devkit_runtime: tick count=92[0m
+[00:00:46.011,000] [0m<inf> devkit_btn: Phase 9A button handled seq=26 count=11[0m
+[00:00:46.011,000] [0m<inf> devkit_app: Phase 9C app transition: ARMED->ACTIVE src=BTN seq=26 total=14[0m
+[00:00:46.511,000] [0m<inf> devkit_runtime: tick count=93[0m
+[00:00:46.511,000] [0m<inf> devkit_btn: Phase 9A button handled seq=28 count=12[0m
+[00:00:46.511,000] [0m<inf> devkit_app: Phase 9C app transition: ACTIVE->IDLE src=BTN seq=28 total=15[0m
+[00:00:47.011,000] [0m<inf> devkit_runtime: tick count=94[0m
+[00:00:47.512,000] [0m<inf> devkit_runtime: tick count=95[0m
+[00:00:48.012,000] [0m<inf> devkit_runtime: tick count=96[0m
+[00:00:48.512,000] [0m<inf> devkit_runtime: tick count=97[0m
+[00:00:49.012,000] [0m<inf> devkit_runtime: tick count=98[0m
+[00:00:49.512,000] [0m<inf> devkit_runtime: tick count=99[0m
+[00:00:49.512,000] [0m<inf> robotos_platform: [robotos_core] core tick count=100[0m
+[00:00:49.512,000] [0m<inf> devkit_btn: Phase 9A button handled seq=35 count=13[0m
+[00:00:49.512,000] [0m<inf> devkit_app: Phase 9C app transition: IDLE->ARMED src=BTN seq=35 total=16[0m
+[00:00:49.512,000] [0m<inf> devkit_obs: ROBOTOS_OBS state=READY ticks=100 pending=2 peak=3 dropped=0 dispatched=65 herr=0 throttled=0 rejected=0 accepted=67 unhandled=0 bp=1 th_active=1[0m
+[00:00:49.512,000] [0m<inf> devkit_obs: ROBOTOS_FAULT active=0 cfsr=0x00000000 hfsr=0x00000000 context=none[0m
+[00:00:49.512,000] [0m<inf> devkit_obs: ROBOTOS_PROD attempted=50 ok=50 throttled=0 dropped=0 invalid=0 other=0 type=USER+1[0m
+[00:00:49.512,000] [0m<inf> devkit_btn: ROBOTOS_BTN attempted=36 ok=14 full=0 debounce=22 invalid=0 other=0 handled=13 type=USER+2[0m
+[00:00:49.512,000] [0m<inf> devkit_uart: ROBOTOS_UART rx=3 ok=3 full=0 invalid=0 other=0 handled=3 last=0x72 type=USER+3[0m
+[00:00:49.512,000] [0m<inf> devkit_app: ROBOTOS_APP state=ARMED transitions=16 button=13 uart=3 ignored=0 last_src=BTN last_byte=0x72[0m
+[00:00:50.012,000] [0m<inf> devkit_runtime: tick count=100[0m
+[00:00:50.012,000] [0m<inf> devkit_btn: Phase 9A button handled seq=36 count=14[0m
+[00:00:50.012,000] [0m<inf> devkit_app: Phase 9C app transition: ARMED->ACTIVE src=BTN seq=36 total=17[0m
+[00:00:50.512,000] [0m<inf> devkit_runtime: tick count=101[0m
+[00:00:51.012,000] [0m<inf> devkit_runtime: tick count=102[0m
+[00:00:51.012,000] [0m<inf> devkit_btn: Phase 9A button handled seq=37 count=15[0m
+[00:00:51.012,000] [0m<inf> devkit_app: Phase 9C app transition: ACTIVE->IDLE src=BTN seq=37 total=18[0m
+[00:00:51.513,000] [0m<inf> devkit_runtime: tick count=103[0m
+[00:00:51.513,000] [0m<inf> devkit_btn: Phase 9A button handled seq=38 count=16[0m
+[00:00:51.513,000] [0m<inf> devkit_app: Phase 9C app transition: IDLE->ARMED src=BTN seq=38 total=19[0m
+[00:00:52.013,000] [0m<inf> devkit_runtime: tick count=104[0m
+[00:00:52.513,000] [0m<inf> devkit_runtime: tick count=105[0m
+[00:00:53.013,000] [0m<inf> devkit_runtime: tick count=106[0m
+[00:00:53.513,000] [0m<inf> devkit_runtime: tick count=107[0m
+[00:00:54.013,000] [0m<inf> devkit_runtime: tick count=108[0m
+[00:00:54.513,000] [0m<inf> devkit_runtime: tick count=109[0m
+[00:00:54.513,000] [0m<inf> robotos_platform: [robotos_core] core tick count=110[0m
+[00:00:54.513,000] [0m<inf> devkit_obs: ROBOTOS_OBS state=READY ticks=110 pending=1 peak=4 dropped=0 dispatched=73 herr=0 throttled=0 rejected=0 accepted=74 unhandled=0 bp=0 th_active=0[0m
+[00:00:54.513,000] [0m<inf> devkit_obs: ROBOTOS_FAULT active=0 cfsr=0x00000000 hfsr=0x00000000 context=none[0m
+[00:00:54.513,000] [0m<inf> devkit_obs: ROBOTOS_PROD attempted=55 ok=55 throttled=0 dropped=0 invalid=0 other=0 type=USER+1[0m
+[00:00:54.513,000] [0m<inf> devkit_btn: ROBOTOS_BTN attempted=38 ok=16 full=0 debounce=22 invalid=0 other=0 handled=16 type=USER+2[0m
+[00:00:54.513,000] [0m<inf> devkit_uart: ROBOTOS_UART rx=3 ok=3 full=0 invalid=0 other=0 handled=3 last=0x72 type=USER+3[0m
+[00:00:54.513,000] [0m<inf> devkit_app: ROBOTOS_APP state=ARMED transitions=19 button=16 uart=3 ignored=0 last_src=BTN last_byte=0x72[0m
+[00:00:55.013,000] [0m<inf> devkit_runtime: tick count=110[0m
+[00:00:55.514,000] [0m<inf> devkit_runtime: tick count=111[0m
+[00:00:55.514,000] [0m<inf> devkit_btn: Phase 9A button handled seq=39 count=17[0m
+[00:00:55.514,000] [0m<inf> devkit_app: Phase 9C app transition: ARMED->ACTIVE src=BTN seq=39 total=20[0m
+[00:00:56.014,000] [0m<inf> devkit_runtime: tick count=112[0m
+[00:00:56.014,000] [0m<inf> devkit_btn: Phase 9A button handled seq=41 count=18[0m
+[00:00:56.014,000] [0m<inf> devkit_app: Phase 9C app transition: ACTIVE->IDLE src=BTN seq=41 total=21[0m
+[00:00:56.514,000] [0m<inf> devkit_runtime: tick count=113[0m
+[00:00:57.014,000] [0m<inf> devkit_runtime: tick count=114[0m
+[00:00:57.014,000] [0m<inf> devkit_btn: Phase 9A button handled seq=42 count=19[0m
+[00:00:57.014,000] [0m<inf> devkit_app: Phase 9C app transition: IDLE->ARMED src=BTN seq=42 total=22[0m
+[00:00:57.514,000] [0m<inf> devkit_runtime: tick count=115[0m
+[00:00:57.514,000] [0m<inf> devkit_btn: Phase 9A button handled seq=43 count=20[0m
+[00:00:57.514,000] [0m<inf> devkit_app: Phase 9C app transition: ARMED->ACTIVE src=BTN seq=43 total=23[0m
+[00:00:58.014,000] [0m<inf> devkit_runtime: tick count=116[0m
+[00:00:58.514,000] [0m<inf> devkit_runtime: tick count=117[0m
+[00:00:59.014,000] [0m<inf> devkit_runtime: tick count=118[0m
+[00:00:59.514,000] [0m<inf> devkit_runtime: tick count=119[0m
+[00:00:59.514,000] [0m<inf> robotos_platform: [robotos_core] core tick count=120[0m
+[00:00:59.514,000] [0m<inf> devkit_obs: ROBOTOS_OBS state=READY ticks=120 pending=1 peak=4 dropped=0 dispatched=82 herr=0 throttled=0 rejected=0 accepted=83 unhandled=0 bp=0 th_active=0[0m
+[00:00:59.514,000] [0m<inf> devkit_obs: ROBOTOS_FAULT active=0 cfsr=0x00000000 hfsr=0x00000000 context=none[0m
+[00:00:59.514,000] [0m<inf> devkit_obs: ROBOTOS_PROD attempted=60 ok=60 throttled=0 dropped=0 invalid=0 other=0 type=USER+1[0m
+[00:00:59.514,000] [0m<inf> devkit_btn: ROBOTOS_BTN attempted=43 ok=20 full=0 debounce=23 invalid=0 other=0 handled=20 type=USER+2[0m
+[00:00:59.514,000] [0m<inf> devkit_uart: ROBOTOS_UART rx=3 ok=3 full=0 invalid=0 other=0 handled=3 last=0x72 type=USER+3[0m
+[00:00:59.515,000] [0m<inf> devkit_app: ROBOTOS_APP state=ACTIVE transitions=23 button=20 uart=3 ignored=0 last_src=BTN last_byte=0x72[0m
+[00:01:00.015,000] [0m<inf> devkit_runtime: tick count=120[0m
+[00:01:00.515,000] [0m<inf> devkit_runtime: tick count=121[0m
+[00:01:01.015,000] [0m<inf> devkit_runtime: tick count=122[0m
+[00:01:01.515,000] [0m<inf> devkit_runtime: tick count=123[0m
+[00:01:02.015,000] [0m<inf> devkit_runtime: tick count=124[0m
+[00:01:02.515,000] [0m<inf> devkit_runtime: tick count=125[0m
+[00:01:03.015,000] [0m<inf> devkit_runtime: tick count=126[0m
+[00:01:03.515,000] [0m<inf> devkit_runtime: tick count=127[0m
+[00:01:04.015,000] [0m<inf> devkit_runtime: tick count=128[0m
+[00:01:04.516,000] [0m<inf> devkit_runtime: tick count=129[0m
+[00:01:04.516,000] [0m<inf> robotos_platform: [robotos_core] core tick count=130[0m
+[00:01:04.516,000] [0m<inf> devkit_obs: ROBOTOS_OBS state=READY ticks=130 pending=1 peak=4 dropped=0 dispatched=87 herr=0 throttled=0 rejected=0 accepted=88 unhandled=0 bp=0 th_active=0[0m
+[00:01:04.516,000] [0m<inf> devkit_obs: ROBOTOS_FAULT active=0 cfsr=0x00000000 hfsr=0x00000000 context=none[0m
+[00:01:04.516,000] [0m<inf> devkit_obs: ROBOTOS_PROD attempted=65 ok=65 throttled=0 dropped=0 invalid=0 other=0 type=USER+1[0m
+[00:01:04.516,000] [0m<inf> devkit_btn: ROBOTOS_BTN attempted=43 ok=20 full=0 debounce=23 invalid=0 other=0 handled=20 type=USER+2[0m
+[00:01:04.516,000] [0m<inf> devkit_uart: ROBOTOS_UART rx=3 ok=3 full=0 invalid=0 other=0 handled=3 last=0x72 type=USER+3[0m
+[00:01:04.516,000] [0m<inf> devkit_app: ROBOTOS_APP state=ACTIVE transitions=23 button=20 uart=3 ignored=0 last_src=BTN last_byte=0x72[0m
+[00:01:05.016,000] [0m<inf> devkit_runtime: tick count=130[0m
+[00:01:05.516,000] [0m<inf> devkit_runtime: tick count=131[0m
+[00:01:06.016,000] [0m<inf> devkit_runtime: tick count=132[0m
+[00:01:06.516,000] [0m<inf> devkit_runtime: tick count=133[0m
+[00:01:07.016,000] [0m<inf> devkit_runtime: tick count=134[0m
+[00:01:07.516,000] [0m<inf> devkit_runtime: tick count=135[0m
+[00:01:08.016,000] [0m<inf> devkit_runtime: tick count=136[0m
+[00:01:08.517,000] [0m<inf> devkit_runtime: tick count=137[0m
+[00:01:09.017,000] [0m<inf> devkit_runtime: tick count=138[0m
+[00:01:09.517,000] [0m<inf> devkit_runtime: tick count=139[0m
+[00:01:09.517,000] [0m<inf> robotos_platform: [robotos_core] core tick count=140[0m
+[00:01:09.517,000] [0m<inf> devkit_obs: ROBOTOS_OBS state=READY ticks=140 pending=1 peak=4 dropped=0 dispatched=92 herr=0 throttled=0 rejected=0 accepted=93 unhandled=0 bp=0 th_active=0[0m
+[00:01:09.517,000] [0m<inf> devkit_obs: ROBOTOS_FAULT active=0 cfsr=0x00000000 hfsr=0x00000000 context=none[0m
+[00:01:09.517,000] [0m<inf> devkit_obs: ROBOTOS_PROD attempted=70 ok=70 throttled=0 dropped=0 invalid=0 other=0 type=USER+1[0m
+[00:01:09.517,000] [0m<inf> devkit_btn: ROBOTOS_BTN attempted=43 ok=20 full=0 debounce=23 invalid=0 other=0 handled=20 type=USER+2[0m
+[00:01:09.517,000] [0m<inf> devkit_uart: ROBOTOS_UART rx=3 ok=3 full=0 invalid=0 other=0 handled=3 last=0x72 type=USER+3[0m
+[00:01:09.517,000] [0m<inf> devkit_app: ROBOTOS_APP state=ACTIVE transitions=23 button=20 uart=3 ignored=0 last_src=BTN last_byte=0x72[0m
+[00:01:10.017,000] [0m<inf> devkit_runtime: tick count=140[0m
+[00:01:10.517,000] [0m<inf> devkit_runtime: tick count=141[0m
+[00:01:11.017,000] [0m<inf> devkit_runtime: tick count=142[0m
+[00:01:11.517,000] [0m<inf> devkit_runtime: tick count=143[0m
+[00:01:12.017,000] [0m<inf> devkit_runtime: tick count=144[0m
+[00:01:12.518,000] [0m<inf> devkit_runtime: tick count=145[0m
+[00:01:13.018,000] [0m<inf> devkit_runtime: tick count=146[0m
+[00:01:13.518,000] [0m<inf> devkit_runtime: tick count=147[0m
+[00:01:14.018,000] [0m<inf> devkit_runtime: tick count=148[0m
+[00:01:14.518,000] [0m<inf> devkit_runtime: tick count=149[0m
+[00:01:14.518,000] [0m<inf> robotos_platform: [robotos_core] core tick count=150[0m
+[00:01:14.518,000] [0m<inf> devkit_obs: ROBOTOS_OBS state=READY ticks=150 pending=1 peak=4 dropped=0 dispatched=97 herr=0 throttled=0 rejected=0 accepted=98 unhandled=0 bp=0 th_active=0[0m
+[00:01:14.518,000] [0m<inf> devkit_obs: ROBOTOS_FAULT active=0 cfsr=0x00000000 hfsr=0x00000000 context=none[0m
+[00:01:14.518,000] [0m<inf> devkit_obs: ROBOTOS_PROD attempted=75 ok=75 throttled=0 dropped=0 invalid=0 other=0 type=USER+1[0m
+[00:01:14.518,000] [0m<inf> devkit_btn: ROBOTOS_BTN attempted=43 ok=20 full=0 debounce=23 invalid=0 other=0 handled=20 type=USER+2[0m
+[00:01:14.518,000] [0m<inf> devkit_uart: ROBOTOS_UART rx=3 ok=3 full=0 invalid=0 other=0 handled=3 last=0x72 type=USER+3[0m
+[00:01:14.518,000] [0m<inf> devkit_app: ROBOTOS_APP state=ACTIVE transitions=23 button=20 uart=3 ignored=0 last_src=BTN last_byte=0x72[0m
+[00:01:15.018,000] [0m<inf> devkit_runtime: tick count=150[0m
+[00:01:15.518,000] [0m<inf> devkit_runtime: tick count=151[0m
+[00:01:16.018,000] [0m<inf> devkit_runtime: tick count=152[0m
+[00:01:16.519,000] [0m<inf> devkit_runtime: tick count=153[0m
+[00:01:17.019,000] [0m<inf> devkit_runtime: tick count=154[0m
+[00:01:17.519,000] [0m<inf> devkit_runtime: tick count=155[0m
+[00:01:18.019,000] [0m<inf> devkit_runtime: tick count=156[0m

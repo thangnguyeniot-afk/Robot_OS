@@ -32,6 +32,7 @@
 #include <zephyr/logging/log.h>
 
 #include "robotos_core.h"
+#include "devkit_app_state.h"
 
 LOG_MODULE_REGISTER(devkit_uart, LOG_LEVEL_INF);
 
@@ -167,6 +168,11 @@ static robotos_core_status_t devkit_uart_handler(
 		LOG_INF("Phase 9B uart handled byte=0x%02x count=%u",
 			(unsigned)byte, s_handled);
 	}
+
+	/* Phase 9C: drive the devkit application state machine.
+	 * Thread-context only; app state module is single-threaded by
+	 * construction (dispatcher serializes handler invocations). */
+	devkit_app_state_on_uart_byte(byte, s_handled);
 
 	return ROBOTOS_CORE_OK;
 }
