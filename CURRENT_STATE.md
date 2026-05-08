@@ -11,7 +11,7 @@
 
 ### Phase 9A-A — Devkit Button EXTI Producer
 
-- **Commit:** (this commit)
+- **Commit:** `2068180`
 - **Date:** 2026-05-08
 - **Branch:** master
 - **Type:** Devkit workload proof. First real (non-synthetic) hardware event source.
@@ -107,7 +107,7 @@ to `DEVKIT_PROGRESS.md` for the full history.
 
 | Phase | Description | Commit |
 | ----- | ----------- | ------ |
-| 9A-A | Devkit Button EXTI Producer (first real hardware workload) | (this commit) |
+| 9A-A | Devkit Button EXTI Producer (first real hardware workload) | `2068180` |
 | 6O | Reusable RTT Streaming Capture Harness (tooling) | `6cb979f` |
 | 6N | Documentation / Navigation Consolidation (docs-only) | `ad52de5` |
 | 6Z | RTT closeout for 6K/6L/6M (docs/evidence only) | `4ec5b86` |
