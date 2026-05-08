@@ -31,6 +31,7 @@
 
 #include "devkit_runtime.h"
 #include "devkit_build_info.h"
+#include "devkit_button_producer.h"
 #include "devkit_fault.h"
 #include "devkit_observability.h"
 #include "devkit_status_led.h"
@@ -216,12 +217,25 @@ int devkit_runtime_init(void)
 		}
 	}
 
+	/* Phase 9A-A: register the user-button USER+2 handler and enable EXTI.
+	 * Distinct from Phase 6I (USER) and Phase 6M (USER+1) so all three
+	 * coexist without routing conflict. Failure is logged and ignored:
+	 * the rest of the runtime continues without the button workload. */
+	{
+		robotos_core_status_t btn_ret = devkit_button_producer_init();
+		if (btn_ret != ROBOTOS_CORE_OK) {
+			LOG_ERR("Phase 9A-A button init failed: %d", (int)btn_ret);
+		}
+	}
+
 	/* Phase 6K: emit one baseline observability snapshot after init */
 	devkit_observability_log_snapshot();
 	/* Phase 6L: emit one baseline fault diagnostic after init */
 	devkit_observability_log_fault();
 	/* Phase 6M: emit one baseline producer stats line after init */
 	devkit_observability_log_producer_stats();
+	/* Phase 9A-A: emit one baseline button stats line after init */
+	devkit_button_producer_log_stats();
 
 	return 0;
 }
@@ -248,13 +262,14 @@ void devkit_runtime_run(void)
 		 * cadence predicate is false; one post at most per call. */
 		devkit_timer_producer_on_tick(tick_count);
 
-		/* Phase 6K/6L/6M: periodic observability snapshot + fault + producer log.
+		/* Phase 6K/6L/6M/9A-A: periodic observability snapshot + fault + producer + button log.
 		 * tick_count was post-incremented in the LOG_INF above, so it
 		 * already reflects the next iteration index here. Fire every N. */
 		if ((tick_count % DEVKIT_OBSERVABILITY_LOG_INTERVAL_TICKS) == 0u) {
 			devkit_observability_log_snapshot();
 			devkit_observability_log_fault();
 			devkit_observability_log_producer_stats();
+			devkit_button_producer_log_stats();
 		}
 
 		/* Log final summary once after all accepted events are handled */

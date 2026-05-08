@@ -9,44 +9,51 @@
 
 ## Last Closed Phase
 
-### Phase 6O — Reusable RTT Streaming Capture Harness
+### Phase 9A-A — Devkit Button EXTI Producer
 
-- **Commit:** `6cb979f`
+- **Commit:** (this commit)
 - **Date:** 2026-05-08
 - **Branch:** master
-- **Type:** Tooling + docs only. No source, test, CMake, Kconfig, or runtime change.
-- **Prior hardware baseline:** Phase 6M (`a6b253b`), closed by Phase 6Z RTT evidence (`4ec5b86`)
+- **Type:** Devkit workload proof. First real (non-synthetic) hardware event source.
+- **Close status:** `CLOSED with BOUNCE_OBSERVED`
+- **Prior tooling baseline:** Phase 6O (`6cb979f`), reusable RTT streaming harness
 
-**Phase 6O delivered:**
+**Phase 9A-A delivered:**
 
-- `RobotOS_v1.0/tools/runtime/capture_devkit_rtt.ps1` — new reusable streaming RTT harness
-- `RobotOS_v1.0/tools/runtime/phase6z_required_patterns.txt` — reference file for default patterns
-- `RobotOS_v1.0/tools/runtime/README.md` — Phase 6O section (scripts table, usage, parameters, troubleshooting)
-- `RobotOS_v1.0/devkit/logs/INDEX.md` — Phase 6O harness-smoke log row
-- `RobotOS_v1.0/devkit/docs/DEVKIT_PROGRESS.md` — Phase 6O section
-- `RobotOS_v1.0/devkit/logs/phase_6O_harness_smoke_2026-05-08.txt` — harness smoke evidence
+- `RobotOS_v1.0/devkit/src/devkit_button_producer.{h,c}` — devkit-local user-button GPIO/EXTI event producer
+- `RobotOS_v1.0/devkit/src/devkit_runtime.c` — wired button producer init, baseline log, and periodic ROBOTOS_BTN log
+- `RobotOS_v1.0/devkit/CMakeLists.txt` — added new source file
+- `RobotOS_v1.0/devkit/logs/phase_9A_button_rtt_2026-05-08.txt` — 60 s RTT capture with real button presses (37 events handled, 135 ISR firings due to mechanical bounce, CFSR=0 HFSR=0)
+- `RobotOS_v1.0/devkit/logs/INDEX.md` — Phase 9A-A row
+- `RobotOS_v1.0/devkit/docs/DEVKIT_PROGRESS.md` — Phase 9A-A section (purpose, architecture boundary, bounce analysis, preservation audit)
 
+**Workload anchor:** RobotOS is now confirmed as an event-driven embedded device runtime serving a real hardware input source. Architecture invariants (admission, FIFO, queue capacity, ISR-safety, handler-outside-lock, no fault) all preserved under bounce-heavy concurrent producer load.
+
+**Phase 6O** (prior): Reusable RTT Streaming Capture Harness, commit `6cb979f`, 2026-05-08.
 **Phase 6N** (prior): Documentation / Navigation Consolidation, commit `ad52de5`, 2026-05-08.
 
 ---
 
-## Validation Evidence (Phase 6O harness smoke)
+## Validation Evidence (Phase 9A-A button workload)
 
 | Gate | Result | Detail |
 | ---- | ------ | ------ |
-| Script syntax | PASS | 0 PS AST parse errors; 2192 tokens |
-| Harness smoke | PASS | `capture_devkit_rtt.ps1 -WaitSeconds 30`; exit 0; 9558 bytes in 30.9 s |
-| ROBOTOS_OBS state=READY | FOUND | Pattern verified in smoke log |
-| ROBOTOS_FAULT active=0 | FOUND | Pattern verified in smoke log |
-| ROBOTOS_PROD attempted= | FOUND | Pattern verified in smoke log |
-| Phase 6I final: | FOUND | Pattern verified in smoke log |
-| CFSR | 0x00000000 throughout | 7 occurrences checked in smoke log |
-| HFSR | 0x00000000 throughout | 7 occurrences checked in smoke log |
-| Manual physical RESET | not required | OpenOCD `reset run` started firmware |
-| Source files changed | ZERO | git diff confirmed no .c/.h/.cmake/Kconfig touched |
-| Zephyr build | PASS (prior session) | FLASH 30032 B / RAM 12160 B unchanged from Phase 6Z |
+| Zephyr build | PASS | FLASH 31208 B (5.95%) / RAM 12224 B (9.33%); +1176 B FLASH and +64 B RAM vs Phase 6Z |
+| Flash | PASS | `west flash` wrote 32768 B; manual RESET not required |
+| RTT capture | PASS | 60.8 s, 21961 bytes captured; ROBOTOS_BTN visible; per-press handler logs visible |
+| ROBOTOS_OBS state=READY | FOUND | Baseline + 12 periodic emissions |
+| ROBOTOS_FAULT active=0 | FOUND | All 13 emissions |
+| ROBOTOS_PROD attempted= | FOUND | Phase 6M producer continues healthy at 60 attempted/60 ok |
+| ROBOTOS_BTN attempted= | FOUND | 13 emissions; final attempted=135 ok=37 full=98 handled=37 |
+| Phase 9A-A button producer init | FOUND | Init banner present in boot sequence |
+| Phase 9A button handled (per-press) | FOUND | 43 occurrences across 60 s |
+| Phase 6I final: | MISSING | Bounce displaced some Phase 6I events from queue → handled count never reached 16 → final summary not emitted. Documented as BOUNCE_OBSERVED, not a regression. See DEVKIT_PROGRESS.md Phase 9A-A. |
+| CFSR | 0x00000000 throughout | 13 occurrences checked |
+| HFSR | 0x00000000 throughout | 13 occurrences checked |
+| Architecture invariants | PASS | accepted=112 dispatched=111 pending=1 (accepted-dispatched=pending) ; peak=16=capacity ; herr=0 ; unhandled=0 |
+| Core/platform sources changed | ZERO | git diff confirmed no `core/`, `platform/`, or `tests/` files touched |
 
-Smoke log: `RobotOS_v1.0/devkit/logs/phase_6O_harness_smoke_2026-05-08.txt`
+Capture log: `RobotOS_v1.0/devkit/logs/phase_9A_button_rtt_2026-05-08.txt`
 
 **Phase 6Z verification highlights:**
 
@@ -100,6 +107,7 @@ to `DEVKIT_PROGRESS.md` for the full history.
 
 | Phase | Description | Commit |
 | ----- | ----------- | ------ |
+| 9A-A | Devkit Button EXTI Producer (first real hardware workload) | (this commit) |
 | 6O | Reusable RTT Streaming Capture Harness (tooling) | `6cb979f` |
 | 6N | Documentation / Navigation Consolidation (docs-only) | `ad52de5` |
 | 6Z | RTT closeout for 6K/6L/6M (docs/evidence only) | `4ec5b86` |
@@ -124,11 +132,14 @@ to `DEVKIT_PROGRESS.md` for the full history.
 
 | Phase | Description | Status |
 | ----- | ----------- | ------ |
-| Phase 8A | Custom STM32F407 board bring-up | **Candidate** — retires 25-phase portability debt; use `capture_devkit_rtt.ps1 -OpenOcdConfig <f407.cfg>` |
-| Phase 9A | First real event source (user button / UART / sensor) | **Candidate** — produces first workload measurement; prerequisite for Phase 7A decision |
-| Phase 7B-1 | Dispatch Budget Test Parameterization | Candidate — only after Phase 9A produces workload evidence |
-| Phase 7A | Dispatch Budget Evolution Planning | DEFER — no workload-driven reason; Phase 6Z confirms `MAX_EVENTS_PER_TICK=1` sufficient |
-| Custom STM32F407 target | Migration / validation | Pending / Unknown — not yet exercised; Phase 8A addresses this |
+| Phase 9A-B | Devkit button debounce refinement (devkit-local time-guard, no core change) | **Optional** — only if bounce traffic is operationally noisy |
+| Phase 8A | Custom STM32F407 board bring-up | **Candidate** — retires 25-phase portability debt; use `capture_devkit_rtt.ps1 -OpenOcdConfig <f407.cfg>`; remains HOLD/DEFER until user reopens |
+| Phase 9B | Second real event source (UART or sensor) | Candidate — depends on application direction |
+| Phase 7B-1 | Dispatch Budget Test Parameterization | Candidate — only if Phase 9A-A workload evidence reveals saturation; current data shows budget=1 still adequate |
+| Phase 7A | Dispatch Budget Evolution Planning | DEFER — Phase 9A-A workload data shows ~112 events / 60 s sustained, no workload-driven reason for budget mutation |
+| Custom STM32F407 target | Migration / validation | HOLD/DEFER — not yet exercised; Phase 8A addresses when reopened |
+
+**Primary workload anchor:** event-driven embedded device runtime, validated with the Phase 9A-A user-button input source. Future workloads can be layered using the same producer/handler pattern (see `devkit_button_producer.c` as the reference template).
 
 Dispatch budget remains `ROBOTOS_CORE_MAX_EVENTS_PER_TICK = 1`. Any
 mutation requires explicit team decision and a workload-driven

@@ -129,6 +129,55 @@ Phase 6I `ok` (17) + Phase 6M `ok` (60) = `ROBOTOS_OBS accepted` (77).
 
 ---
 
+## ROBOTOS_BTN — User Button Producer Snapshot (Phase 9A-A)
+
+Emitted by `devkit_button_producer_log_stats()` in `devkit_button_producer.c`.
+
+**Literal log shape** (from `devkit_button_producer.c` LOG_INF format string):
+
+```text
+ROBOTOS_BTN attempted=N ok=N full=N invalid=N other=N handled=N type=USER+2
+```
+
+**Cadence:** same as ROBOTOS_OBS / FAULT / PROD (one baseline at init; one
+periodic per cadence window). Each cadence window now emits a 4-line block:
+ROBOTOS_OBS, ROBOTOS_FAULT, ROBOTOS_PROD, ROBOTOS_BTN.
+
+**Field reference:**
+
+| Field | Type | Meaning | Canonical Definition |
+|-------|------|---------|----------------------|
+| `attempted` | uint32 | Every GPIO ISR firing increments this once (includes mechanical bounce) | `DEVKIT_PROGRESS.md` — Phase 9A-A "Counter / Behavior Analysis" |
+| `ok` | uint32 | `robotos_core_post_event()` returned `OK` | `DEVKIT_PROGRESS.md` — Phase 9A-A |
+| `full` | uint32 | Returned `ERR_FULL` (queue at capacity, common during bounce) | `DEVKIT_PROGRESS.md` — Phase 9A-A "BOUNCE_OBSERVED" |
+| `invalid` | uint32 | Returned `ERR_INVALID_ARG` (defensive; should always be 0) | `DEVKIT_PROGRESS.md` — Phase 9A-A |
+| `other` | uint32 | Any other non-OK return (defensive; should always be 0) | `DEVKIT_PROGRESS.md` — Phase 9A-A |
+| `handled` | uint32 | Button handler invocations (thread context) | `DEVKIT_PROGRESS.md` — Phase 9A-A |
+| `type` | literal | `USER+2` — the producer's event type (`ROBOTOS_EVENT_USER + 2 = 102`) | `DEVKIT_PROGRESS.md` — Phase 9A-A "Chosen Event Type / Marker" |
+
+**Producer design:**
+
+- ISR source: STM32F411E-DISCO user button (PA0, alias `sw0`), edge-to-active.
+- API used: `robotos_core_post_event()` (raw, ISR-safe per Phase 5G).
+- arg0 = `0x9A0A` (Phase 9A-A marker).
+- arg1 = monotonic ISR-firing sequence (advances even on ERR_FULL).
+- No software debounce; mechanical bounce produces multiple ISR firings per
+  physical press. `attempted - ok = full` is the bounce-rejection count.
+- Distinct from Phase 6I (USER) and Phase 6M (USER+1) — three producers
+  coexist without routing conflict.
+
+**Per-press handler log** (separate from periodic ROBOTOS_BTN line):
+
+```text
+Phase 9A button handled seq=N count=M
+```
+
+Emitted once per accepted-and-dispatched button event. Useful for ordering
+verification (`seq` may have gaps reflecting ERR_FULL entries; `count` is
+strictly monotonic).
+
+---
+
 ## Telemetry Stack Summary
 
 ```
@@ -138,6 +187,8 @@ ROBOTOS_FAULT --- direct SCB register read (0xE000ED28, 0xE000ED2C)
                   Cortex-M only, devkit-local, passive read-only
 ROBOTOS_PROD  --- devkit_timer_producer_get_stats()
                   producer module: devkit_timer_producer.c (pure C, host-testable)
+ROBOTOS_BTN   --- devkit_button_producer_get_stats()  (Phase 9A-A)
+                  producer module: devkit_button_producer.c (Zephyr GPIO/EXTI; devkit-local)
 ```
 
 All three streams are **passive read-only**. They do not feed back into

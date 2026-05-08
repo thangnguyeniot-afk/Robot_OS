@@ -25,7 +25,8 @@ the bottom of this file.
 | 6F — Mixed Event Policy | `5bca62f` | [phase_6F_rtt_2026-05-03.txt](phase_6F_rtt_2026-05-03.txt) | 2026-05-03 | OpenOCD RTT dump (4 KB) | PASS — accept/reject/drop in one run |
 | 6I — Timer Queue-Pressure Stress | `e78e503` | [phase_6I_rtt_2026-05-03.txt](phase_6I_rtt_2026-05-03.txt) | 2026-05-03 | OpenOCD RTT dump (4 KB) | PASS — attempted=24 ok=16 full=8 handled=16 CFSR=0 HFSR=0 |
 | 6Z — RTT Closeout (6K/6L/6M) | `4ec5b86` | [phase_6Z_rtt_2026-05-07.txt](phase_6Z_rtt_2026-05-07.txt) | 2026-05-07 | OpenOCD streaming RTT TCP server (60 s) | PASS — ROBOTOS_OBS/FAULT/PROD baseline+12 periodic; CFSR=0 HFSR=0 throughout; accepted=77 dispatched=76 pending=1 |
-| 6O — Harness smoke | (this commit) | [phase_6O_harness_smoke_2026-05-08.txt](phase_6O_harness_smoke_2026-05-08.txt) | 2026-05-08 | `capture_devkit_rtt.ps1` Phase 6O harness (30 s) | PASS — all 4 patterns found; CFSR=0 HFSR=0 (7 occurrences); 9558 bytes; exit 0 |
+| 6O — Harness smoke | `6cb979f` | [phase_6O_harness_smoke_2026-05-08.txt](phase_6O_harness_smoke_2026-05-08.txt) | 2026-05-08 | `capture_devkit_rtt.ps1` Phase 6O harness (30 s) | PASS — all 4 patterns found; CFSR=0 HFSR=0 (7 occurrences); 9558 bytes; exit 0 |
+| 9A-A — Button EXTI workload | (this commit) | [phase_9A_button_rtt_2026-05-08.txt](phase_9A_button_rtt_2026-05-08.txt) | 2026-05-08 | Phase 6O harness (60 s) with manual button presses | CLOSED with BOUNCE_OBSERVED — 37 button events handled; CFSR=0 HFSR=0 (13 occurrences); 21961 bytes; bounce caused "Phase 6I final:" miss — see DEVKIT_PROGRESS.md Phase 9A-A |
 
 ---
 
