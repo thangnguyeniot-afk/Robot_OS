@@ -7842,7 +7842,7 @@ that arrived while the queue was already at capacity from Phase 6I burst (first
 
 **Date:** 2026-05-08
 **Branch:** master
-**Commit:** pending
+**Commit:** `3989ff9`
 **Baseline commit:** `92de5e0` (Phase 9A-B)
 **Type:** Devkit diagnostic gating. Devkit-local compile-time gate; no core/platform/scheduler change.
 **Close status:** CLOSED

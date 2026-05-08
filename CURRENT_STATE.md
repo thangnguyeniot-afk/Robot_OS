@@ -11,7 +11,7 @@
 
 ### Phase 9A-C — Gate Phase 6I Startup Burst
 
-- **Commit:** pending
+- **Commit:** `3989ff9`
 - **Date:** 2026-05-08
 - **Branch:** master
 - **Type:** Devkit diagnostic gating. Devkit-local compile-time gate; no core/platform/scheduler change.
@@ -113,7 +113,7 @@ to `DEVKIT_PROGRESS.md` for the full history.
 
 | Phase | Description | Commit |
 | ----- | ----------- | ------ |
-| 9A-C | Gate Phase 6I Startup Burst (devkit-local compile-time gate; default disabled; full 4→0, dropped 13→0) | pending |
+| 9A-C | Gate Phase 6I Startup Burst (devkit-local compile-time gate; default disabled; full 4→0, dropped 13→0) | `3989ff9` |
 | 9A-B | Devkit Button Debounce Refinement (30 ms time-guard; full 98→4) | `92de5e0` |
 | 9A-A | Devkit Button EXTI Producer (first real hardware workload) | `2068180` |
 | 6O | Reusable RTT Streaming Capture Harness (tooling) | `6cb979f` |
