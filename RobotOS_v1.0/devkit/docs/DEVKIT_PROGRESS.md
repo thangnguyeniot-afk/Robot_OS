@@ -7105,3 +7105,179 @@ closed, the canonical candidates remain:
   pending=1, no growth in dropped after burst).
 
 Team decision required before opening any of the above.
+
+---
+
+## Phase 6O -- Reusable RTT Streaming Capture Harness
+
+**Date:** 2026-05-08
+**Branch:** master
+**Type:** Tooling only -- no source, test, CMake, Kconfig, or runtime change.
+**Close status:** `CLOSED -- harness smoke PASS on hardware (2026-05-08)`
+
+---
+
+### Phase 6O Purpose
+
+Generalize the Phase 6Z OpenOCD streaming RTT capture workflow into a
+reusable, parameterized PowerShell script. Phase 6Z proved that the
+OpenOCD `rtt server start` TCP streaming approach captures ROBOTOS_OBS /
+ROBOTOS_FAULT / ROBOTOS_PROD triplets over a 30-60 s window without
+ring-buffer wraparound. Phase 6O packages that workflow for repeatable use
+in Phase 8A (custom STM32F407 bring-up), Phase 9A (first real workload),
+and future validation sessions.
+
+The Phase 6H snapshot harness (`capture_phase6h_runtime.ps1`) is preserved
+unchanged. It remains the correct tool for Phase 6H counter-comparison.
+
+---
+
+### Phase 6O Files Added
+
+| File | Role |
+| ---- | ---- |
+| `tools/runtime/capture_devkit_rtt.ps1` | New reusable RTT streaming capture script |
+| `tools/runtime/phase6z_required_patterns.txt` | Human-readable reference for default patterns (not read at runtime) |
+
+### Phase 6O Files Modified
+
+| File | Change |
+| ---- | ------ |
+| `tools/runtime/README.md` | New Phase 6O section (scripts table, usage, parameters, troubleshooting) |
+| `devkit/logs/INDEX.md` | Phase 6O harness-smoke log row added |
+
+No source, test, CMake, or Kconfig files modified.
+
+---
+
+### Phase 6O Script Interface
+
+Script: `RobotOS_v1.0/tools/runtime/capture_devkit_rtt.ps1`
+
+Key parameters:
+
+```text
+-OutputLog <path>       : Save RTT log here (default: devkit/logs/phase_rtt_<date>.txt)
+-WaitSeconds <int>      : Capture window (default: 60; use 30 for quick smoke)
+-Port <int>             : OpenOCD RTT TCP port (default: 9090)
+-BuildFirst             : Run west build --pristine before capture
+-FlashFirst             : Run west flash before capture (kills stale OpenOCD first)
+-RequirePatterns <str[]>: Literal strings that must appear in captured log
+-OpenOcdExe <path>      : Override auto-discovered OpenOCD path
+-OpenOcdConfig <path>   : Override board .cfg (for Phase 8A custom board)
+-RttControlBlock <hex>  : Explicit RTT address; skips nm when provided
+-RttSearchBase <hex>    : RAM base for nm-fallback search (default: 0x20000000)
+-RttSearchSize <hex>    : RAM range for nm-fallback search (default: 0x20000 = 128 KB)
+```
+
+Default required patterns:
+
+```text
+ROBOTOS_OBS state=READY
+ROBOTOS_FAULT active=0
+ROBOTOS_PROD attempted=
+Phase 6I final:
+```
+
+Exit 0 on PASS, 1 on FAIL. Raw log preserved in both cases. CFSR/HFSR non-zero
+triggers a hard FAIL regardless of patterns.
+
+OpenOCD auto-discovery: PATH → xpack WinGet install location. Scripts directory
+auto-derived from OpenOCD exe location (xpack: bin/../openocd/scripts). _SEGGER_RTT
+address resolved via nm from the ELF; falls back to RAM search range if nm fails.
+Only the OpenOCD process started by this script is stopped on cleanup.
+
+---
+
+### Phase 6O Validation
+
+**Syntax check:**
+
+```text
+PowerShell AST parser: SYNTAX OK -- 0 parse errors; 2192 tokens
+```
+
+**Harness smoke capture:**
+
+```text
+Script  : RobotOS_v1.0/tools/runtime/capture_devkit_rtt.ps1
+Command : -OutputLog devkit/logs/phase_6O_harness_smoke_2026-05-08.txt -WaitSeconds 30
+Board   : STM32F411E-DISCO (ST-LINK V2J47S0)
+ELF     : build/zephyr/zephyr.elf  (Phase 6N baseline: FLASH 30032 B unchanged)
+RTT     : _SEGGER_RTT @ 0x20000a34 (auto-resolved via nm)
+OpenOCD : xpack 0.12.0+dev-02228-ge5888bda3-dirty
+Result  : PASS -- exit 0
+```
+
+Pattern verification table:
+
+| Pattern | Result |
+| ------- | ------ |
+| ROBOTOS_OBS state=READY | FOUND |
+| ROBOTOS_FAULT active=0 | FOUND |
+| ROBOTOS_PROD attempted= | FOUND |
+| Phase 6I final: | FOUND |
+| CFSR all 0x00000000 | PASS (7 occurrences) |
+| HFSR all 0x00000000 | PASS (7 occurrences) |
+
+```text
+Bytes captured : 9558 bytes
+Duration       : 30.9 s
+Manual RESET   : not required (OpenOCD reset run started firmware cleanly)
+```
+
+Evidence log: `RobotOS_v1.0/devkit/logs/phase_6O_harness_smoke_2026-05-08.txt`
+
+---
+
+### Phase 6O Architecture Preservation Audit
+
+Confirmed unchanged in Phase 6O:
+
+- No source under `core/`, `platform/`, `devkit/src/`, or `tests/` modified.
+- No CMake / Kconfig / prj.conf modified.
+- `ROBOTOS_CORE_MAX_EVENTS_PER_TICK = 1` unchanged.
+- Log formats (ROBOTOS_OBS / ROBOTOS_FAULT / ROBOTOS_PROD) unchanged.
+- SEGGER RTT configuration unchanged.
+- `capture_phase6h_runtime.ps1` and `phase6h_read.gdb` unchanged.
+- Existing RTT and host log files unchanged.
+- Runtime behavior unchanged.
+
+---
+
+### Phase 6O Known Limitations
+
+- **Windows/PowerShell only.** The script is not portable to Linux/macOS without
+  porting. A future phase could generalize it (e.g., using a Bash variant for
+  Linux CI/CD). For now, the development environment is Windows PowerShell 5.1
+  per repo convention.
+- **OpenOCD path portability.** The auto-discovery covers PATH and the WinGet
+  xpack-openocd install. Other install locations require `-OpenOcdExe`.
+- **Port 9090 conflict.** If another process binds port 9090, the script prints
+  a warning and the caller should use `-Port <other>`. It does not auto-select
+  a free port.
+- **Manual RESET not required in this session**, but the known `POST_FLASH_AUTOSTART`
+  unreliable-auto-start issue (Phase 3B OPEN) remains. If the board does not
+  start after flash, the `reset run` in the sidecar cfg will restart it when
+  the script connects. If that also fails, a physical RESET followed by
+  rerunning the script (without `-FlashFirst`) is the workaround.
+- **Custom STM32F407 target still unvalidated.** The script is designed to support
+  it via `-OpenOcdConfig` and `-RttSearchSize 0x40000`, but no F407 session has
+  been run yet. Phase 8A will be the first real test of these override paths.
+
+---
+
+### Phase 6O Next Recommended Phase
+
+With Phase 6O tooling in place, the blocking items before scheduler evolution
+are the custom board validation and workload definition. Candidates:
+
+- **Phase 8A** -- Custom STM32F407 bring-up: flash current Phase 6N firmware on
+  the F407, capture RTT with `capture_devkit_rtt.ps1 -OpenOcdConfig <f407.cfg>`,
+  verify ROBOTOS_OBS/FAULT/PROD baseline. Retires the 25-phase-old portability debt.
+- **Phase 9A** -- First real event source (user button, UART, or sensor):
+  define a concrete non-synthetic producer and handler; use `capture_devkit_rtt.ps1`
+  for evidence capture. Produces the first workload measurement to motivate or
+  dismiss Phase 7A.
+- **Phase 7A** -- Dispatch Budget Evolution Planning: DEFER until Phase 9A
+  produces workload evidence that budget=1 is insufficient.

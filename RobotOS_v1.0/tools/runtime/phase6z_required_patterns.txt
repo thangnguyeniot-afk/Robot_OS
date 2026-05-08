@@ -1,0 +1,20 @@
+# Phase 6Z / Phase 6K-6M default required patterns for capture_devkit_rtt.ps1
+#
+# One literal grep string per line.
+# Lines starting with # are comments and are NOT fed to the script.
+# Lines are substring-matched against the captured RTT log.
+#
+# Usage with the default pattern set (this file is informational):
+#   .\capture_devkit_rtt.ps1
+#
+# Usage with a custom set for Phase 8A / Phase 9A (supply as -RequirePatterns):
+#   .\capture_devkit_rtt.ps1 -RequirePatterns @("ROBOTOS_OBS state=READY", "ROBOTOS_FAULT active=0")
+#
+# IMPORTANT: this file is NOT read by the script at runtime.
+# The same patterns are embedded as the -RequirePatterns default in the script.
+# This file is a human-readable reference only.
+
+ROBOTOS_OBS state=READY
+ROBOTOS_FAULT active=0
+ROBOTOS_PROD attempted=
+Phase 6I final:

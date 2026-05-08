@@ -9,40 +9,44 @@
 
 ## Last Closed Phase
 
-### Phase 6N — Documentation / Navigation Consolidation
+### Phase 6O — Reusable RTT Streaming Capture Harness
 
-- **Commit:** `ad52de5`
+- **Commit:** (this commit)
 - **Date:** 2026-05-08
 - **Branch:** master
-- **Type:** Docs-only. No source, test, CMake, Kconfig, or runtime change.
+- **Type:** Tooling + docs only. No source, test, CMake, Kconfig, or runtime change.
 - **Prior hardware baseline:** Phase 6M (`a6b253b`), closed by Phase 6Z RTT evidence (`4ec5b86`)
 
-**Phase 6N delivered:**
+**Phase 6O delivered:**
 
-- Phase Index table added to `DEVKIT_PROGRESS.md` top (one-click navigation for all 37+ phases)
-- `RobotOS_v1.0/README.md` Repository Orientation section (active vs legacy tree clarified)
-- `RobotOS_v1.0/core/README.md` Phase 6J/6K/6L/6M/6Z summaries appended; Next Phase updated
-- `RobotOS_v1.0/devkit/README.md` Expected Serial Output refreshed from Phase 6Z RTT evidence
-- `RobotOS_v1.0/devkit/logs/INDEX.md` (new) — RTT evidence index with host-log duplicate note
-- `RobotOS_v1.0/devkit/docs/TELEMETRY_REFERENCE.md` (new) — telemetry field → canonical-doc links
+- `RobotOS_v1.0/tools/runtime/capture_devkit_rtt.ps1` — new reusable streaming RTT harness
+- `RobotOS_v1.0/tools/runtime/phase6z_required_patterns.txt` — reference file for default patterns
+- `RobotOS_v1.0/tools/runtime/README.md` — Phase 6O section (scripts table, usage, parameters, troubleshooting)
+- `RobotOS_v1.0/devkit/logs/INDEX.md` — Phase 6O harness-smoke log row
+- `RobotOS_v1.0/devkit/docs/DEVKIT_PROGRESS.md` — Phase 6O section
+- `RobotOS_v1.0/devkit/logs/phase_6O_harness_smoke_2026-05-08.txt` — harness smoke evidence
+
+**Phase 6N** (prior): Documentation / Navigation Consolidation, commit `ad52de5`, 2026-05-08.
 
 ---
 
-## Validation Evidence (Phase 6Z RTT closeout for Phase 6K / 6L / 6M)
+## Validation Evidence (Phase 6O harness smoke)
 
 | Gate | Result | Detail |
 | ---- | ------ | ------ |
-| Host tests | PASS | 20/20 suites (Phase 6M added timer-producer contract suite, 59 cases); 0 failures (per commit `a6b253b`) |
-| Zephyr build | PASS | `west build -b stm32f411e_disco RobotOS_v1.0/devkit/ --pristine` (Phase 6Z session) |
-| FLASH | 30032 B / 524288 B (5.73%) | stm32f411e_disco (matches Phase 6M baseline) |
-| RAM | 12160 B / 131072 B (9.28%) | stm32f411e_disco (unchanged from Phase 6J/6K/6L/6M) |
-| Flash | PASS | `west flash` wrote 32768 B from `zephyr.hex` in 1.123 s (ST-LINK V2J47S0) |
-| RTT capture | PASS | OpenOCD streaming RTT TCP server, 60 s wallclock, 16,560 bytes captured |
-| CFSR | 0x00000000 throughout | All 13 ROBOTOS_FAULT emissions over 60 s |
-| HFSR | 0x00000000 throughout | All 13 ROBOTOS_FAULT emissions over 60 s |
-| Manual physical RESET | not required | OpenOCD `reset run` started firmware cleanly post-flash |
+| Script syntax | PASS | 0 PS AST parse errors; 2192 tokens |
+| Harness smoke | PASS | `capture_devkit_rtt.ps1 -WaitSeconds 30`; exit 0; 9558 bytes in 30.9 s |
+| ROBOTOS_OBS state=READY | FOUND | Pattern verified in smoke log |
+| ROBOTOS_FAULT active=0 | FOUND | Pattern verified in smoke log |
+| ROBOTOS_PROD attempted= | FOUND | Pattern verified in smoke log |
+| Phase 6I final: | FOUND | Pattern verified in smoke log |
+| CFSR | 0x00000000 throughout | 7 occurrences checked in smoke log |
+| HFSR | 0x00000000 throughout | 7 occurrences checked in smoke log |
+| Manual physical RESET | not required | OpenOCD `reset run` started firmware |
+| Source files changed | ZERO | git diff confirmed no .c/.h/.cmake/Kconfig touched |
+| Zephyr build | PASS (prior session) | FLASH 30032 B / RAM 12160 B unchanged from Phase 6Z |
 
-RTT log: `RobotOS_v1.0/devkit/logs/phase_6Z_rtt_2026-05-07.txt`
+Smoke log: `RobotOS_v1.0/devkit/logs/phase_6O_harness_smoke_2026-05-08.txt`
 
 **Phase 6Z verification highlights:**
 
@@ -96,6 +100,7 @@ to `DEVKIT_PROGRESS.md` for the full history.
 
 | Phase | Description | Commit |
 | ----- | ----------- | ------ |
+| 6O | Reusable RTT Streaming Capture Harness (tooling) | (this commit) |
 | 6N | Documentation / Navigation Consolidation (docs-only) | `ad52de5` |
 | 6Z | RTT closeout for 6K/6L/6M (docs/evidence only) | `4ec5b86` |
 | 6M | Producer Realism / Timer Producer Diagnostic | `a6b253b` |
@@ -119,9 +124,11 @@ to `DEVKIT_PROGRESS.md` for the full history.
 
 | Phase | Description | Status |
 | ----- | ----------- | ------ |
-| Phase 7B-1 | Dispatch Budget Test Parameterization (preparation only; no behavior change) | Candidate |
-| Phase 7A | Dispatch Budget Evolution Planning | DEFER (no workload-driven reason; Phase 6Z confirms `MAX_EVENTS_PER_TICK=1` is sufficient for current workload) |
-| Custom STM32F407 target | Migration / validation | Pending / Unknown — not exercised by Phase 6Z; separate validation activity |
+| Phase 8A | Custom STM32F407 board bring-up | **Candidate** — retires 25-phase portability debt; use `capture_devkit_rtt.ps1 -OpenOcdConfig <f407.cfg>` |
+| Phase 9A | First real event source (user button / UART / sensor) | **Candidate** — produces first workload measurement; prerequisite for Phase 7A decision |
+| Phase 7B-1 | Dispatch Budget Test Parameterization | Candidate — only after Phase 9A produces workload evidence |
+| Phase 7A | Dispatch Budget Evolution Planning | DEFER — no workload-driven reason; Phase 6Z confirms `MAX_EVENTS_PER_TICK=1` sufficient |
+| Custom STM32F407 target | Migration / validation | Pending / Unknown — not yet exercised; Phase 8A addresses this |
 
 Dispatch budget remains `ROBOTOS_CORE_MAX_EVENTS_PER_TICK = 1`. Any
 mutation requires explicit team decision and a workload-driven
