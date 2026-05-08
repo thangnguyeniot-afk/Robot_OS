@@ -50,8 +50,12 @@
 
 .PARAMETER RequirePatterns
     Literal strings that must ALL appear in the captured log.
-    Default: "ROBOTOS_OBS state=READY", "ROBOTOS_FAULT active=0",
-             "ROBOTOS_PROD attempted=", "Phase 6I final:"
+    Default (Phase 9A-C): "ROBOTOS_OBS state=READY", "ROBOTOS_FAULT active=0",
+             "ROBOTOS_PROD attempted=", "ROBOTOS_BTN",
+             "DEVKIT_DIAG phase6i_startup_burst="
+    Phase 6I final: was the previous default but is gated off by default in
+    Phase 9A-C; restore it manually via -RequirePatterns when capturing
+    diagnostic builds compiled with -DDEVKIT_PHASE6I_STARTUP_BURST_ENABLED=1.
 
 .PARAMETER OpenOcdExe
     Full path to openocd.exe. Auto-discovered if omitted.
@@ -119,7 +123,8 @@ param(
         "ROBOTOS_OBS state=READY",
         "ROBOTOS_FAULT active=0",
         "ROBOTOS_PROD attempted=",
-        "Phase 6I final:"
+        "ROBOTOS_BTN",
+        "DEVKIT_DIAG phase6i_startup_burst="
     ),
     [string]   $OpenOcdExe      = "",
     [string]   $OpenOcdScripts  = "",

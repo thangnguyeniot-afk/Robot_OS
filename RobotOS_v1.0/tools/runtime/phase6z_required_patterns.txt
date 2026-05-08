@@ -1,4 +1,4 @@
-# Phase 6Z / Phase 6K-6M default required patterns for capture_devkit_rtt.ps1
+# Default required patterns for capture_devkit_rtt.ps1 (Phase 9A-C onward).
 #
 # One literal grep string per line.
 # Lines starting with # are comments and are NOT fed to the script.
@@ -7,8 +7,11 @@
 # Usage with the default pattern set (this file is informational):
 #   .\capture_devkit_rtt.ps1
 #
-# Usage with a custom set for Phase 8A / Phase 9A (supply as -RequirePatterns):
-#   .\capture_devkit_rtt.ps1 -RequirePatterns @("ROBOTOS_OBS state=READY", "ROBOTOS_FAULT active=0")
+# Usage with a custom set for stress diagnostic builds compiled with
+# -DDEVKIT_PHASE6I_STARTUP_BURST_ENABLED=1 (re-enables the synthetic burst):
+#   .\capture_devkit_rtt.ps1 -RequirePatterns @(
+#     "ROBOTOS_OBS state=READY", "ROBOTOS_FAULT active=0",
+#     "ROBOTOS_PROD attempted=", "Phase 6I final:")
 #
 # IMPORTANT: this file is NOT read by the script at runtime.
 # The same patterns are embedded as the -RequirePatterns default in the script.
@@ -17,4 +20,5 @@
 ROBOTOS_OBS state=READY
 ROBOTOS_FAULT active=0
 ROBOTOS_PROD attempted=
-Phase 6I final:
+ROBOTOS_BTN
+DEVKIT_DIAG phase6i_startup_burst=

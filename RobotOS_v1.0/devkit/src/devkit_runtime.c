@@ -27,7 +27,31 @@
  *           Final summary logged once handled==16.
  *           <zephyr/kernel.h> re-introduced for k_timer; Zephyr type must
  *           not appear in core/ or platform/ headers.
+ * Phase 9A-C: Phase 6I synthetic startup burst gated behind compile-time
+ *           macro DEVKIT_PHASE6I_STARTUP_BURST_ENABLED. Default 0 (disabled)
+ *           so real button workload (Phase 9A-A/9A-B) boots without queue
+ *           pressure from the synthetic burst. Re-enable with
+ *             -DDEVKIT_PHASE6I_STARTUP_BURST_ENABLED=1
+ *           for diagnostic stress runs. Phase 6I source preserved verbatim
+ *           inside the #if guard for evidentiary continuity.
  */
+
+/*
+ * Phase 9A-C diagnostic gate.
+ * Default 0 → Phase 6I synthetic startup burst code is fully compiled out:
+ *   - timer ISR + counters not emitted
+ *   - USER handler not registered
+ *   - timer not started
+ *   - "Phase 6I timer producer started" banner suppressed
+ *   - "Phase 6I final:" summary suppressed
+ *   - "Phase 6I event handled" milestones suppressed
+ * Override with -DDEVKIT_PHASE6I_STARTUP_BURST_ENABLED=1 to restore the
+ * Phase 6I diagnostic stress fixture exactly as it shipped through 9A-B.
+ * No core, platform, or scheduler semantics are affected by this gate.
+ */
+#ifndef DEVKIT_PHASE6I_STARTUP_BURST_ENABLED
+#define DEVKIT_PHASE6I_STARTUP_BURST_ENABLED 0
+#endif
 
 #include "devkit_runtime.h"
 #include "devkit_build_info.h"
@@ -69,6 +93,7 @@ LOG_MODULE_REGISTER(devkit_runtime, LOG_LEVEL_INF);
  *   CFSR=0, HFSR=0
  * -------------------------------------------------------------------------- */
 
+#if DEVKIT_PHASE6I_STARTUP_BURST_ENABLED
 #define DEVKIT_PHASE6I_MARKER          0x6900u
 #define DEVKIT_PHASE6I_ATTEMPT_COUNT     24u   /* more than queue capacity=16 */
 #define DEVKIT_PHASE6I_EXPECTED_OK       16u   /* == ROBOTOS_EVENT_QUEUE_CAPACITY */
@@ -149,6 +174,7 @@ static robotos_core_status_t devkit_phase6i_handler(
 	}
 	return ROBOTOS_CORE_OK;
 }
+#endif /* DEVKIT_PHASE6I_STARTUP_BURST_ENABLED */
 
 /* -------------------------------------------------------------------------- */
 
@@ -173,6 +199,17 @@ int devkit_runtime_init(void)
 		LOG_ERR("Core init failed: %d -- continuing", (int)core_ret);
 	}
 
+	/* Phase 9A-C: announce diagnostic gate state once at boot. Grep targets:
+	 *   "DEVKIT_DIAG phase6i_startup_burst=0|1"
+	 *   "Phase 6I startup burst disabled" (gate=0 only)
+	 * The Phase 6I synthetic burst ran unconditionally through Phase 9A-B.
+	 * Default in 9A-C is 0 so real button workload boots without queue
+	 * pressure from the synthetic stress fixture. Re-enable with
+	 *   -DDEVKIT_PHASE6I_STARTUP_BURST_ENABLED=1
+	 * for stress diagnostic captures. */
+#if DEVKIT_PHASE6I_STARTUP_BURST_ENABLED
+	LOG_INF("DEVKIT_DIAG phase6i_startup_burst=1");
+
 	/* Phase 6I: register USER handler before timer start */
 	core_ret = robotos_core_register_event_handler(ROBOTOS_EVENT_USER,
 						       devkit_phase6i_handler,
@@ -190,6 +227,11 @@ int devkit_runtime_init(void)
 		      K_MSEC(DEVKIT_PHASE6I_TIMER_MS));
 	LOG_INF("Phase 6I timer producer started: attempts=%u interval=%ums",
 		DEVKIT_PHASE6I_ATTEMPT_COUNT, DEVKIT_PHASE6I_TIMER_MS);
+#else
+	LOG_INF("DEVKIT_DIAG phase6i_startup_burst=0");
+	LOG_INF("Phase 6I startup burst disabled (Phase 9A-C default; "
+		"-DDEVKIT_PHASE6I_STARTUP_BURST_ENABLED=1 to restore)");
+#endif
 
 	LOG_INF("RobotOS devkit starting -- board: %s", CONFIG_BOARD);
 
@@ -272,6 +314,7 @@ void devkit_runtime_run(void)
 			devkit_button_producer_log_stats();
 		}
 
+#if DEVKIT_PHASE6I_STARTUP_BURST_ENABLED
 		/* Log final summary once after all accepted events are handled */
 		if (s_handled_count >= DEVKIT_PHASE6I_EXPECTED_OK &&
 		    !s_prod_final_logged) {
@@ -299,6 +342,7 @@ void devkit_runtime_run(void)
 				(int)snap.producer_throttle_active);
 			s_prod_final_logged = true;
 		}
+#endif /* DEVKIT_PHASE6I_STARTUP_BURST_ENABLED */
 
 		robotos_platform_sleep_ms(DEVKIT_TICK_MS);
 	}

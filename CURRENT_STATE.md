@@ -9,50 +9,57 @@
 
 ## Last Closed Phase
 
-### Phase 9A-B — Devkit Button Debounce Refinement
+### Phase 9A-C — Gate Phase 6I Startup Burst
 
-- **Commit:** `92de5e0`
+- **Commit:** pending
 - **Date:** 2026-05-08
 - **Branch:** master
-- **Type:** Devkit workload refinement. Devkit-local debounce guard; no core/platform change.
+- **Type:** Devkit diagnostic gating. Devkit-local compile-time gate; no core/platform/scheduler change.
 - **Close status:** `CLOSED`
-- **Prior baseline:** Phase 9A-A (`2068180`), first real hardware event source
+- **Prior baseline:** Phase 9A-B (`92de5e0`), button debounce refinement
 
-**Phase 9A-B delivered:**
+**Phase 9A-C delivered:**
 
-- `RobotOS_v1.0/devkit/src/devkit_button_producer.h` — added `DEVKIT_BUTTON_DEBOUNCE_MS = 30u`; added `debounce` field to stats struct
-- `RobotOS_v1.0/devkit/src/devkit_button_producer.c` — ISR time-guard using `k_uptime_get_32()`; `s_debounce_filtered` counter; updated init banner, `get_stats`, `log_stats`
-- `RobotOS_v1.0/devkit/docs/TELEMETRY_REFERENCE.md` — `debounce` field added to ROBOTOS_BTN table and producer design notes
-- `RobotOS_v1.0/devkit/logs/phase_9B_debounce_rtt_2026-05-08.txt` — 90 s RTT capture; 29160 bytes; 36 button events handled; `full` 98→4; `debounce=54`
-- `RobotOS_v1.0/devkit/logs/INDEX.md` — Phase 9A-B row
-- `RobotOS_v1.0/devkit/docs/DEVKIT_PROGRESS.md` — Phase 9A-B section
+- `RobotOS_v1.0/devkit/src/devkit_runtime.c` — added `DEVKIT_PHASE6I_STARTUP_BURST_ENABLED` compile-time gate (default 0); wrapped Phase 6I macros, counters, ISR, handler, init register/timer-start, init banner, and run-loop final summary in `#if`. Added `DEVKIT_DIAG phase6i_startup_burst=0|1` and `Phase 6I startup burst disabled` boot banners.
+- `RobotOS_v1.0/tools/runtime/capture_devkit_rtt.ps1` — updated default `RequirePatterns`: dropped `"Phase 6I final:"`, added `"ROBOTOS_BTN"` and `"DEVKIT_DIAG phase6i_startup_burst="`. Doc comment updated.
+- `RobotOS_v1.0/tools/runtime/phase6z_required_patterns.txt` — reference file synced to new defaults; documents the diagnostic-build override pattern set.
+- `RobotOS_v1.0/devkit/logs/phase_9C_no_burst_button_rtt_2026-05-08.txt` — 60 s RTT capture; 19564 bytes; gate-disabled banner verified; button workload healthy (full=0, dropped=0); Phase 6I lines absent.
+- `RobotOS_v1.0/devkit/logs/INDEX.md` — Phase 9A-C row
+- `RobotOS_v1.0/devkit/docs/DEVKIT_PROGRESS.md` — Phase 9A-C section
 
+**Default policy:** Phase 6I synthetic startup burst is **disabled by default** in 9A-C. Re-enable for stress diagnostic captures with `west build … -- -DDEVKIT_PHASE6I_STARTUP_BURST_ENABLED=1`. Phase 6I source is preserved verbatim inside the `#if` guard.
+
+**Phase 9A-B** (prior): Button debounce refinement, commit `92de5e0`.
 **Phase 9A-A** (prior): Button EXTI producer, commit `2068180`, CLOSED with BOUNCE_OBSERVED.
 **Phase 6O** (prior): Reusable RTT Streaming Capture Harness, commit `6cb979f`.
 
 ---
 
-## Validation Evidence (Phase 9A-B debounce workload)
+## Validation Evidence (Phase 9A-C gate verification)
 
 | Gate | Result | Detail |
 | ---- | ------ | ------ |
-| Zephyr build | PASS | FLASH 31292 B (5.97%) / RAM 12224 B (9.33%); +84 B FLASH vs Phase 9A-A (debounce guard cost) |
+| Zephyr build | PASS | FLASH 30580 B (5.83%) / RAM 12160 B (9.28%); −712 B FLASH and −64 B RAM vs Phase 9A-B (Phase 6I burst code compiled out) |
 | Flash | PASS | `west flash` wrote 32768 B |
-| RTT capture | PASS | 90.8 s, 29160 bytes; harness exit 0 |
-| ROBOTOS_OBS state=READY | FOUND | Baseline + 18 periodic emissions (ticks=0,10,…,180) |
-| ROBOTOS_FAULT active=0 | FOUND | All 19 emissions; CFSR=0 HFSR=0 throughout |
-| Phase 9A-B button producer init | FOUND | `debounce=30ms` visible in init banner |
-| ROBOTOS_BTN attempted= | FOUND | 19 emissions; final attempted=94 ok=36 full=4 debounce=54 handled=36 |
-| Phase 9A button handled (per-press) | FOUND | 36 occurrences |
-| Phase 6I final: | MISSING | Button pressed during Phase 6I burst window (first ~5 s); same mechanism as Phase 9A-A BOUNCE_OBSERVED; non-regression; architectural invariants preserved |
-| CFSR | 0x00000000 throughout | 19 occurrences checked |
-| HFSR | 0x00000000 throughout | 19 occurrences checked |
-| Debounce conservation | PASS | ok(36)+full(4)+debounce(54)+invalid(0)+other(0) = attempted(94) ✓ |
-| Debounce effectiveness | PASS | ERR_FULL reduced from 98 (Phase 9A-A) to 4 (Phase 9A-B); 96% reduction |
-| Architecture invariants | PASS | accepted=141 dispatched=140 pending=1 (accepted−dispatched=pending ✓); peak=16; herr=0; unhandled=0 |
+| RTT capture | PASS | 60.7 s, 19564 bytes; harness exit 0 with new default patterns |
+| `DEVKIT_DIAG phase6i_startup_burst=0` | FOUND | Boot banner present; gate state visible in evidence |
+| `Phase 6I startup burst disabled` | FOUND | Confirms default-disabled policy with re-enable hint |
+| `Phase 6I timer producer started` | ABSENT | Confirms timer not initialized when gate=0 |
+| `Phase 6I event handled` | ABSENT | Confirms handler not registered/triggered when gate=0 |
+| `Phase 6I final:` | ABSENT | Confirms run-loop summary fully gated when gate=0 |
+| ROBOTOS_OBS state=READY | FOUND | Baseline + 12 periodic emissions (ticks=0,10,…,120) |
+| ROBOTOS_FAULT active=0 | FOUND | All 13 emissions; CFSR=0 HFSR=0 throughout |
+| ROBOTOS_PROD attempted= | FOUND | Phase 6M producer healthy: ticks=120 → attempted=60 ok=60 dropped=0 |
+| ROBOTOS_BTN | FOUND | Final: attempted=57 ok=17 full=0 debounce=40 handled=17 |
+| Phase 9A button handled (per-press) | FOUND | 17 occurrences (one per accepted post) |
+| CFSR | 0x00000000 throughout | 13 occurrences checked |
+| HFSR | 0x00000000 throughout | 13 occurrences checked |
+| Debounce conservation | PASS | ok(17)+full(0)+debounce(40)+invalid(0)+other(0) = attempted(57) ✓ |
+| Queue health | PASS | `full=0` (vs 9A-B full=4); OBS `dropped=0` (vs 9A-B dropped=13); peak=14 (no capacity hit) |
+| Architecture invariants | PASS | accepted=77 dispatched=76 pending=1 (accepted−dispatched=pending ✓); herr=0; unhandled=0; accepted = Phase 6M(60)+button(17) = 77 ✓ |
 | Core/platform sources changed | ZERO | No `core/`, `platform/`, or `tests/` files touched |
 
-Capture log: `RobotOS_v1.0/devkit/logs/phase_9B_debounce_rtt_2026-05-08.txt`
+Capture log: `RobotOS_v1.0/devkit/logs/phase_9C_no_burst_button_rtt_2026-05-08.txt`
 
 **Phase 6Z verification highlights:**
 
@@ -106,6 +113,7 @@ to `DEVKIT_PROGRESS.md` for the full history.
 
 | Phase | Description | Commit |
 | ----- | ----------- | ------ |
+| 9A-C | Gate Phase 6I Startup Burst (devkit-local compile-time gate; default disabled; full 4→0, dropped 13→0) | pending |
 | 9A-B | Devkit Button Debounce Refinement (30 ms time-guard; full 98→4) | `92de5e0` |
 | 9A-A | Devkit Button EXTI Producer (first real hardware workload) | `2068180` |
 | 6O | Reusable RTT Streaming Capture Harness (tooling) | `6cb979f` |
@@ -133,9 +141,11 @@ to `DEVKIT_PROGRESS.md` for the full history.
 | Phase | Description | Status |
 | ----- | ----------- | ------ |
 | Phase 9A-B | Devkit button debounce refinement (30 ms time-guard, no core change) | **CLOSED** — full 98→4; debounce=54; see Phase 9A-B section in DEVKIT_PROGRESS.md |
+| Phase 9A-C | Gate Phase 6I startup burst (devkit-local compile-time gate; default disabled) | **CLOSED** — full 4→0; dropped 13→0; peak=14; see Phase 9A-C section in DEVKIT_PROGRESS.md |
+| Phase 9B | Second real event source (UART RX, sensor, or similar) | Candidate — clean baseline now available (no Phase 6I interference) |
+| Phase 9C | Minimal application state machine (button workload as agent demo) | Candidate — depends on application direction |
 | Phase 8A | Custom STM32F407 board bring-up | **Candidate** — retires 25-phase portability debt; use `capture_devkit_rtt.ps1 -OpenOcdConfig <f407.cfg>`; remains HOLD/DEFER until user reopens |
-| Phase 9B | Second real event source (UART or sensor) | Candidate — depends on application direction |
-| Phase 7B-1 | Dispatch Budget Test Parameterization | Candidate — only if Phase 9A-A workload evidence reveals saturation; current data shows budget=1 still adequate |
+| Phase 7B-1 | Dispatch Budget Test Parameterization | Candidate — only if workload evidence reveals saturation; Phase 9A-C clean baseline shows budget=1 still adequate (peak=14, dropped=0) |
 | Phase 7A | Dispatch Budget Evolution Planning | DEFER — Phase 9A-A workload data shows ~112 events / 60 s sustained, no workload-driven reason for budget mutation |
 | Custom STM32F407 target | Migration / validation | HOLD/DEFER — not yet exercised; Phase 8A addresses when reopened |
 

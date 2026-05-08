@@ -53,6 +53,7 @@ or by searching for the heading manually.
 | 6Z | RTT Closeout for Phase 6K / 6L / 6M | CLOSED | [→](#phase-6z----rtt-closeout-for-phase-6k--6l--6m) |
 | 9A-A | Devkit Button EXTI Producer | CLOSED with BOUNCE_OBSERVED | [→](#phase-9a-a----devkit-button-exti-producer) |
 | 9A-B | Devkit Button Debounce Refinement | CLOSED | [→](#phase-9a-b----devkit-button-debounce-refinement) |
+| 9A-C | Gate Phase 6I Startup Burst | CLOSED | [→](#phase-9a-c----gate-phase-6i-startup-burst) |
 | 7A | Dispatch Budget Evolution Planning | DEFER | see `CURRENT_STATE.md` |
 | 7B-1 | Dispatch Budget Test Parameterization | Candidate | see `CURRENT_STATE.md` |
 
@@ -7834,3 +7835,295 @@ that arrived while the queue was already at capacity from Phase 6I burst (first
 | **8A** Custom STM32F407 bring-up | Flash Phase 9A-B firmware on F407; retires 25-phase portability debt | HOLD/DEFER until reopened |
 | **9B** Second real event source | Add UART or sensor producer using the button producer as template | Candidate |
 | **7B-1** Dispatch budget test parameterization | Only if workload evidence reveals saturation; current data shows budget=1 adequate | Candidate |
+
+---
+
+## Phase 9A-C -- Gate Phase 6I Startup Burst
+
+**Date:** 2026-05-08
+**Branch:** master
+**Commit:** pending
+**Baseline commit:** `92de5e0` (Phase 9A-B)
+**Type:** Devkit diagnostic gating. Devkit-local compile-time gate; no core/platform/scheduler change.
+**Close status:** CLOSED
+
+---
+
+### Purpose
+
+Phase 9A-A and 9A-B both observed that the Phase 6I synthetic startup burst
+(24 ISR posts at 50 ms, queue capacity 16) competed with real button workload
+events during the first ~5–8 seconds of every boot. Symptoms:
+
+- Phase 9A-A: 98 of 135 button ISR firings hit ERR_FULL during the burst
+  window (BOUNCE_OBSERVED).
+- Phase 9A-B: with debounce, 4 residual ERR_FULL still occurred during the
+  burst window. `Phase 6I final:` was suppressed when the user pressed the
+  button early, because button events displaced Phase 6I from the queue.
+
+Phase 6I is still valuable as a queue-pressure diagnostic, but it is no
+longer the right default for boot. Phase 9A-C gates the Phase 6I synthetic
+startup burst behind a compile-time switch, defaulted to OFF, while keeping
+the entire Phase 6I source body intact for diagnostic re-enable.
+
+This phase is **not** a scheduler evolution, dispatch budget mutation, queue
+policy change, core API change, or platform abstraction change. It is purely
+devkit-local evidence cleanup.
+
+---
+
+### Gating Design Choice
+
+**Option A (selected):** devkit-local compile-time macro in
+`devkit_runtime.c`, defaulted in source via `#ifndef`/`#define`, overridable
+on the build command line.
+
+```c
+#ifndef DEVKIT_PHASE6I_STARTUP_BURST_ENABLED
+#define DEVKIT_PHASE6I_STARTUP_BURST_ENABLED 0
+#endif
+```
+
+Rejected:
+
+- **Option B (Kconfig):** would have required Kconfig file edits and
+  `prj.conf` entries. Overkill for a single devkit-local diagnostic switch
+  that no other source file consumes.
+- **Option C (runtime flag):** would have required a runtime configuration
+  surface that does not exist; introduces state without justification.
+
+The chosen option keeps the gate fully local to `devkit_runtime.c`. The
+existing Phase 6I source code (counters, ISR callback, handler, init
+register/start, run-loop final summary) is wrapped in
+`#if DEVKIT_PHASE6I_STARTUP_BURST_ENABLED ... #endif` blocks. When the gate
+is 0, the wrapped code does not exist in the binary at all.
+
+---
+
+### Default Policy
+
+**Phase 9A-C default: `DEVKIT_PHASE6I_STARTUP_BURST_ENABLED = 0` (disabled).**
+
+Rationale: every workload validation phase from 9A-A onward has been
+disturbed by the synthetic burst. The default should match the workload
+phase that callers are actually validating. Phase 6I remains available as
+an explicit diagnostic mode.
+
+**Re-enable for stress diagnostics:**
+
+```powershell
+west build -b stm32f411e_disco RobotOS_v1.0/devkit/ --pristine -- -DDEVKIT_PHASE6I_STARTUP_BURST_ENABLED=1
+```
+
+When re-enabled, the firmware behaves exactly as Phase 9A-B did: the timer
+ISR posts 24 events at 50 ms, the handler dispatches 16, and the run-loop
+emits `Phase 6I final:` once. Re-enable mode is **not RTT-validated** in
+this phase; build-only validation is sufficient because the gated code is
+verbatim Phase 9A-B source.
+
+---
+
+### Boot Banner Behavior
+
+| Gate value | Boot banner |
+| ---------- | ----------- |
+| `=0` (default) | `DEVKIT_DIAG phase6i_startup_burst=0` followed by `Phase 6I startup burst disabled (Phase 9A-C default; -DDEVKIT_PHASE6I_STARTUP_BURST_ENABLED=1 to restore)` |
+| `=1` (diag) | `DEVKIT_DIAG phase6i_startup_burst=1` followed by the existing `Phase 6I timer producer started: attempts=24 interval=50ms` |
+
+Both forms are grep-friendly. The harness default `RequirePatterns` now
+includes `"DEVKIT_DIAG phase6i_startup_burst="` (substring) so any captured
+build is forced to declare its gate state.
+
+---
+
+### What Is Gated
+
+| Item | When gate=0 | When gate=1 |
+| ---- | ----------- | ----------- |
+| Phase 6I macros (MARKER, ATTEMPT_COUNT, EXPECTED_OK, EXPECTED_FULL, TIMER_MS) | not defined | defined |
+| Phase 6I volatile counters (`s_prod_attempted`, `s_prod_ok`, `s_prod_full`, `s_prod_invalid`, `s_prod_other`) | not declared | declared |
+| `s_handled_count`, `s_prod_final_logged`, `s_phase6i_timer` | not declared | declared |
+| `devkit_phase6i_timer_cb` ISR | not compiled | compiled |
+| `devkit_phase6i_handler` | not compiled | compiled |
+| `robotos_core_register_event_handler(USER, ...)` for Phase 6I | not called | called |
+| `k_timer_init` / `k_timer_start` for Phase 6I | not called | called |
+| `Phase 6I timer producer started` banner | not emitted | emitted |
+| `Phase 6I event handled seq=… count=…` milestones | not emitted | emitted |
+| `Phase 6I final: …` summary (run-loop) | not emitted | emitted |
+
+### What Is Not Gated
+
+| Item | Status |
+| ---- | ------ |
+| `robotos_core_init` | unchanged |
+| `devkit_button_producer_init` (Phase 9A-A/B) | unchanged |
+| `devkit_timer_producer_init` (Phase 6M, USER+1) | unchanged |
+| ROBOTOS_OBS / FAULT / PROD / BTN telemetry | unchanged |
+| Tick loop / status LED / fault observability | unchanged |
+| Dispatch budget / queue capacity / admission / throttle / retry | unchanged |
+
+---
+
+### Files Changed (Phase 9A-C)
+
+| File | Change |
+| ---- | ------ |
+| `RobotOS_v1.0/devkit/src/devkit_runtime.c` | Added `DEVKIT_PHASE6I_STARTUP_BURST_ENABLED` gate macro and `#if`/`#endif` wraps around Phase 6I macros, counters, ISR, handler, init register/timer-start, init banner, and run-loop final summary. Added `DEVKIT_DIAG phase6i_startup_burst=0|1` and `Phase 6I startup burst disabled` boot banners. |
+| `RobotOS_v1.0/tools/runtime/capture_devkit_rtt.ps1` | Default `RequirePatterns` updated: dropped `"Phase 6I final:"`, added `"ROBOTOS_BTN"` and `"DEVKIT_DIAG phase6i_startup_burst="`. Doc comment updated. |
+| `RobotOS_v1.0/tools/runtime/phase6z_required_patterns.txt` | Reference file synced to new defaults; documents the diagnostic-build override pattern set. |
+| `RobotOS_v1.0/devkit/logs/phase_9C_no_burst_button_rtt_2026-05-08.txt` | New — 60 s RTT capture with gate=0 and manual button presses; 19564 bytes. |
+| `RobotOS_v1.0/devkit/logs/INDEX.md` | Phase 9A-C row added. |
+| `RobotOS_v1.0/devkit/docs/DEVKIT_PROGRESS.md` | This section; index updated. |
+| `CURRENT_STATE.md` | Last-closed phase advanced to Phase 9A-C. |
+
+No changes to `core/`, `platform/`, `tests/`, `CMakeLists.txt`, `prj.conf`,
+or `Kconfig`. The button producer, Phase 6M producer, and observability
+helpers were not touched.
+
+---
+
+### Build Evidence
+
+| Gate | Result | Detail |
+| ---- | ------ | ------ |
+| `west build --pristine` | PASS | FLASH 30580 B (5.83%) / RAM 12160 B (9.28%) |
+| Delta vs Phase 9A-B | −712 B FLASH, −64 B RAM | Phase 6I macros, counters, ISR, handler, init code, and final-summary block all compiled out |
+| `west flash` | PASS | 32768 bytes written |
+| Compiler warnings | none new | Pre-existing `q_valid` unused-function warning in `robotos_event_queue.c` (unchanged from prior phases) |
+
+The negative FLASH/RAM delta is intentional: with the gate disabled the
+Phase 6I synthetic-burst code is genuinely absent from the image, not just
+behaviorally suppressed.
+
+---
+
+### RTT Evidence (Phase 9A-C, gate=0)
+
+**Log:** `RobotOS_v1.0/devkit/logs/phase_9C_no_burst_button_rtt_2026-05-08.txt`
+**Capture:** Phase 6O harness with new default `RequirePatterns` (no `-RequirePatterns` override)
+**Duration / size:** 60.7 s, 19564 bytes
+**_SEGGER_RTT:** `0x20000a10`
+**Press procedure:** wait 10–15 s after boot, then press the user button several times spaced >1 s apart over the next ~10 s.
+
+#### Pattern verification (harness exit 0 with default patterns)
+
+| Pattern | Result |
+| ------- | ------ |
+| `ROBOTOS_OBS state=READY` | FOUND — baseline + 12 periodic emissions (ticks=0,10,…,120) |
+| `ROBOTOS_FAULT active=0` | FOUND — all 13 emissions; CFSR=0 HFSR=0 throughout |
+| `ROBOTOS_PROD attempted=` | FOUND — Phase 6M producer healthy at ticks=120 → attempted=60 ok=60 |
+| `ROBOTOS_BTN` | FOUND — 13 emissions (baseline + periodic); final = attempted=57 ok=17 full=0 debounce=40 handled=17 |
+| `DEVKIT_DIAG phase6i_startup_burst=` | FOUND — exactly `=0` at boot; no `=1` produced |
+| CFSR | `0x00000000` — 13 occurrences checked |
+| HFSR | `0x00000000` — 13 occurrences checked |
+
+#### Phase 6I absence verification
+
+| Phase 6I marker | Status in log |
+| --------------- | ------------- |
+| `Phase 6I timer producer started` | ABSENT (timer not initialized) |
+| `Phase 6I event handled` | ABSENT (handler not invoked because not registered) |
+| `Phase 6I final:` | ABSENT (run-loop summary block compiled out) |
+| `Phase 6I startup burst disabled` | PRESENT (gate=0 banner) |
+
+#### Counter evidence (final snapshot, ticks=120)
+
+| Source | Counter | Value | Notes |
+| ------ | ------- | ----- | ----- |
+| ROBOTOS_OBS | `accepted` | 77 | = Phase 6M ok(60) + button ok(17) ✓ |
+| ROBOTOS_OBS | `dispatched` | 76 | accepted − dispatched = pending = 1 ✓ |
+| ROBOTOS_OBS | `pending` | 1 | Architecture invariant preserved |
+| ROBOTOS_OBS | `peak` | 14 | Brief queue depth during a press flurry; no capacity hit |
+| ROBOTOS_OBS | `dropped` | **0** | vs Phase 9A-B `dropped=13` — no queue-full drops at all |
+| ROBOTOS_OBS | `herr` / `unhandled` / `rejected` / `throttled` | 0 / 0 / 0 / 0 | Clean across the board |
+| ROBOTOS_PROD | `attempted` / `ok` / `dropped` | 60 / 60 / 0 | Phase 6M cadence intact (1/2 ticks × 120 ticks = 60) |
+| ROBOTOS_BTN | `attempted` | 57 | Total ISR firings |
+| ROBOTOS_BTN | `ok` | 17 | All accepted button events |
+| ROBOTOS_BTN | `full` | **0** | vs Phase 9A-B `full=4` — no ERR_FULL under the same workload |
+| ROBOTOS_BTN | `debounce` | 40 | Bounce filtering still active |
+| ROBOTOS_BTN | `handled` | 17 | `ok = handled` ✓ |
+| ROBOTOS_BTN | conservation | 17+0+40+0+0=57 | `attempted` ✓ |
+
+---
+
+### Counter / Behavior Analysis
+
+The numerical comparison against Phase 9A-B (same hardware, same firmware
+modulo the gate, same harness, similar manual press procedure):
+
+| Metric | Phase 9A-B (gate=ON) | Phase 9A-C (gate=OFF) | Delta |
+| ------ | -------------------- | --------------------- | ----- |
+| OBS `accepted` | 141 | 77 | −64 (no Phase 6I 17 + bookkeeping) |
+| OBS `dispatched` | 140 | 76 | −64 |
+| OBS `dropped` | 13 | **0** | **−13** (no synthetic burst pressure) |
+| OBS `peak` | 16 (= capacity) | 14 | −2 (queue never saturates) |
+| OBS `pending` | 1 | 1 | 0 (invariant preserved) |
+| BTN `full` | 4 | **0** | **−4** (no contention with synthetic burst) |
+| BTN `debounce` | 54 | 40 | −14 (fewer presses in 9A-C window; debounce still effective) |
+| BTN `ok = handled` | 36 = 36 | 17 = 17 | invariant preserved |
+| Phase 6M `ok` | 90 | 60 | −30 (60 s vs 90 s capture) |
+
+The two metrics that matter for the gate's success — OBS `dropped` and BTN
+`full` — both drop to zero. Queue health is now bounded by physical press
+rate alone, not by the synthetic burst.
+
+---
+
+### Architecture Preservation Audit (Phase 9A-C)
+
+- **Core API unchanged.** No file under `RobotOS_v1.0/core/` was modified.
+  `git diff` confirms zero `core/` changes.
+- **Platform boundary unchanged.** No file under `RobotOS_v1.0/platform/`
+  was modified. No new abstraction added.
+- **Tests unchanged.** No file under `RobotOS_v1.0/tests/` was modified.
+- **Scheduler semantics unchanged.** `ROBOTOS_CORE_MAX_EVENTS_PER_TICK = 1`
+  unchanged. No new scheduling state. No priority dispatch.
+- **Queue policy unchanged.** `ROBOTOS_EVENT_QUEUE_CAPACITY = 16` unchanged.
+- **Admission / throttle / retry / backpressure semantics unchanged.**
+  `ROBOTOS_CORE_ERR_THROTTLED = -7` remains highest-numbered error.
+- **ISR-safe producer contract** (Phase 5G): preserved. No new ISR path
+  added; the gated Phase 6I ISR is still Phase 5G-compliant when re-enabled.
+- **Handler-outside-lock invariant** (Phase 5F): unchanged.
+- **OBS / FAULT / PROD / BTN telemetry formats unchanged.** No fields
+  added, removed, or renamed.
+- **Phase 6I diagnostic mode preserved.** Source body is verbatim Phase
+  9A-B inside the `#if` guard. `-DDEVKIT_PHASE6I_STARTUP_BURST_ENABLED=1`
+  restores the exact prior behavior.
+- **Three producers still coexist.** Phase 6M (USER+1, 101) and Phase
+  9A-A/B button (USER+2, 102) remain wired and functional. Phase 6I (USER,
+  100) is dormant only.
+- **Phase 6O harness preserved.** Default `RequirePatterns` updated to
+  match the new default firmware; the harness mechanism (sidecar cfg, TCP
+  RTT streaming, pattern verification) is unchanged.
+
+---
+
+### Phase 9A-C Known Limitations
+
+- **Diagnostic re-enable build is not RTT-validated in 9A-C.** Build with
+  `-DDEVKIT_PHASE6I_STARTUP_BURST_ENABLED=1` is expected to behave exactly
+  as Phase 9A-B did, because the gated source is unchanged. Future
+  diagnostic captures should pass `-RequirePatterns @("ROBOTOS_OBS state=READY",
+  "ROBOTOS_FAULT active=0", "ROBOTOS_PROD attempted=", "Phase 6I final:")`
+  to verify the burst once it has been intentionally re-enabled.
+- **Bounce still observable in `debounce` counter.** Phase 9A-B's 30 ms
+  guard remains in place; bounce ISR firings are filtered, not eliminated.
+  This is workload-level expected behavior, not a regression.
+- **Single hardware input source.** Phase 9A workload still consists of
+  one button. Phase 9B (UART RX or sensor) remains the recommended path
+  to diversify real workloads.
+- **Custom F407 board still HOLD/DEFER.** Phase 8A is unchanged by 9A-C.
+- **Scheduler mutation still DEFER.** Phase 7A is unchanged by 9A-C; the
+  cleaner workload baseline (peak=14, dropped=0) makes the case for
+  budget=1 stronger, not weaker.
+
+---
+
+### Phase 9A-C Next Recommended Phases
+
+| Phase | Description | Priority |
+| ----- | ----------- | -------- |
+| **9B** Second real event source | Add UART RX or sensor producer using the button producer as template; clean baseline now available (no Phase 6I interference) | Candidate (workload branch) |
+| **9C** Minimal application state machine | Promote button workload into a small agent-style state machine demo | Candidate (application direction) |
+| **8A** Custom STM32F407 bring-up | Flash current firmware on F407; retires 25-phase portability debt | HOLD/DEFER until reopened |
+| **7A / 7B-1** Dispatch budget evolution / test parameterization | Phase 9A-C clean baseline (peak=14, dropped=0) shows budget=1 still adequate; no workload-driven justification yet | DEFER |
