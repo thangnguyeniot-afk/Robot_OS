@@ -60,6 +60,7 @@
 #include "devkit_observability.h"
 #include "devkit_status_led.h"
 #include "devkit_timer_producer.h"
+#include "devkit_uart_producer.h"
 #include "robotos_core.h"
 #include "robotos_platform_critical.h"
 #include "robotos_platform_time.h"
@@ -270,6 +271,17 @@ int devkit_runtime_init(void)
 		}
 	}
 
+	/* Phase 9B: register the UART RX USER+3 handler and enable RX IRQ.
+	 * Distinct from Phase 6I (USER), Phase 6M (USER+1), Phase 9A-A (USER+2)
+	 * so all real producers coexist without routing conflict. Failure is
+	 * logged and ignored: the rest of the runtime continues without UART. */
+	{
+		robotos_core_status_t uart_ret = devkit_uart_producer_init();
+		if (uart_ret != ROBOTOS_CORE_OK) {
+			LOG_ERR("Phase 9B uart init failed: %d", (int)uart_ret);
+		}
+	}
+
 	/* Phase 6K: emit one baseline observability snapshot after init */
 	devkit_observability_log_snapshot();
 	/* Phase 6L: emit one baseline fault diagnostic after init */
@@ -278,6 +290,8 @@ int devkit_runtime_init(void)
 	devkit_observability_log_producer_stats();
 	/* Phase 9A-A: emit one baseline button stats line after init */
 	devkit_button_producer_log_stats();
+	/* Phase 9B: emit one baseline uart stats line after init */
+	devkit_uart_producer_log_stats();
 
 	return 0;
 }
@@ -304,14 +318,16 @@ void devkit_runtime_run(void)
 		 * cadence predicate is false; one post at most per call. */
 		devkit_timer_producer_on_tick(tick_count);
 
-		/* Phase 6K/6L/6M/9A-A: periodic observability snapshot + fault + producer + button log.
-		 * tick_count was post-incremented in the LOG_INF above, so it
-		 * already reflects the next iteration index here. Fire every N. */
+		/* Phase 6K/6L/6M/9A-A/9B: periodic observability snapshot + fault +
+		 * producer + button + uart log. tick_count was post-incremented in
+		 * the LOG_INF above, so it already reflects the next iteration
+		 * index here. Fire every N. */
 		if ((tick_count % DEVKIT_OBSERVABILITY_LOG_INTERVAL_TICKS) == 0u) {
 			devkit_observability_log_snapshot();
 			devkit_observability_log_fault();
 			devkit_observability_log_producer_stats();
 			devkit_button_producer_log_stats();
+			devkit_uart_producer_log_stats();
 		}
 
 #if DEVKIT_PHASE6I_STARTUP_BURST_ENABLED

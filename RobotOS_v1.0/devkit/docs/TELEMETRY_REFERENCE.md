@@ -185,9 +185,59 @@ strictly monotonic).
 
 ---
 
+## ROBOTOS_UART — UART RX Producer Snapshot (Phase 9B)
+
+Emitted by `devkit_uart_producer_log_stats()` in `devkit_uart_producer.c`.
+
+**Literal log shape** (from `devkit_uart_producer.c` LOG_INF format string):
+
+```text
+ROBOTOS_UART rx=N ok=N full=N invalid=N other=N handled=N last=0xNN type=USER+3
+```
+
+**Cadence:** same as ROBOTOS_OBS / FAULT / PROD / BTN (one baseline at init;
+one periodic per cadence window). Each cadence window now emits a 5-line block:
+ROBOTOS_OBS, ROBOTOS_FAULT, ROBOTOS_PROD, ROBOTOS_BTN, ROBOTOS_UART.
+
+**Field reference:**
+
+| Field | Type | Meaning | Canonical Definition |
+|-------|------|---------|----------------------|
+| `rx` | uint32 | Every byte read from the UART hardware FIFO (one event posted per byte) | `DEVKIT_PROGRESS.md` — Phase 9B |
+| `ok` | uint32 | `robotos_core_post_event()` returned `OK` | `DEVKIT_PROGRESS.md` — Phase 9B |
+| `full` | uint32 | Returned `ERR_FULL` (queue at capacity during a burst) | `DEVKIT_PROGRESS.md` — Phase 9B |
+| `invalid` | uint32 | Returned `ERR_INVALID_ARG` (defensive; should always be 0) | `DEVKIT_PROGRESS.md` — Phase 9B |
+| `other` | uint32 | Any other non-OK return (defensive; should always be 0) | `DEVKIT_PROGRESS.md` — Phase 9B |
+| `handled` | uint32 | UART byte handler invocations (thread context) | `DEVKIT_PROGRESS.md` — Phase 9B |
+| `last` | hex uint8 | Most recent byte read by the ISR (low 8 bits) | `DEVKIT_PROGRESS.md` — Phase 9B |
+| `type` | literal | `USER+3` — the producer's event type (`ROBOTOS_EVENT_USER + 3 = 103`) | `DEVKIT_PROGRESS.md` — Phase 9B |
+
+**Producer design:**
+
+- Source: STM32F411E-DISCO `usart2` (chosen `zephyr,console` node), PA2 TX / PA3 RX, 115200 8N1.
+- Required physical wiring: external USB-UART adapter TX → board PA3, adapter GND → board GND. The board has no on-board USB-VCP.
+- API used: Zephyr `uart_irq_callback_set()` + `uart_fifo_read()` in ISR context. `robotos_core_post_event()` is called per byte (Phase 5G ISR-safe).
+- One byte = one event. No line buffering, no parsing, no protocol framing.
+- arg0 = `0x9B0B` (Phase 9B marker); arg1 = received byte value (0–255).
+- Distinct from Phase 6I (USER), Phase 6M (USER+1), and Phase 9A button (USER+2). Four producers coexist without routing conflict.
+- RTT remains the canonical log backend; UART is **not** used for logging or console (`CONFIG_LOG_BACKEND_UART=n`, `CONFIG_UART_CONSOLE=n`).
+
+**Per-byte handler log** (separate from periodic ROBOTOS_UART line):
+
+```text
+Phase 9B uart handled byte=0xNN ('c') count=M    (when 0x20 ≤ byte < 0x7F)
+Phase 9B uart handled byte=0xNN count=M           (otherwise; e.g. 0x0a for LF)
+```
+
+Emitted once per accepted-and-dispatched byte. Useful for ordering and content
+verification (the byte sequence in handler logs matches the bytes sent on the
+wire).
+
+---
+
 ## Telemetry Stack Summary
 
-```
+```text
 ROBOTOS_OBS   --- core snapshot getter (robotos_core_snapshot)
                   canonical counter semantics: core/README.md Phase 4J
 ROBOTOS_FAULT --- direct SCB register read (0xE000ED28, 0xE000ED2C)
@@ -196,6 +246,8 @@ ROBOTOS_PROD  --- devkit_timer_producer_get_stats()
                   producer module: devkit_timer_producer.c (pure C, host-testable)
 ROBOTOS_BTN   --- devkit_button_producer_get_stats()  (Phase 9A-A)
                   producer module: devkit_button_producer.c (Zephyr GPIO/EXTI; devkit-local)
+ROBOTOS_UART  --- devkit_uart_producer_get_stats()    (Phase 9B)
+                  producer module: devkit_uart_producer.c (Zephyr UART IRQ; devkit-local)
 ```
 
 All three streams are **passive read-only**. They do not feed back into

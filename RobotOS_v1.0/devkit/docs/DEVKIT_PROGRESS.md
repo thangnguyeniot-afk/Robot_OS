@@ -54,6 +54,7 @@ or by searching for the heading manually.
 | 9A-A | Devkit Button EXTI Producer | CLOSED with BOUNCE_OBSERVED | [→](#phase-9a-a----devkit-button-exti-producer) |
 | 9A-B | Devkit Button Debounce Refinement | CLOSED | [→](#phase-9a-b----devkit-button-debounce-refinement) |
 | 9A-C | Gate Phase 6I Startup Burst | CLOSED | [→](#phase-9a-c----gate-phase-6i-startup-burst) |
+| 9B | Devkit UART RX Producer | CLOSED | [→](#phase-9b----devkit-uart-rx-producer) |
 | 7A | Dispatch Budget Evolution Planning | DEFER | see `CURRENT_STATE.md` |
 | 7B-1 | Dispatch Budget Test Parameterization | Candidate | see `CURRENT_STATE.md` |
 
@@ -8123,7 +8124,241 @@ rate alone, not by the synthetic burst.
 
 | Phase | Description | Priority |
 | ----- | ----------- | -------- |
-| **9B** Second real event source | Add UART RX or sensor producer using the button producer as template; clean baseline now available (no Phase 6I interference) | Candidate (workload branch) |
-| **9C** Minimal application state machine | Promote button workload into a small agent-style state machine demo | Candidate (application direction) |
+| **9B** Second real event source | CLOSED — see Phase 9B section below | — |
+| **9C** Minimal application state machine | Promote button + UART workload into a small agent-style state machine demo | Candidate (application direction) |
 | **8A** Custom STM32F407 bring-up | Flash current firmware on F407; retires 25-phase portability debt | HOLD/DEFER until reopened |
 | **7A / 7B-1** Dispatch budget evolution / test parameterization | Phase 9A-C clean baseline (peak=14, dropped=0) shows budget=1 still adequate; no workload-driven justification yet | DEFER |
+
+---
+
+## Phase 9B -- Devkit UART RX Producer
+
+**Date:** 2026-05-08
+**Branch:** master
+**Commit:** pending
+**Baseline commit:** `3989ff9` (Phase 9A-C)
+**Type:** Devkit workload expansion. Second real hardware event source; devkit-local; no core/platform/scheduler change.
+**Close status:** CLOSED
+
+---
+
+### Purpose
+
+Phase 9A-A proved the first real hardware event source (GPIO/EXTI button).
+Phase 9B proves RobotOS can also ingest a different real hardware input
+**class** — serial bytes — through the same portable event pipeline. Two
+real producers, distinct hardware modalities (edge-triggered GPIO interrupt
+vs UART RX FIFO interrupt), one core API.
+
+The phase is deliberately minimal: one byte = one event. No shell, no
+parser, no command framework, no protocol. The validation goal is to prove
+the pipeline, not to build an application.
+
+---
+
+### Architecture Boundary
+
+```text
+external USB-UART adapter TX
+  -> board PA3 (usart2 RX)
+  -> Zephyr UART RX interrupt
+  -> uart_irq_callback (ISR context, Zephyr STM32 driver)
+  -> uart_fifo_read() drains all available bytes
+  -> for each byte:
+       robotos_event_t { type=USER+3, arg0=0x9B0B, arg1=byte }
+       robotos_core_post_event()           [Phase 5G ISR-safe contract]
+  -> core queue
+  -> robotos_core_tick() dispatcher        [thread context, budget=1/tick]
+  -> devkit_uart_handler() (validates marker, increments handled, logs byte)
+  -> ROBOTOS_UART periodic snapshot in 10-tick cadence
+```
+
+Layers preserved:
+
+- **Application / Workload:** UART RX demo lives in `devkit/src/`.
+- **Robot Framework / Core:** unchanged. Sees only `ROBOTOS_EVENT_USER + 3` events.
+- **Robot Adapter / Platform:** unchanged. **No `robotos_platform_uart` was added.** Premature abstraction; only one workload uses UART.
+- **Zephyr Kernel:** UART API used only inside `devkit_uart_producer.c`.
+- **Hardware:** STM32F411E-DISCO usart2 (PA2 TX / PA3 RX, 115200 8N1). F407 migration unchanged (HOLD/DEFER).
+
+---
+
+### UART Source / Path
+
+| Item | Value | Source of truth |
+| ---- | ----- | --------------- |
+| Zephyr device | `usart2` (DT chosen `zephyr,console`) | `zephyr/boards/arm/stm32f411e_disco/stm32f411e_disco.dts` line 17 |
+| TX pin | PA2 | `&usart2` `pinctrl-0 = <&usart2_tx_pa2 ...>` |
+| RX pin | PA3 | `&usart2` `pinctrl-0 = <... &usart2_rx_pa3>` |
+| Baud | 115200 | `&usart2 { current-speed = <115200>; }` |
+| Frame | 8N1 | Zephyr default for `current-speed`-only spec |
+| Driver Kconfig | `CONFIG_SERIAL=y` + `CONFIG_UART_INTERRUPT_DRIVEN=y` | `RobotOS_v1.0/devkit/prj.conf` |
+| Console routing | `CONFIG_UART_CONSOLE=n` (RTT only) | unchanged from prior phases |
+| Log backend | `CONFIG_LOG_BACKEND_RTT=y`, `CONFIG_LOG_BACKEND_UART=n` | unchanged from prior phases |
+| Required external HW | USB-UART adapter (CP210x in this run) wired adapter-TX → board-PA3, adapter-GND → board-GND. The DISCO board has no on-board USB-VCP. | board doc + prj.conf comment |
+
+The board's chosen `zephyr,console` aliases also tag `zephyr,shell-uart`
+and `zephyr,uart-mcumgr`, but neither shell nor mcumgr is enabled in
+`prj.conf`, so usart2 is a free hardware resource for the producer.
+
+---
+
+### Event Type / Marker
+
+| Producer | Event type | Numeric | Marker | Status |
+| -------- | ---------- | ------- | ------ | ------ |
+| Phase 6I (timer burst, gated) | `ROBOTOS_EVENT_USER` | 100 | `0x6900` | gated off in 9A-C; opt-in only |
+| Phase 6M (timer producer) | `ROBOTOS_EVENT_USER + 1` | 101 | `0x6D00` | active |
+| Phase 9A-A/B button | `ROBOTOS_EVENT_USER + 2` | 102 | `0x9A0A` | active |
+| **Phase 9B UART** | `ROBOTOS_EVENT_USER + 3` | **103** | **`0x9B0B`** | **active (this phase)** |
+
+No new core enum. `arg0` = marker, `arg1` = received byte (0–255). Admitted
+by the Phase 4I admission gate (USER+ accepted; only `ROBOTOS_EVENT_NONE`
+and reserved are rejected).
+
+---
+
+### Files Changed (Phase 9B)
+
+| File | Change |
+| ---- | ------ |
+| `RobotOS_v1.0/devkit/src/devkit_uart_producer.h` | NEW — public interface; `DEVKIT_UART_PRODUCER_TYPE = USER+3`; `DEVKIT_UART_PRODUCER_MARKER = 0x9B0B`; stats struct (rx, ok, full, invalid, other, handled, last_byte); init/get_stats/log_stats prototypes |
+| `RobotOS_v1.0/devkit/src/devkit_uart_producer.c` | NEW — Zephyr `uart_irq_callback_set` ISR draining `uart_fifo_read()` and posting one event per byte; thread-context handler logging each byte; ROBOTOS_UART periodic line emitter |
+| `RobotOS_v1.0/devkit/src/devkit_runtime.c` | Added include, init call, baseline log call, periodic log call (5-line cadence block); failure path identical to button producer (logged, ignored, runtime continues) |
+| `RobotOS_v1.0/devkit/CMakeLists.txt` | Added `src/devkit_uart_producer.c` |
+| `RobotOS_v1.0/devkit/prj.conf` | `CONFIG_SERIAL=y`, `CONFIG_UART_INTERRUPT_DRIVEN=y` (added); `CONFIG_UART_CONSOLE=n` (preserved); commented rationale |
+| `RobotOS_v1.0/devkit/docs/TELEMETRY_REFERENCE.md` | New ROBOTOS_UART section + per-byte handler-log description; Telemetry Stack Summary updated |
+| `RobotOS_v1.0/devkit/logs/phase_9B_uart_rtt_2026-05-08.txt` | New — 60 s RTT capture with `abc123\n` payload, 20627 bytes |
+| `RobotOS_v1.0/devkit/logs/INDEX.md` | Phase 9B row |
+| `RobotOS_v1.0/devkit/docs/DEVKIT_PROGRESS.md` | This section + index update |
+| `CURRENT_STATE.md` | Last-closed phase advanced to Phase 9B |
+
+No changes to `core/`, `platform/`, `tests/`, or `Kconfig`. The button
+producer, Phase 6M producer, observability helpers, and Phase 6O harness
+were not touched.
+
+---
+
+### Build Evidence
+
+| Gate | Result | Detail |
+| ---- | ------ | ------ |
+| `west build --pristine` | PASS | FLASH 34448 B (6.57%) / RAM 12224 B (9.33%) |
+| Delta vs Phase 9A-C | +3868 B FLASH, +64 B RAM | Zephyr serial driver + STM32 UART driver newly enabled (`CONFIG_SERIAL=y`); UART producer source itself is small |
+| `west flash` | PASS | 49152 bytes written |
+| Compiler warnings | none new | Pre-existing `q_valid` unused-function warning in `robotos_event_queue.c` (unchanged) |
+
+---
+
+### RTT Evidence (Phase 9B)
+
+**Log:** `RobotOS_v1.0/devkit/logs/phase_9B_uart_rtt_2026-05-08.txt`
+**Capture:** Phase 6O harness with Phase 9B-specific `RequirePatterns`
+**Duration / size:** 60.4 s, 20627 bytes
+**_SEGGER_RTT:** `0x20000a48`
+**UART send method:** PowerShell `System.IO.Ports.SerialPort` opened on COM5 (CP210x USB-UART) at 115200 8N1, `Write("abc123`n")` (7 bytes), close.
+**Send timing:** ~12 s into capture (after Phase 6M had emitted 1 baseline + 2 periodic ROBOTOS_PROD lines; before any user button press).
+**Coexistence note:** button producer was initialized but not pressed in this capture; ROBOTOS_BTN remains all-zero throughout. Phase 6M producer ran continuously.
+
+#### Pattern verification (harness exit 0)
+
+| Pattern | Result |
+| ------- | ------ |
+| `ROBOTOS_OBS state=READY` | FOUND — baseline + 12 periodic emissions (ticks=0,10,…,120) |
+| `ROBOTOS_FAULT active=0` | FOUND — all 13 emissions; CFSR=0 HFSR=0 throughout (13 occurrences) |
+| `ROBOTOS_PROD attempted=` | FOUND — Phase 6M healthy at ticks=120: attempted=60 ok=60 dropped=0 |
+| `ROBOTOS_BTN` | FOUND — initialized but idle (no presses) |
+| `ROBOTOS_UART` | FOUND — final at ticks=120: rx=7 ok=7 full=0 invalid=0 other=0 handled=7 last=0x0a |
+| `Phase 9B uart producer init` | FOUND — `type=USER+3 marker=0x9b0b dev=serial@40004400` |
+| `Phase 9B uart handled` | FOUND — 7 occurrences (one per byte) |
+| CFSR | `0x00000000` — 13 occurrences checked |
+| HFSR | `0x00000000` — 13 occurrences checked |
+
+#### Per-byte handler log (verbatim, in arrival order)
+
+| Tick (s) | Byte | Char | count | RTT line |
+| -------- | ---- | ---- | ----- | -------- |
+| 11.503 | 0x61 | a | 1 | `Phase 9B uart handled byte=0x61 ('a') count=1` |
+| 12.003 | 0x62 | b | 2 | `Phase 9B uart handled byte=0x62 ('b') count=2` |
+| 12.503 | 0x63 | c | 3 | `Phase 9B uart handled byte=0x63 ('c') count=3` |
+| 13.003 | 0x31 | 1 | 4 | `Phase 9B uart handled byte=0x31 ('1') count=4` |
+| 13.503 | 0x32 | 2 | 5 | `Phase 9B uart handled byte=0x32 ('2') count=5` |
+| 14.003 | 0x33 | 3 | 6 | `Phase 9B uart handled byte=0x33 ('3') count=6` |
+| 14.503 | 0x0a | LF | 7 | `Phase 9B uart handled byte=0x0a count=7` |
+
+Sequence matches the host-side payload `abc123\n` byte-for-byte. The 500 ms
+gap between handler logs reflects the unchanged dispatch budget
+(`ROBOTOS_CORE_MAX_EVENTS_PER_TICK = 1` × `DEVKIT_TICK_MS = 500`): all
+seven bytes were ISR-posted within a single UART burst (~1 ms on the wire
+at 115200), entered the queue together (peak briefly hit 8), and were
+drained one per tick.
+
+---
+
+### Counter / Behavior Analysis
+
+Final snapshot at ticks=120:
+
+| Source | Counter | Value | Notes |
+| ------ | ------- | ----- | ----- |
+| ROBOTOS_OBS | `accepted` | 67 | = Phase 6M ok(60) + UART ok(7) ✓ |
+| ROBOTOS_OBS | `dispatched` | 66 | accepted − dispatched = pending = 1 ✓ |
+| ROBOTOS_OBS | `pending` | 1 | architecture invariant preserved |
+| ROBOTOS_OBS | `peak` | 8 | UART 7-byte burst on top of one Phase 6M event already pending (1 + 7 = 8); no capacity hit |
+| ROBOTOS_OBS | `dropped` | 0 | no queue overflow |
+| ROBOTOS_OBS | `herr` / `unhandled` / `rejected` / `throttled` | 0 / 0 / 0 / 0 | all clean |
+| ROBOTOS_PROD | attempted / ok / dropped | 60 / 60 / 0 | Phase 6M cadence intact |
+| ROBOTOS_BTN | attempted / ok / handled | 0 / 0 / 0 | button producer initialized; no presses this capture |
+| ROBOTOS_UART | rx | 7 | every byte read from FIFO |
+| ROBOTOS_UART | ok | 7 | all posts succeeded |
+| ROBOTOS_UART | full / invalid / other | 0 / 0 / 0 | clean (queue had ample capacity for the 7-byte burst) |
+| ROBOTOS_UART | handled | 7 | thread-context handler invocations |
+| ROBOTOS_UART | last | 0x0a | final byte (LF) |
+| ROBOTOS_UART | conservation | 7+0+0+0+0=7 | `ok + full + invalid + other = rx` ✓ |
+
+Counter cross-check at ticks=120 lines up: Phase 6M ok(60) + UART ok(7) =
+ROBOTOS_OBS accepted(67); ok = handled = 7 means every accepted byte was
+dispatched and consumed by the registered handler.
+
+---
+
+### Architecture Preservation Audit (Phase 9B)
+
+- **No `core/` changes.** `git diff` confirms zero changes under `RobotOS_v1.0/core/`.
+- **No `platform/` changes.** No `robotos_platform_uart` introduced. The platform layer remains UART-agnostic.
+- **No `tests/` changes.**
+- **No Zephyr include in core.** All Zephyr UART headers (`zephyr/drivers/uart.h`, `zephyr/device.h`, `zephyr/devicetree.h`) are confined to `devkit_uart_producer.c`.
+- **Scheduler unchanged.** `ROBOTOS_CORE_MAX_EVENTS_PER_TICK = 1`. No new scheduling state, no priority dispatch, no auto-retry.
+- **Queue capacity unchanged.** `ROBOTOS_EVENT_QUEUE_CAPACITY = 16`.
+- **Admission / throttle / retry / backpressure semantics unchanged.**
+- **ISR-safe producer contract** (Phase 5G): preserved. The UART callback uses only `uart_irq_update()` / `uart_irq_rx_ready()` / `uart_fifo_read()` (Zephyr ISR-safe), O(1) event construction on stack, simple counter increments, and `robotos_core_post_event()` (proven ISR-safe). No logging, sleeping, dispatching, registration, or allocation in ISR context.
+- **Handler-outside-lock invariant** (Phase 5F): unchanged.
+- **OBS / FAULT / PROD / BTN / UART telemetry formats stable.** New ROBOTOS_UART line follows the same key=value, integer-and-hex-only convention; no existing format changed.
+- **Phase 6I gate (9A-C)** unchanged. `DEVKIT_DIAG phase6i_startup_burst=0` banner still emitted; Phase 6I source still gated off by default.
+- **Phase 6O harness** unchanged in mechanism. Phase 9B simply consumes the same harness with `-RequirePatterns` listing UART-specific markers.
+- **Four producers coexist.** Phase 6M (USER+1), Phase 9A-A/B button (USER+2), Phase 9B UART (USER+3), and Phase 6I (USER, dormant). All distinct event types; admission gate accepts USER+; handler routing has no conflict.
+- **RTT remains canonical log backend.** UART is RX-only as a producer; nothing was migrated from RTT to UART.
+
+---
+
+### Phase 9B Known Limitations
+
+- **External hardware required.** STM32F411E-DISCO has no on-board USB-VCP; an external USB-UART adapter must be wired to PA3/GND for any meaningful capture. Future operators must replicate the wiring and supply a COM-port path.
+- **One byte = one event.** No line buffering, no protocol framing, no command parsing. Higher-rate UART input (long sustained streams faster than 1 byte / 500 ms = 2 B/s, the dispatch budget) will exercise queue full backpressure. Not tested in this phase; current 7-byte burst is comfortably below that threshold per-event but well above it per-burst (the queue absorbed the burst, peak=8).
+- **No echo, no response.** TX path is unused. The producer is RX-only.
+- **No flow control.** RTS/CTS not configured. The internal FIFO + 16-slot core queue absorb short bursts; sustained over-rate input will produce ERR_FULL events visible in `ROBOTOS_UART full=`.
+- **Single hardware path.** Only `usart2` is consumed. UART1 / UART6 remain unused. Multi-UART workloads are not in scope.
+- **Line-ending behavior is host-controlled.** PowerShell `Write("abc123`n")` sends LF (0x0a) only; a CR-LF terminal would post 8 bytes instead of 7. Documented in this evidence as 0x0a in `last=`.
+- **Scheduler mutation still DEFER.** Even with the 7-byte burst the queue invariants held; `peak=8` against capacity=16 leaves headroom. Phase 7A/7B-1 remain DEFER.
+- **F407 custom board still HOLD/DEFER.** Phase 8A unchanged.
+
+---
+
+### Phase 9B Next Recommended Phases
+
+| Phase | Description | Priority |
+| ----- | ----------- | -------- |
+| **9C** Minimal application state machine | Compose button + UART into a small agent-style state machine (e.g., button toggles a "mode" that the UART handler interprets) | Candidate (workload composition) |
+| **9D** Workload mode cleanup | Only if multi-source workload reveals friction or evidence-clarity gaps | Candidate |
+| **8A** Custom STM32F407 bring-up | Flash current firmware on F407; retires 25-phase portability debt | HOLD/DEFER until reopened |
+| **7A / 7B-1** Dispatch budget evolution | Phase 9B baseline still shows budget=1 adequate for current peak burst (peak=8 vs capacity=16); no workload-driven justification yet | DEFER |

@@ -9,57 +9,58 @@
 
 ## Last Closed Phase
 
-### Phase 9A-C — Gate Phase 6I Startup Burst
+### Phase 9B — Devkit UART RX Producer
 
-- **Commit:** `3989ff9`
+- **Commit:** pending
 - **Date:** 2026-05-08
 - **Branch:** master
-- **Type:** Devkit diagnostic gating. Devkit-local compile-time gate; no core/platform/scheduler change.
+- **Type:** Devkit workload expansion. Second real hardware event source (UART RX); devkit-local; no core/platform/scheduler change.
 - **Close status:** `CLOSED`
-- **Prior baseline:** Phase 9A-B (`92de5e0`), button debounce refinement
+- **Prior baseline:** Phase 9A-C (`3989ff9`), Phase 6I startup burst gated off
 
-**Phase 9A-C delivered:**
+**Phase 9B delivered:**
 
-- `RobotOS_v1.0/devkit/src/devkit_runtime.c` — added `DEVKIT_PHASE6I_STARTUP_BURST_ENABLED` compile-time gate (default 0); wrapped Phase 6I macros, counters, ISR, handler, init register/timer-start, init banner, and run-loop final summary in `#if`. Added `DEVKIT_DIAG phase6i_startup_burst=0|1` and `Phase 6I startup burst disabled` boot banners.
-- `RobotOS_v1.0/tools/runtime/capture_devkit_rtt.ps1` — updated default `RequirePatterns`: dropped `"Phase 6I final:"`, added `"ROBOTOS_BTN"` and `"DEVKIT_DIAG phase6i_startup_burst="`. Doc comment updated.
-- `RobotOS_v1.0/tools/runtime/phase6z_required_patterns.txt` — reference file synced to new defaults; documents the diagnostic-build override pattern set.
-- `RobotOS_v1.0/devkit/logs/phase_9C_no_burst_button_rtt_2026-05-08.txt` — 60 s RTT capture; 19564 bytes; gate-disabled banner verified; button workload healthy (full=0, dropped=0); Phase 6I lines absent.
-- `RobotOS_v1.0/devkit/logs/INDEX.md` — Phase 9A-C row
-- `RobotOS_v1.0/devkit/docs/DEVKIT_PROGRESS.md` — Phase 9A-C section
+- `RobotOS_v1.0/devkit/src/devkit_uart_producer.{h,c}` — devkit-local UART RX event producer using Zephyr `uart_irq_callback_set` + `uart_fifo_read`; one byte → one event (USER+3, marker `0x9B0B`).
+- `RobotOS_v1.0/devkit/src/devkit_runtime.c` — wired UART producer init, baseline log, and periodic `ROBOTOS_UART` log into the existing observability cadence.
+- `RobotOS_v1.0/devkit/CMakeLists.txt` — added `src/devkit_uart_producer.c`.
+- `RobotOS_v1.0/devkit/prj.conf` — enabled `CONFIG_SERIAL=y` and `CONFIG_UART_INTERRUPT_DRIVEN=y`; `CONFIG_UART_CONSOLE=n` and `CONFIG_LOG_BACKEND_UART=n` preserved (RTT remains canonical log backend).
+- `RobotOS_v1.0/devkit/docs/TELEMETRY_REFERENCE.md` — added ROBOTOS_UART section; updated Telemetry Stack Summary.
+- `RobotOS_v1.0/devkit/logs/phase_9B_uart_rtt_2026-05-08.txt` — 60 s RTT capture with `abc123\n` (7 bytes) sent via CP210x USB-UART → PA3 @ 115200; rx=7 ok=7 full=0 handled=7; per-byte handler logs match payload.
+- `RobotOS_v1.0/devkit/logs/INDEX.md` — Phase 9B row.
+- `RobotOS_v1.0/devkit/docs/DEVKIT_PROGRESS.md` — Phase 9B section.
 
-**Default policy:** Phase 6I synthetic startup burst is **disabled by default** in 9A-C. Re-enable for stress diagnostic captures with `west build … -- -DDEVKIT_PHASE6I_STARTUP_BURST_ENABLED=1`. Phase 6I source is preserved verbatim inside the `#if` guard.
+**Workload anchor expanded:** RobotOS now ingests **two distinct real hardware event sources** — GPIO/EXTI (Phase 9A user button, USER+2) and UART RX (Phase 9B serial bytes, USER+3). Both coexist with Phase 6M timer producer (USER+1). Architecture invariants preserved under combined producer load.
 
+**Phase 9A-C** (prior): Gate Phase 6I startup burst, commit `3989ff9`.
 **Phase 9A-B** (prior): Button debounce refinement, commit `92de5e0`.
 **Phase 9A-A** (prior): Button EXTI producer, commit `2068180`, CLOSED with BOUNCE_OBSERVED.
 **Phase 6O** (prior): Reusable RTT Streaming Capture Harness, commit `6cb979f`.
 
 ---
 
-## Validation Evidence (Phase 9A-C gate verification)
+## Validation Evidence (Phase 9B UART workload)
 
 | Gate | Result | Detail |
 | ---- | ------ | ------ |
-| Zephyr build | PASS | FLASH 30580 B (5.83%) / RAM 12160 B (9.28%); −712 B FLASH and −64 B RAM vs Phase 9A-B (Phase 6I burst code compiled out) |
-| Flash | PASS | `west flash` wrote 32768 B |
-| RTT capture | PASS | 60.7 s, 19564 bytes; harness exit 0 with new default patterns |
-| `DEVKIT_DIAG phase6i_startup_burst=0` | FOUND | Boot banner present; gate state visible in evidence |
-| `Phase 6I startup burst disabled` | FOUND | Confirms default-disabled policy with re-enable hint |
-| `Phase 6I timer producer started` | ABSENT | Confirms timer not initialized when gate=0 |
-| `Phase 6I event handled` | ABSENT | Confirms handler not registered/triggered when gate=0 |
-| `Phase 6I final:` | ABSENT | Confirms run-loop summary fully gated when gate=0 |
-| ROBOTOS_OBS state=READY | FOUND | Baseline + 12 periodic emissions (ticks=0,10,…,120) |
-| ROBOTOS_FAULT active=0 | FOUND | All 13 emissions; CFSR=0 HFSR=0 throughout |
+| Zephyr build | PASS | FLASH 34448 B (6.57%) / RAM 12224 B (9.33%); +3868 B FLASH and +64 B RAM vs Phase 9A-C (Zephyr serial + STM32 UART driver newly enabled) |
+| Flash | PASS | `west flash` wrote 49152 B |
+| UART send | PASS | `abc123\n` (7 bytes) written to COM5 (CP210x USB-UART) → board PA3 at 115200 8N1, 12 s into capture |
+| RTT capture | PASS | 60.4 s, 20627 bytes; harness exit 0 with Phase 9B-specific patterns |
+| Phase 9B uart producer init | FOUND | Init banner shows `type=USER+3 marker=0x9b0b dev=serial@40004400` |
+| ROBOTOS_OBS state=READY | FOUND | Baseline + 12 periodic emissions |
+| ROBOTOS_FAULT active=0 | FOUND | All 13 emissions; CFSR=0 HFSR=0 throughout (13 occurrences) |
 | ROBOTOS_PROD attempted= | FOUND | Phase 6M producer healthy: ticks=120 → attempted=60 ok=60 dropped=0 |
-| ROBOTOS_BTN | FOUND | Final: attempted=57 ok=17 full=0 debounce=40 handled=17 |
-| Phase 9A button handled (per-press) | FOUND | 17 occurrences (one per accepted post) |
+| ROBOTOS_BTN | FOUND | Button producer initialized; idle (no presses): attempted=0 ok=0 |
+| ROBOTOS_UART | FOUND | Final at ticks=120: rx=7 ok=7 full=0 invalid=0 other=0 handled=7 last=0x0a |
+| `DEVKIT_DIAG phase6i_startup_burst=0` | FOUND | Phase 9A-C gate still in effect; no Phase 6I interference |
+| Phase 9B uart handled (per-byte) | FOUND | 7 occurrences in order: 0x61 (`a`), 0x62 (`b`), 0x63 (`c`), 0x31 (`1`), 0x32 (`2`), 0x33 (`3`), 0x0a (LF) — exact match to sent payload |
 | CFSR | 0x00000000 throughout | 13 occurrences checked |
 | HFSR | 0x00000000 throughout | 13 occurrences checked |
-| Debounce conservation | PASS | ok(17)+full(0)+debounce(40)+invalid(0)+other(0) = attempted(57) ✓ |
-| Queue health | PASS | `full=0` (vs 9A-B full=4); OBS `dropped=0` (vs 9A-B dropped=13); peak=14 (no capacity hit) |
-| Architecture invariants | PASS | accepted=77 dispatched=76 pending=1 (accepted−dispatched=pending ✓); herr=0; unhandled=0; accepted = Phase 6M(60)+button(17) = 77 ✓ |
-| Core/platform sources changed | ZERO | No `core/`, `platform/`, or `tests/` files touched |
+| UART conservation | PASS | ok(7)+full(0)+invalid(0)+other(0) = rx(7) ✓; ok = handled = 7 ✓ |
+| Architecture invariants | PASS | accepted=67 dispatched=66 pending=1 (accepted−dispatched=pending ✓); peak=8 (queue absorbed the 7-byte burst); dropped=0; herr=0; unhandled=0; accepted = Phase 6M(60)+UART(7) = 67 ✓ |
+| Core/platform sources changed | ZERO | No `core/`, `platform/`, or `tests/` files touched; no Zephyr include in core |
 
-Capture log: `RobotOS_v1.0/devkit/logs/phase_9C_no_burst_button_rtt_2026-05-08.txt`
+Capture log: `RobotOS_v1.0/devkit/logs/phase_9B_uart_rtt_2026-05-08.txt`
 
 **Phase 6Z verification highlights:**
 
@@ -113,6 +114,7 @@ to `DEVKIT_PROGRESS.md` for the full history.
 
 | Phase | Description | Commit |
 | ----- | ----------- | ------ |
+| 9B | Devkit UART RX Producer (second real hardware event source; USER+3; rx=7 ok=7 full=0 handled=7) | pending |
 | 9A-C | Gate Phase 6I Startup Burst (devkit-local compile-time gate; default disabled; full 4→0, dropped 13→0) | `3989ff9` |
 | 9A-B | Devkit Button Debounce Refinement (30 ms time-guard; full 98→4) | `92de5e0` |
 | 9A-A | Devkit Button EXTI Producer (first real hardware workload) | `2068180` |
@@ -142,8 +144,9 @@ to `DEVKIT_PROGRESS.md` for the full history.
 | ----- | ----------- | ------ |
 | Phase 9A-B | Devkit button debounce refinement (30 ms time-guard, no core change) | **CLOSED** — full 98→4; debounce=54; see Phase 9A-B section in DEVKIT_PROGRESS.md |
 | Phase 9A-C | Gate Phase 6I startup burst (devkit-local compile-time gate; default disabled) | **CLOSED** — full 4→0; dropped 13→0; peak=14; see Phase 9A-C section in DEVKIT_PROGRESS.md |
-| Phase 9B | Second real event source (UART RX, sensor, or similar) | Candidate — clean baseline now available (no Phase 6I interference) |
-| Phase 9C | Minimal application state machine (button workload as agent demo) | Candidate — depends on application direction |
+| Phase 9B | UART RX producer (second real hardware event source; USER+3) | **CLOSED** — rx=7 ok=7 full=0 handled=7; per-byte handler logs match payload `abc123\n`; see Phase 9B section in DEVKIT_PROGRESS.md |
+| Phase 9C | Minimal application state machine (compose button + UART into agent demo) | Candidate — two real input sources now available |
+| Phase 9D | Workload mode cleanup / second-board sanity | Candidate — only if multi-source workload reveals friction |
 | Phase 8A | Custom STM32F407 board bring-up | **Candidate** — retires 25-phase portability debt; use `capture_devkit_rtt.ps1 -OpenOcdConfig <f407.cfg>`; remains HOLD/DEFER until user reopens |
 | Phase 7B-1 | Dispatch Budget Test Parameterization | Candidate — only if workload evidence reveals saturation; Phase 9A-C clean baseline shows budget=1 still adequate (peak=14, dropped=0) |
 | Phase 7A | Dispatch Budget Evolution Planning | DEFER — Phase 9A-A workload data shows ~112 events / 60 s sustained, no workload-driven reason for budget mutation |
