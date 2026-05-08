@@ -11,7 +11,7 @@
 
 ### Phase 6O — Reusable RTT Streaming Capture Harness
 
-- **Commit:** (this commit)
+- **Commit:** `6cb979f`
 - **Date:** 2026-05-08
 - **Branch:** master
 - **Type:** Tooling + docs only. No source, test, CMake, Kconfig, or runtime change.
@@ -100,7 +100,7 @@ to `DEVKIT_PROGRESS.md` for the full history.
 
 | Phase | Description | Commit |
 | ----- | ----------- | ------ |
-| 6O | Reusable RTT Streaming Capture Harness (tooling) | (this commit) |
+| 6O | Reusable RTT Streaming Capture Harness (tooling) | `6cb979f` |
 | 6N | Documentation / Navigation Consolidation (docs-only) | `ad52de5` |
 | 6Z | RTT closeout for 6K/6L/6M (docs/evidence only) | `4ec5b86` |
 | 6M | Producer Realism / Timer Producer Diagnostic | `a6b253b` |
