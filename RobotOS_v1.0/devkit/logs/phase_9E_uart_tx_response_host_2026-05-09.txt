@@ -1,0 +1,10 @@
+﻿# Phase 9E UART TX response transcript
+# Date: 2026-05-09 09:10:31  Port: COM5  Baud: 115200
+# Sequence: a s ? r x
+# InterByteDelayMs: 600  ReadTimeoutMs: 1200
+
+SEND 'a' (0x61) -> RECV: OK state=ARMED
+SEND 's' (0x73) -> RECV: OK state=ACTIVE
+SEND '?' (0x3f) -> RECV: STATE state=ACTIVE transitions=2 button=0 uart=3 ignored=0
+SEND 'r' (0x72) -> RECV: OK state=IDLE
+SEND 'x' (0x78) -> RECV: ERR ignored byte=0x78 state=IDLE

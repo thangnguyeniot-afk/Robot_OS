@@ -9,6 +9,41 @@
 
 ## Last Closed Phase
 
+### Phase 9E — UART TX Minimal Response
+
+- **Commit:** `587dab7` (implementation); closeout docs in subsequent commit
+- **Date:** 2026-05-09
+- **Branch:** master
+- **Type:** Devkit-local firmware + tooling. Minimal UART TX response path.
+- **Close status:** `CLOSED`
+- **Prior phase:** Phase 9Z checkpoint (`5b71daf`)
+
+**Phase 9E delivered:**
+
+First real hardware host→board→host command/response loop. Board receives UART
+commands (PA3 RX), routes them through the RobotOS core event queue, dispatches
+in thread context, and emits bounded UART TX responses (PA2 TX) via `uart_poll_out()`.
+
+Validated with `run_phase9e_uart_response_demo.ps1 -ComPort COM5` (60 s):
+
+| Command | Expected | Received |
+| ------- | -------- | -------- |
+| `a` | `OK state=ARMED` | ✓ |
+| `s` | `OK state=ACTIVE` | ✓ |
+| `?` | `STATE state=ACTIVE transitions=2 button=0 uart=3 ignored=0` | ✓ |
+| `r` | `OK state=IDLE` | ✓ |
+| `x` | `ERR ignored byte=0x78 state=IDLE` | ✓ |
+
+RTT: ROBOTOS_UART rx=5 ok=5 handled=5; ROBOTOS_APP transitions=3 uart=5 ignored=1;
+OBS accepted=25 dispatched=24 pending=1 peak=2 dropped=0; CFSR/HFSR=0 (13 occurrences).
+Phase 6M producer healthy throughout (60 ok=60 at ticks=120).
+
+**Files changed:** `devkit/src/devkit_app_state.h/.c` (+state_name API),
+`devkit/src/devkit_uart_producer.c` (TX helpers), `tools/runtime/run_phase9e_uart_response_demo.ps1`.
+No core/, platform/, tests/, CMakeLists.txt, or prj.conf change.
+
+---
+
 ### Phase 9Z — Workload-Branch Checkpoint Review
 
 - **Commit:** `8e8c801` (HEAD at checkpoint; no new source commit — docs-only)
@@ -36,6 +71,7 @@ Phase 8A (F407) HOLD/DEFER. Next step: user product-direction decision.
 **Workload demo anchor:** the runbook + runner are now the canonical entry point for demonstrating the current devkit workload (button + UART → app state machine). Future phases that depend on the Phase 9A-C/9B/9C event-pipeline contract can rerun the same demo to assert no regression.
 
 **No Kconfig/prj.conf changes. No firmware changes.** Phase 9D source impact list:
+
 - `core/`, `platform/`, `tests/` — untouched
 - `devkit/src/` — untouched
 - `devkit/CMakeLists.txt` — untouched
@@ -134,6 +170,7 @@ to `DEVKIT_PROGRESS.md` for the full history.
 
 | Phase | Description | Commit |
 | ----- | ----------- | ------ |
+| 9E | UART TX Minimal Response (first host↔board command/response loop; `uart_poll_out()` from thread ctx; 5-command validation a/s/?/r/x) | `587dab7` |
 | 9Z | Workload-Branch Checkpoint Review (audit-only; ON_TRACK_WITH_WATCHPOINTS; tag v0.9d-workload-baseline; full audit in PHASE_9Z_CHECKPOINT.md) | `8e8c801` |
 | 9D | Workload Demo Script & Runbook (run_phase9d_demo.ps1 + WORKLOAD_DEMO_9D.md; canonical scenario `a`/`s`/`r` UART + 3 button presses → IDLE/ARMED/ACTIVE; tooling/docs only) | `8e8c801` |
 | 9C | Devkit Minimal Application State Machine (button + UART → IDLE/ARMED/ACTIVE; 23 transitions; first multi-source workload composition) | `286e61b` |
@@ -170,8 +207,9 @@ to `DEVKIT_PROGRESS.md` for the full history.
 | Phase 9B | UART RX producer (second real hardware event source; USER+3) | **CLOSED** — rx=7 ok=7 full=0 handled=7; per-byte handler logs match payload `abc123\n`; see Phase 9B section in DEVKIT_PROGRESS.md |
 | Phase 9C | Minimal application state machine (compose button + UART into IDLE/ARMED/ACTIVE) | **CLOSED** — 23 transitions; button=20 uart=3 ignored=0; peak=4; dropped=0; see Phase 9C section in DEVKIT_PROGRESS.md |
 | Phase 9D | Workload demo script & runbook (`run_phase9d_demo.ps1` + `WORKLOAD_DEMO_9D.md`; tooling/docs only) | **CLOSED** — 12 default + Phase 9D patterns FOUND; queue saturation observed safely (peak=16, dropped=3, herr=0); CFSR/HFSR=0 throughout; see Phase 9D section |
+| Phase 9E | Minimal UART TX response (`uart_poll_out()`, 5-command loop `a`/`s`/`?`/`r`/`x`) | **CLOSED** — all 5 host responses correct; RTT rx=5 ok=5 handled=5; CFSR/HFSR=0; see Phase 9E section |
 | Phase 9Z | Workload-branch checkpoint review (audit-only; no source change) | **CLOSED** — ON_TRACK_WITH_WATCHPOINTS; full audit in `PHASE_9Z_CHECKPOINT.md`; tag `v0.9d-workload-baseline` |
-| Phase 9E | Optional UART TX response / `?` echo / richer app behavior | Candidate — only if explicitly approved; would introduce TX path |
+| Phase 9F | Command-response polish (richer command set, button TX echo, structured response) | Candidate — only if explicitly approved |
 | Phase 8A | Custom STM32F407 board bring-up | **Candidate** — retires 25-phase portability debt; use `capture_devkit_rtt.ps1 -OpenOcdConfig <f407.cfg>`; remains HOLD/DEFER until user reopens |
 | Phase 7B-1 | Dispatch Budget Test Parameterization | Candidate — only if workload evidence reveals saturation; Phase 9A-C clean baseline shows budget=1 still adequate (peak=14, dropped=0) |
 | Phase 7A | Dispatch Budget Evolution Planning | DEFER — Phase 9A-A workload data shows ~112 events / 60 s sustained, no workload-driven reason for budget mutation |

@@ -57,6 +57,7 @@ or by searching for the heading manually.
 | 9B | Devkit UART RX Producer | CLOSED | [→](#phase-9b----devkit-uart-rx-producer) |
 | 9C | Devkit Minimal Application State Machine | CLOSED | [→](#phase-9c----devkit-minimal-application-state-machine) |
 | 9D | Workload Demo Script & Runbook | CLOSED | [→](#phase-9d----workload-demo-script--runbook) |
+| 9E | UART TX Minimal Response | CLOSED | [→](#phase-9e----uart-tx-minimal-response) |
 | 9Z | Workload-Branch Checkpoint Review (audit-only) | CLOSED | [→](#phase-9z----workload-branch-checkpoint-review) |
 | 7A | Dispatch Budget Evolution Planning | DEFER | see `CURRENT_STATE.md` |
 | 7B-1 | Dispatch Budget Test Parameterization | Candidate | see `CURRENT_STATE.md` |
@@ -8941,3 +8942,207 @@ No source, test, CMake, Kconfig, or runtime file changed.
 
 Await user product-direction decision (Phase 9E vs Phase 8A vs Robot Framework
 promotion) before implementing any further phase.
+
+---
+
+## Phase 9E — UART TX Minimal Response
+
+**Date:** 2026-05-09
+**Branch:** master
+**Baseline commit:** `587dab7` (implementation); closeout docs in subsequent commit
+**Type:** Devkit-local firmware + tooling. No core/platform/tests change.
+**Close status:** CLOSED
+
+### Purpose
+
+Prove the minimal host-command/state-response feedback loop:
+
+```text
+host UART command (PA3 RX)
+  → UART RX ISR (Phase 9B) → core queue → dispatcher → handler (thread ctx)
+  → devkit_app_state_on_uart_byte() (Phase 9C)
+  → devkit_uart_emit_tx_response() (Phase 9E NEW)
+  → uart_poll_out() byte-by-byte (PA2 TX)
+  → host serial receive
+```
+
+This is the first time RobotOS firmware sends a response back to the host
+over a real hardware path. The loop closes: host commands drive embedded
+application state and the embedded system reports the result.
+
+### Relation to Prior Phases
+
+- **Phase 9B** — UART RX producer and handler (USER+3). Phase 9E adds TX
+  response emission inside the existing handler; no new event type, no
+  new thread, no new ISR path.
+- **Phase 9C** — App state machine. Phase 9E adds `devkit_app_state_state_name()`
+  to the public API (one-liner wrapper) so the UART module can format
+  response strings without duplicating the name-lookup logic.
+- **Phase 9D** — Demo runner pattern. Phase 9E follows the same pattern:
+  a new `run_phase9e_uart_response_demo.ps1` runner orchestrates RTT capture
+  and full-duplex UART send/receive in one script.
+
+### Architecture Boundary Statement
+
+All Phase 9E changes are devkit-local:
+
+- `devkit_uart_producer.c` — TX helpers added; no new core/platform API.
+- `devkit_app_state.h/.c` — `devkit_app_state_state_name()` added; module
+  remains devkit-local.
+- No new Zephyr thread, no TX interrupt machinery, no dynamic allocation.
+- `uart_poll_out()` is called from thread context only (handler, dispatched
+  by `robotos_core_tick()`). Never from ISR.
+- `core/`, `platform/`, `tests/` — untouched.
+- `CMakeLists.txt`, `prj.conf` — untouched (no new source files).
+
+### UART TX Design Choice
+
+`uart_poll_out()` from thread context (the handler). Rationale:
+
+- Simple: no TX interrupt, no TX FIFO management, no async subsystem.
+- Deterministic: blocks for one byte at a time; acceptable for short
+  bounded demo responses at 115200 baud (~0.1 ms per byte, ~1 ms total).
+- Safe: USART2 TX (PA2) is already configured in the DTS pinctrl.
+- Scope-bounded: explicitly documented as demo-grade only.
+
+### Command / Response Mapping
+
+| Input byte | Condition | Board TX response |
+| ---------- | --------- | ----------------- |
+| `a` / `A` | IDLE or ACTIVE → ARMED | `OK state=ARMED\r\n` |
+| `a` / `A` | already ARMED | `OK state=ARMED unchanged=1\r\n` |
+| `s` / `S` | IDLE or ARMED → ACTIVE | `OK state=ACTIVE\r\n` |
+| `s` / `S` | already ACTIVE | `OK state=ACTIVE unchanged=1\r\n` |
+| `r` / `R` | ARMED or ACTIVE → IDLE | `OK state=IDLE\r\n` |
+| `r` / `R` | already IDLE | `OK state=IDLE unchanged=1\r\n` |
+| `?` | query | `STATE state=<N> transitions=N button=N uart=N ignored=N\r\n` |
+| any other | — | `ERR ignored byte=0xNN state=<NAME>\r\n` |
+
+Response buffer: fixed 96-byte stack; `snprintf` with truncation check; no heap.
+
+### Files Changed
+
+| File | Change |
+| ---- | ------ |
+| `devkit/src/devkit_app_state.h` | Added `devkit_app_state_state_name()` declaration |
+| `devkit/src/devkit_app_state.c` | Implemented `devkit_app_state_state_name()` (one-liner wrapper) |
+| `devkit/src/devkit_uart_producer.c` | Added `s_tx_sent` counter; added `devkit_uart_send_bytes()` + `devkit_uart_emit_tx_response()` static helpers; updated `devkit_uart_handler()` to take before/after snapshots and call TX emitter; added `<stdbool.h>` + `<stdio.h>` includes |
+| `tools/runtime/run_phase9e_uart_response_demo.ps1` | New — PowerShell 5.1 demo runner: RTT capture + full-duplex UART send/receive; per-command transcript; verification checklist |
+
+**Explicitly unchanged:** `core/`, `platform/`, `tests/`, `CMakeLists.txt`,
+`prj.conf`, `capture_devkit_rtt.ps1`, `devkit_runtime.c`, `devkit_button_producer.*`.
+
+### Build Result
+
+| Attribute | Value |
+| --------- | ----- |
+| Target | STM32F411E-DISCO (Cortex-M4, Zephyr 3.6.0) |
+| Build | PASS (pristine, no warnings) |
+| FLASH | 36,240 B (35.4 KB, 6.91% of 512 KB) |
+| RAM | 12,224 B (9.33% of 128 KB) |
+| Delta vs Phase 9C | +540 B FLASH (TX helpers + snprintf + state_name wrapper) |
+
+### RTT Evidence
+
+| Log | Path |
+| --- | ---- |
+| RTT (60 s) | `devkit/logs/phase_9E_uart_tx_response_rtt_2026-05-09.txt` |
+| Host UART transcript | `devkit/logs/phase_9E_uart_tx_response_host_2026-05-09.txt` |
+
+Capture method: `run_phase9e_uart_response_demo.ps1 -ComPort COM5` (60 s);
+CP210x USB-UART adapter; board PA2 TX → adapter RX; board PA3 RX ← adapter TX;
+board GND — adapter GND; no VCC cross-connection.
+
+### Host UART Transcript
+
+```text
+SEND 'a' (0x61) -> RECV: OK state=ARMED
+SEND 's' (0x73) -> RECV: OK state=ACTIVE
+SEND '?' (0x3f) -> RECV: STATE state=ACTIVE transitions=2 button=0 uart=3 ignored=0
+SEND 'r' (0x72) -> RECV: OK state=IDLE
+SEND 'x' (0x78) -> RECV: ERR ignored byte=0x78 state=IDLE
+```
+
+All 5 responses received without timeout at `InterByteDelayMs=600 ReadTimeoutMs=1200`.
+
+### Validation Table
+
+| Gate | Result | Detail |
+| ---- | ------ | ------ |
+| Build | PASS | FLASH 36240 B / RAM 12224 B; no warnings |
+| Flash | PASS | 49152 bytes written via ST-LINK/V2 + OpenOCD |
+| RTT precheck | PASS | 8931 bytes / 20 s; 5 patterns found; CFSR/HFSR zero |
+| Host response — `a` | PASS | `OK state=ARMED` — IDLE→ARMED transition confirmed |
+| Host response — `s` | PASS | `OK state=ACTIVE` — ARMED→ACTIVE transition confirmed |
+| Host response — `?` | PASS | `STATE state=ACTIVE transitions=2 button=0 uart=3 ignored=0` |
+| Host response — `r` | PASS | `OK state=IDLE` — ACTIVE→IDLE transition confirmed |
+| Host response — `x` | PASS | `ERR ignored byte=0x78 state=IDLE` |
+| RTT ROBOTOS_UART | PASS | rx=5 ok=5 full=0 invalid=0 other=0 handled=5 last=0x78 |
+| RTT ROBOTOS_APP final | PASS | state=IDLE transitions=3 button=0 uart=5 ignored=1 last_byte=0x78 |
+| OBS invariant | PASS | accepted(25)−dispatched(24)=pending(1) ✓; PROD(20)+UART(5)=accepted(25) ✓ |
+| Queue pressure | PASS | peak=2, dropped=0, herr=0 — well within capacity=16 |
+| CFSR | PASS | 0x00000000 in all 13 ROBOTOS_FAULT emissions |
+| HFSR | PASS | 0x00000000 in all 13 ROBOTOS_FAULT emissions |
+| Phase 6M coexistence | PASS | attempted=60/ok=60 at ticks=120 (+5/10 ticks cadence maintained) |
+| Core boundary | PASS | core/, platform/, tests/ unchanged; no new core API |
+| TX from ISR | PASS | `uart_poll_out()` called only from handler (thread context) |
+| No shell/parser | PASS | Fixed switch/snprintf; no command registry, no dynamic dispatch |
+| RTT logging unchanged | PASS | CONFIG_LOG_BACKEND_RTT=y; CONFIG_UART_CONSOLE=n preserved |
+
+### Behavior Analysis
+
+The RTT log confirms the full dispatch chain for each command:
+
+| t (firmware) | tick | Event | RTT evidence |
+| ------------ | ---- | ----- | ------------ |
+| 00:00:14.504 | 30 | 'a' handled → IDLE→ARMED | `Phase 9E UART response sent cmd=0x61 len=16 state=ARMED` |
+| 00:00:15.505 | 31 | 's' handled → ARMED→ACTIVE | `Phase 9E UART response sent cmd=0x73 len=17 state=ACTIVE` |
+| 00:00:16.507 | 33 | '?' handled → query | `Phase 9E UART response sent cmd=0x3f len=60 state=ACTIVE` |
+| 00:00:17.512 | 35 | 'r' handled → ACTIVE→IDLE | `Phase 9E UART response sent cmd=0x72 len=15 state=IDLE` |
+| 00:00:18.513 | 37 | 'x' handled → ignored | `Phase 9E UART response sent cmd=0x78 len=34 state=IDLE` |
+
+The `?` query response correctly reports `uart=3` (a, s, ? have been processed
+by the app at query time; uart_count increments on every `on_uart_byte()` call
+including queries). The host sees this value because the snapshot is taken AFTER
+`devkit_app_state_on_uart_byte()` returns.
+
+### Architecture Preservation Audit (Phase 9E)
+
+- **No `core/` changes.**
+- **No `platform/` changes.**
+- **No `tests/` changes.**
+- **No CMakeLists.txt change.** No new compiled source file.
+- **No `prj.conf` change.** `CONFIG_SERIAL=y` + `CONFIG_UART_INTERRUPT_DRIVEN=y`
+  already present from Phase 9B.
+- **No scheduler/budget/queue/admission/throttle/retry semantics change.**
+- **No new Zephyr thread, task, or timer.**
+- **No UART console or logging switch.** RTT remains canonical; UART is pure
+  event input + command response. `CONFIG_UART_CONSOLE=n` preserved.
+- **No shell/parser/command-registry/dynamic-allocation.**
+- **TX exclusively from thread context.** `uart_poll_out()` called only inside
+  `devkit_uart_handler()`, which runs from the core dispatcher in
+  `devkit_runtime_run()` main thread.
+- **Phase 6I gate default preserved** (`DEVKIT_PHASE6I_STARTUP_BURST_ENABLED=0`).
+
+### Phase 9E Known Limitations
+
+- **TX is polling/demo-grade.** `uart_poll_out()` blocks the dispatch thread
+  for the duration of the response. Acceptable for short responses at 115200
+  baud (< 1 ms total). Not suitable for large/frequent responses.
+- **No UART TX flow control.** Host must be ready to receive.
+- **No echo of button events.** Button presses drive app state but produce no
+  UART TX response (Phase 9E scope is UART-command-only).
+- **No multi-command batching.** One command dispatched per tick (budget=1).
+  Bytes sent faster than one per 500 ms will queue; each is handled and
+  responded to in turn.
+- **Workload is devkit-local.** No Robot Framework abstraction.
+- **STM32F407 / Phase 8A.** Remains HOLD/DEFER.
+
+### Phase 9E Next Recommended Phases
+
+| Phase | Description | Priority |
+| ----- | ----------- | -------- |
+| **(direction review)** | Decide: continue Phase 9 command-response polish, promote pattern to Robot Framework, or open Phase 8A (F407) | Recommended next decision point |
+| **9F** command-response demo polish | Richer command set, button-press TX echo, structured response format | Candidate (only if explicitly approved) |
+| **8A** Custom STM32F407 bring-up | Flash current firmware on F407 | HOLD/DEFER |
+| **7A / 7B-1** Dispatch budget evolution | Phase 9E peak=2 well within capacity; no workload-driven justification | DEFER |
