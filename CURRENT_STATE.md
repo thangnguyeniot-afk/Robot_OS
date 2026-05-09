@@ -9,6 +9,16 @@
 
 ## Last Closed Phase
 
+### Phase 9E-Z — Command Loop Checkpoint / Direction Guard
+
+- **Date:** 2026-05-09
+- **Type:** Audit-only. No source, runtime, test, or Kconfig change.
+- **Close status:** `CLOSED`
+- **Full checkpoint:** `RobotOS_v1.0/devkit/docs/PHASE_9EZ_CHECKPOINT.md`
+- **Verdict:** ON_TRACK. Phase 9A–9E stream proven complete. Scheduler DEFER confirmed. UART TX scope frozen (no shell/parser/protocol). Awaiting user product-direction decision.
+
+---
+
 ### Phase 9E — UART TX Minimal Response
 
 - **Commit:** `587dab7` (implementation); closeout docs in subsequent commit
@@ -170,6 +180,7 @@ to `DEVKIT_PROGRESS.md` for the full history.
 
 | Phase | Description | Commit |
 | ----- | ----------- | ------ |
+| 9E-Z | Command Loop Checkpoint / Direction Guard (audit-only; ON_TRACK; UART TX scope frozen; scheduler DEFER; full doc in PHASE_9EZ_CHECKPOINT.md) | `30bae27` |
 | 9E | UART TX Minimal Response (first host↔board command/response loop; `uart_poll_out()` from thread ctx; 5-command validation a/s/?/r/x) | `587dab7` |
 | 9Z | Workload-Branch Checkpoint Review (audit-only; ON_TRACK_WITH_WATCHPOINTS; tag v0.9d-workload-baseline; full audit in PHASE_9Z_CHECKPOINT.md) | `8e8c801` |
 | 9D | Workload Demo Script & Runbook (run_phase9d_demo.ps1 + WORKLOAD_DEMO_9D.md; canonical scenario `a`/`s`/`r` UART + 3 button presses → IDLE/ARMED/ACTIVE; tooling/docs only) | `8e8c801` |
@@ -207,6 +218,7 @@ to `DEVKIT_PROGRESS.md` for the full history.
 | Phase 9B | UART RX producer (second real hardware event source; USER+3) | **CLOSED** — rx=7 ok=7 full=0 handled=7; per-byte handler logs match payload `abc123\n`; see Phase 9B section in DEVKIT_PROGRESS.md |
 | Phase 9C | Minimal application state machine (compose button + UART into IDLE/ARMED/ACTIVE) | **CLOSED** — 23 transitions; button=20 uart=3 ignored=0; peak=4; dropped=0; see Phase 9C section in DEVKIT_PROGRESS.md |
 | Phase 9D | Workload demo script & runbook (`run_phase9d_demo.ps1` + `WORKLOAD_DEMO_9D.md`; tooling/docs only) | **CLOSED** — 12 default + Phase 9D patterns FOUND; queue saturation observed safely (peak=16, dropped=3, herr=0); CFSR/HFSR=0 throughout; see Phase 9D section |
+| Phase 9E-Z | Command loop checkpoint / direction guard (audit-only; ON_TRACK) | **CLOSED** — PHASE_9EZ_CHECKPOINT.md; scheduler DEFER confirmed; UART TX scope frozen |
 | Phase 9E | Minimal UART TX response (`uart_poll_out()`, 5-command loop `a`/`s`/`?`/`r`/`x`) | **CLOSED** — all 5 host responses correct; RTT rx=5 ok=5 handled=5; CFSR/HFSR=0; see Phase 9E section |
 | Phase 9Z | Workload-branch checkpoint review (audit-only; no source change) | **CLOSED** — ON_TRACK_WITH_WATCHPOINTS; full audit in `PHASE_9Z_CHECKPOINT.md`; tag `v0.9d-workload-baseline` |
 | Phase 9F | Command-response polish (richer command set, button TX echo, structured response) | Candidate — only if explicitly approved |

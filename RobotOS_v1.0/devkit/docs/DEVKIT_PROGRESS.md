@@ -58,6 +58,7 @@ or by searching for the heading manually.
 | 9C | Devkit Minimal Application State Machine | CLOSED | [→](#phase-9c----devkit-minimal-application-state-machine) |
 | 9D | Workload Demo Script & Runbook | CLOSED | [→](#phase-9d----workload-demo-script--runbook) |
 | 9E | UART TX Minimal Response | CLOSED | [→](#phase-9e----uart-tx-minimal-response) |
+| 9E-Z | Command Loop Checkpoint / Direction Guard (audit-only) | CLOSED | see `PHASE_9EZ_CHECKPOINT.md` |
 | 9Z | Workload-Branch Checkpoint Review (audit-only) | CLOSED | [→](#phase-9z----workload-branch-checkpoint-review) |
 | 7A | Dispatch Budget Evolution Planning | DEFER | see `CURRENT_STATE.md` |
 | 7B-1 | Dispatch Budget Test Parameterization | Candidate | see `CURRENT_STATE.md` |
