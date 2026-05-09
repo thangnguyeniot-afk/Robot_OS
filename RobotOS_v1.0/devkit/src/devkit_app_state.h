@@ -99,6 +99,15 @@ void devkit_app_state_on_uart_byte(uint8_t byte, uint32_t handler_count);
 void devkit_app_state_get_snapshot(devkit_app_state_snapshot_t *out);
 
 /*
+ * Return the canonical name string for a state enum value.
+ * Returns "IDLE", "ARMED", "ACTIVE", or "UNKNOWN" for out-of-range values.
+ * Result is a string literal (read-only); safe to call from thread context.
+ * Added Phase 9E so devkit_uart_producer can format UART TX responses without
+ * duplicating the name-lookup logic.
+ */
+const char *devkit_app_state_state_name(devkit_app_state_t state);
+
+/*
  * Emit one ROBOTOS_APP log line via Zephyr LOG_INF.
  *
  * Stable single-line format (state and source names only; integers/hex):

@@ -37,6 +37,11 @@ static const char *state_name(devkit_app_state_t s)
 	}
 }
 
+const char *devkit_app_state_state_name(devkit_app_state_t state)
+{
+	return state_name(state);
+}
+
 static const char *src_name(devkit_app_src_t s)
 {
 	switch (s) {

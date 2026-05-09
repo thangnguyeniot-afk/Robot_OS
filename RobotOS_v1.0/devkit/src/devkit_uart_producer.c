@@ -23,7 +23,9 @@
 
 #include "devkit_uart_producer.h"
 
+#include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
@@ -68,6 +70,9 @@ static volatile uint8_t  s_last_byte;
 
 /* Thread context only (handler runs from core dispatch in tick context). */
 static uint32_t s_handled;
+
+/* Phase 9E: TX responses emitted (thread context only; never from ISR). */
+static uint32_t s_tx_sent;
 
 /*
  * UART RX ISR callback (Phase 5G ISR-safe contract).
@@ -131,6 +136,90 @@ static void devkit_uart_isr_cb(const struct device *dev, void *user_data)
 	}
 }
 
+/* --------------------------------------------------------------------------
+ * Phase 9E: Minimal UART TX response path.
+ *
+ * uart_poll_out() is a polled byte-at-a-time TX primitive. Acceptable for
+ * small, bounded demo responses from thread context only. Characteristics:
+ *   - Never called from ISR (handler runs from core dispatcher, thread ctx).
+ *   - Response is a fixed stack buffer (96 bytes); no heap, no dynamic alloc.
+ *   - No TX interrupt machinery, no TX FIFO management, no async subsystem.
+ *   - No new Zephyr thread. Single-threaded by construction.
+ *   - No shell, no parser, no command registry, no echo, no prompt.
+ *
+ * Response format:
+ *   State command ('a'/'s'/'r'), transition occurred:
+ *     OK state=<NAME>\r\n
+ *   State command ('a'/'s'/'r'), already in target state (redundant):
+ *     OK state=<NAME> unchanged=1\r\n
+ *   Query ('?'):
+ *     STATE state=<NAME> transitions=N button=N uart=N ignored=N\r\n
+ *   Unknown / unrecognized byte:
+ *     ERR ignored byte=0xNN state=<NAME>\r\n
+ *
+ * Thread safety: called only from devkit_uart_handler(), which is serialized
+ * through the core dispatcher (one event per tick, ROBOTOS_CORE_MAX_EVENTS_PER_TICK=1).
+ * -------------------------------------------------------------------------- */
+
+static void devkit_uart_send_bytes(const char *buf, int len)
+{
+	for (int i = 0; i < len; i++) {
+		uart_poll_out(s_uart_dev, (unsigned char)buf[i]);
+	}
+}
+
+static void devkit_uart_emit_tx_response(uint8_t byte,
+					 const devkit_app_state_snapshot_t *before,
+					 const devkit_app_state_snapshot_t *after)
+{
+	char    buf[96];
+	int     n = 0;
+	uint8_t c = byte;
+	bool    changed = (after->transitions != before->transitions);
+
+	if (c >= 'A' && c <= 'Z') {
+		c = (uint8_t)(c + ('a' - 'A'));
+	}
+
+	switch (c) {
+	case 'a':
+	case 's':
+	case 'r':
+		if (changed) {
+			n = snprintf(buf, sizeof(buf), "OK state=%s\r\n",
+				     devkit_app_state_state_name(after->state));
+		} else {
+			n = snprintf(buf, sizeof(buf), "OK state=%s unchanged=1\r\n",
+				     devkit_app_state_state_name(after->state));
+		}
+		break;
+
+	case '?':
+		n = snprintf(buf, sizeof(buf),
+			     "STATE state=%s transitions=%u button=%u uart=%u ignored=%u\r\n",
+			     devkit_app_state_state_name(after->state),
+			     (unsigned)after->transitions,
+			     (unsigned)after->button_count,
+			     (unsigned)after->uart_count,
+			     (unsigned)after->ignored_count);
+		break;
+
+	default:
+		n = snprintf(buf, sizeof(buf), "ERR ignored byte=0x%02x state=%s\r\n",
+			     (unsigned)byte,
+			     devkit_app_state_state_name(after->state));
+		break;
+	}
+
+	if (n > 0 && n < (int)sizeof(buf)) {
+		devkit_uart_send_bytes(buf, n);
+		s_tx_sent++;
+		LOG_INF("Phase 9E UART response sent cmd=0x%02x len=%d state=%s",
+			(unsigned)byte, n,
+			devkit_app_state_state_name(after->state));
+	}
+}
+
 /*
  * Devkit-local handler for DEVKIT_UART_PRODUCER_TYPE.
  * Runs in thread context from the core dispatcher (one event per tick under
@@ -169,10 +258,20 @@ static robotos_core_status_t devkit_uart_handler(
 			(unsigned)byte, s_handled);
 	}
 
+	/* Phase 9E: snapshot before driving app state so we can detect whether
+	 * a transition occurred (distinguishes "OK state=X" from
+	 * "OK state=X unchanged=1" for redundant state commands). */
+	devkit_app_state_snapshot_t snap_before, snap_after;
+	devkit_app_state_get_snapshot(&snap_before);
+
 	/* Phase 9C: drive the devkit application state machine.
 	 * Thread-context only; app state module is single-threaded by
 	 * construction (dispatcher serializes handler invocations). */
 	devkit_app_state_on_uart_byte(byte, s_handled);
+
+	/* Phase 9E: snapshot after, then emit minimal UART TX response. */
+	devkit_app_state_get_snapshot(&snap_after);
+	devkit_uart_emit_tx_response(byte, &snap_before, &snap_after);
 
 	return ROBOTOS_CORE_OK;
 }
