@@ -152,6 +152,12 @@ void devkit_app_state_on_uart_byte(uint8_t byte, uint32_t handler_count)
 			state_name(s_state), s_transitions);
 		/* '?' is a recognized query, not an ignored command. */
 		break;
+	case 'v':
+		/* Phase 10B-v: build/version query. No state change; not an
+		 * ignored command. Response is emitted by the UART TX path. */
+		LOG_INF("Phase 10B-v build query: state=%s",
+			state_name(s_state));
+		break;
 	default:
 		s_ignored_count++;
 		break;

@@ -9,6 +9,24 @@
 
 ## Last Closed Phase
 
+### Phase 10B-v — Build/Version Query Command `v` (hardware evidence)
+
+- **Date:** 2026-05-11
+- **Type:** First Phase 10B-class implementation. Single-byte command added to the proven Phase 9E UART RX/TX path; devkit-local source changes only. No core, platform, scheduler, queue, event-type, test, CMake, Zephyr, board, or `prj.conf` change.
+- **Close status:** `CLOSED_WITH_HARDWARE_EVIDENCE`
+- **Closeout doc:** `RobotOS_v1.0/devkit/docs/PHASE_10B_V_CLOSE.md`
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/DEVKIT_PROGRESS_PHASE_10.md` `<a id="phase-10b-v"></a>`
+- **Companion command spec update:** `RobotOS_v1.0/devkit/docs/COMMAND_SET_DRAFT.md` (the `v` row was promoted from Section B DRAFT to Section A IMPLEMENTED).
+- **Evidence:** `RobotOS_v1.0/devkit/logs/phase_10B_v_rtt_2026-05-11.txt` (23226 B, 61.2 s) + `RobotOS_v1.0/devkit/logs/phase_10B_v_host_2026-05-11.txt` (host transcript)
+- **Source change:** `devkit/src/devkit_app_state.c` (+6 lines, `case 'v'` recognition; no transition, not ignored) and `devkit/src/devkit_uart_producer.c` (+12 lines, `case 'v'` response; new `#include "devkit_runtime.h"`); plus new host harness `tools/runtime/run_phase10b_v_build_query_demo.ps1`.
+- **Response format:** `INFO phase=10b-v app=devkit board=stm32f411e_disco tick_ms=500 uart=minimal\r\n` (77 bytes; deterministic across identical builds; fits within existing 96-byte stack buffer).
+- **Build delta:** FLASH 30032 B → 36416 B (+6384 B; dominated by cbprintf format-string plumbing); RAM 12160 B → 12224 B (+64 B). Within `stm32f411e_disco` budget.
+- **Verdict:** PASS. Sequence `v a v r ?` on COM5; both `v` responses byte-identical (state-invariant); `a → OK state=ARMED`, `r → OK state=IDLE`, `?` reports `transitions=2 button=0 uart=5 ignored=0` confirming `v` did not transition and did not increment `ignored`. ROBOTOS_UART `rx=ok=handled=5`; ROBOTOS_OBS `peak=2 dropped=0`; CFSR/HFSR `0x00000000` (13×); Phase 6M producer healthy `attempted=ok=60` at ticks=120; `accepted(65) - dispatched(64) = pending(1)` invariant holds.
+- **Other Phase 10B candidates (`d`, `L`, `T`):** remain `USER_DECISION_REQUIRED` in `COMMAND_SET_DRAFT.md` Section B; **NOT implemented**.
+- **Next gate:** User to decide between (a) Phase 10B-`L` (LED toggle, first physical effect), (b) Phase 10B-`d` (explicit disarm, smallest behavioral surface), (c) Phase 10B-`T` (sensor read, largest surface), or (d) continued hold. Phase 10B-v itself does not authorize any of these.
+
+---
+
 ### Phase 9G — Bounded UART Burst Characterization (hardware evidence)
 
 - **Date:** 2026-05-11

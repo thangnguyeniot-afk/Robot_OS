@@ -1,9 +1,11 @@
 # COMMAND_SET_DRAFT.md — RobotOS Devkit Product Command Vocabulary (DRAFT)
 
-**Status:** `DRAFT` — Phase 10A docs-only planning artifact.
-**No implementation exists for any DRAFT row below.** This document is a
-planning input for a future Phase 10B-class implementation phase; it is
-neither a specification nor a behavioral claim.
+**Status:** `DRAFT` for Section B rows. **Section A row `v` (0x76) is now
+IMPLEMENTED** per Phase 10B-v (see [`PHASE_10B_V_CLOSE.md`](PHASE_10B_V_CLOSE.md)).
+**No implementation exists for the remaining Section B DRAFT rows** (`d`,
+`L`, `T`). This document is a planning input for a future Phase 10B-class
+implementation phase; it is neither a specification nor a behavioral
+claim for unimplemented rows.
 
 **Authoritative cross-references:**
 
@@ -51,6 +53,7 @@ listed here for reference only; Phase 10A does not modify them.
 | `?` (0x3f) | Query | any | `uart += 1` only | `STATE state=<S> transitions=<N> button=<N> uart=<N> ignored=<N>\r\n` | same |
 | `r` (0x72) | Reset to IDLE | any (`ACTIVE → IDLE` proven; `ARMED → IDLE` not explicitly shown in Phase 9E transcript) | `* → IDLE`; `transitions += 1` if state changed; `uart += 1` | `OK state=IDLE\r\n` | same |
 | `x` (0x78) | Negative-path probe (unrecognized byte) | any | `uart += 1`; `ignored += 1` | `ERR ignored byte=0x78 state=<S>\r\n` | same |
+| `v` (0x76) | Build/version/info query | any | `uart += 1` only (no transition, no ignored) | `INFO phase=10b-v app=devkit board=<CONFIG_BOARD> tick_ms=<DEVKIT_TICK_MS> uart=minimal\r\n` (77 B on `stm32f411e_disco` at `DEVKIT_TICK_MS=500`) | **Phase 10B-v** — hardware-validated 2026-05-11; see [`PHASE_10B_V_CLOSE.md`](PHASE_10B_V_CLOSE.md) and `phase_10B_v_{host,rtt}_2026-05-11.txt`. Promoted from Section B at Phase 10B-v close. |
 
 Notes:
 
@@ -77,7 +80,7 @@ explicit user approval of that specific row, including answering its
 | Byte | Human meaning | Precondition | Proposed side effect | Proposed response | Phase 10B? | New driver/config? | Scope-guard violation? | `USER_DECISION_REQUIRED` notes |
 |---|---|---|---|---|---|---|---|---|
 | `d` (0x64) | DRAFT — Explicit disarm | `ARMED` | `ARMED → IDLE`; `transitions += 1` | `OK state=IDLE\r\n` | Yes | No | No | Whether to introduce `d` given `r` already handles `* → IDLE`; whether `r` from `ARMED` is intended to remain the canonical disarm path. |
-| `v` (0x76) | DRAFT — Build / firmware identification query | any | None (query only); `uart += 1` | `BUILD <fields>\r\n` (single line ≤ 96 B); fields `USER_DECISION_REQUIRED` | Yes | No | No | Exact field set (git hash? phase tag? build date? Zephyr version?); whether to reuse `devkit_build_info` content verbatim or trim it. |
+| ~~`v` (0x76)~~ | **PROMOTED to Section A** — implemented at Phase 10B-v, 2026-05-11 | — | — | `INFO phase=10b-v app=devkit board=<CONFIG_BOARD> tick_ms=<DEVKIT_TICK_MS> uart=minimal\r\n` | **DONE** | No | No | See [`PHASE_10B_V_CLOSE.md`](PHASE_10B_V_CLOSE.md). Phase tag `10b-v` is the closeout identifier; the response format may be reviewed in a future planning phase but is **frozen** as published baseline. |
 | `L` (0x4c) | DRAFT — Onboard LED toggle | any | LED state flips | `OK led=<on|off>\r\n` | Yes | Conditional — re-use of `devkit_status_led.c` API; no new Zephyr driver | No (single-byte, fixed response, thread-context handler) | Whether to override the current blink semantics (per-command latch) or layer toggle on top of blink; whether to expose LED state in `?` response. **First physical-effect command — confirm product intent before opening Phase 10B.** |
 | `T` (0x54) | DRAFT — Onboard sensor read placeholder (e.g. core temperature) | any | Sensor read; no actuator change | `TEMP <value>\r\n` (or `ERR sensor unavailable\r\n`); units / precision / sensor identity `USER_DECISION_REQUIRED` | Yes | Yes — sensor driver dependency; `prj.conf` flag(s); Zephyr sensor API path | Conditional — fixed-buffer compliance must be verified for the chosen format | Which sensor (STM32 internal temp? external sensor on the dev board? new I²C/SPI part?); whether a driver exists; response format. |
 
@@ -123,13 +126,14 @@ retained as fallback; plain `west flash` alone is not runtime-start
 evidence), RTT counter table, host transcript table, architecture-boundary
 preservation audit, scope-guard restated, and a dedicated closeout document.
 
-1. **Phase 10B-`v` (build query)** — smallest implementation surface;
-   single-byte query; reuses existing `devkit_build_info` data; no driver
-   dependency; produces a single bounded response line.
-2. **Phase 10B-`d` (explicit disarm)** — smallest behavioral surface;
-   single-byte app-state command; useful only if user vocabulary requires
-   explicit disarm. May be merged into Phase 10B-`v` if both rows are
-   approved.
+1. ~~**Phase 10B-`v` (build query)**~~ — **IMPLEMENTED 2026-05-11**;
+   see [`PHASE_10B_V_CLOSE.md`](PHASE_10B_V_CLOSE.md). Hardware-validated
+   on STM32F411E-DISCO; 77-byte fixed response; no parser/registry; no
+   driver dependency; no state-change side effect; `ignored` does not
+   increment.
+2. **Phase 10B-`d` (explicit disarm)** — smallest remaining behavioral
+   surface; single-byte app-state command; useful only if user vocabulary
+   requires explicit disarm over `r`'s `* → IDLE` semantics.
 3. **Phase 10B-`L` (LED toggle)** — first physical-effect command; requires
    reconciliation with `devkit_status_led` blink semantics; no new driver.
 4. **Phase 10B-`T` (sensor read)** — largest of the four; introduces a

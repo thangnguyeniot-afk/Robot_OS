@@ -56,6 +56,7 @@ anchors.
 |-------|-------|--------|------|
 | 10A | Product Command Set Planning (docs-only) | CLOSED_DOCS_ONLY | [→](#phase-10a) |
 | 9G ‡ | Bounded UART Burst Characterization (hardware evidence captured) | CLOSED_WITH_HARDWARE_EVIDENCE | [→](#phase-9g-late) |
+| 10B-v | Build/Version Query Command `v` | CLOSED_WITH_HARDWARE_EVIDENCE | [→](#phase-10b-v) |
 | 10Z | RESERVED — future checkpoint / closeout slot | NOT_STARTED | [→](#phase-10z) |
 
 `‡` = **non-linear insert.** Phase 9G is a Phase-9-series late evidence
@@ -422,6 +423,84 @@ from `COMMAND_SET_DRAFT.md` section 3 with its open notes answered,
 demo polish), or (c) a continued hold. Phase 9G's findings do not by
 themselves authorize any Phase 10B opening; they remove a blocking
 unknown but do not constitute approval.
+
+---
+
+<a id="phase-10b-v"></a>
+## Phase 10B-v — Build/Version Query Command `v`
+
+**Status:** `CLOSED_WITH_HARDWARE_EVIDENCE`
+**Type:** First Phase 10B-class implementation. Single-byte command added
+to the proven Phase 9E UART RX/TX path; devkit-local source changes only.
+No core, platform, scheduler, queue, event-type, test, CMake, Zephyr,
+board, or prj.conf change.
+**Date opened/closed:** 2026-05-11 (same-day hardware run).
+**Branch:** master.
+**Companion closeout:** [`PHASE_10B_V_CLOSE.md`](PHASE_10B_V_CLOSE.md).
+**Evidence logs:**
+[`../logs/phase_10B_v_host_2026-05-11.txt`](../logs/phase_10B_v_host_2026-05-11.txt),
+[`../logs/phase_10B_v_rtt_2026-05-11.txt`](../logs/phase_10B_v_rtt_2026-05-11.txt).
+
+### 10B-v.1 Command
+
+| Byte | 0x76 (`v`; case-insensitive, `V` also accepted) |
+|---|---|
+| Meaning | Build/version/info query |
+| Precondition | Any app state |
+| App-state side effect | None (state, transitions, ignored, button counters all unchanged) |
+| Physical side effect | None |
+| Response | `INFO phase=10b-v app=devkit board=<CONFIG_BOARD> tick_ms=<DEVKIT_TICK_MS> uart=minimal\r\n` (77 bytes on `stm32f411e_disco` at `DEVKIT_TICK_MS=500`) |
+
+### 10B-v.2 Implementation surface
+
+Three files changed, all devkit-local:
+
+- `devkit/src/devkit_app_state.c` — added `case 'v':` recognition in
+  `devkit_app_state_on_uart_byte()`; emits a `Phase 10B-v build query:
+  state=<S>` LOG_INF; no transition; not counted as ignored.
+- `devkit/src/devkit_uart_producer.c` — added `case 'v':` response in
+  `devkit_uart_emit_tx_response()` producing the fixed `INFO …` line
+  via the existing 96-byte stack buffer; added `#include
+  "devkit_runtime.h"` for `DEVKIT_TICK_MS`.
+- `tools/runtime/run_phase10b_v_build_query_demo.ps1` — new demo
+  harness (PowerShell 5.1 compatible, pure ASCII, Phase 6O
+  `capture_devkit_rtt.ps1` discipline).
+
+### 10B-v.3 Build + flash + hardware-run summary
+
+| Stage | Result |
+|---|---|
+| `west build --pristine` (`stm32f411e_disco`) | PASS; FLASH 36416 B (6.95%; +6384 B vs Phase 9E 30032 B); RAM 12224 B (9.33%; +64 B vs 12160 B). No new warnings beyond pre-existing `q_valid` and `drivers__console`. |
+| `west flash` | PASS; 49152 bytes; 1.538 s; clean shutdown. Cold examination succeeded first attempt. |
+| `run_phase10b_v_build_query_demo.ps1 -ComPort COM5` | PASS; 6 required patterns FOUND (including `Phase 10B-v build query`); CFSR/HFSR all 0x00000000 (13 occurrences); 23226-byte RTT log over 61.2 s; manual RESET not required. |
+| Host transcript | 5/5 responses in send order; both `v` responses byte-identical across IDLE → ARMED. |
+| RTT counters | `ROBOTOS_UART rx=5 ok=5 full=0 handled=5 last=0x3f`; `ROBOTOS_APP transitions=2 button=0 uart=5 ignored=0`; `ROBOTOS_OBS peak=2 dropped=0 dispatched=64 accepted=65 herr=0`; `ROBOTOS_PROD attempted=60 ok=60`. |
+| Invariants | `accepted(65) - dispatched(64) = pending(1)` ✓; `PROD ok(60) + UART ok(5) = accepted(65)` ✓; `transitions(2) = a-event + r-event` ✓; `v` did not transition; `ignored=0`. |
+
+### 10B-v.4 What this entry does not do
+
+- Does not change `core/`, `platform/`, `tests/`, `CMakeLists.txt`, or
+  `prj.conf`.
+- Does not alter `ROBOTOS_CORE_MAX_EVENTS_PER_TICK` or
+  `ROBOTOS_EVENT_QUEUE_CAPACITY`.
+- Does not change Phase 9E UART TX behavior for `a`, `s`, `?`, `r`, or
+  `x` (their switch branches are untouched).
+- Does not reopen Scheduler 7A / 7B-1 (still DEFER).
+- Does not reopen Phase 8A / F407 (still HOLD/DEFER).
+- Does not promote `devkit_app_state` to `core/` or Robot Framework.
+- Does not introduce parser, shell, command registry, framing protocol,
+  response queue, ACK/retry, heap allocation, ISR-context TX, or
+  core/platform UART abstraction.
+- Does not implement `d`, `L`, or `T`; those remain
+  `USER_DECISION_REQUIRED` in `COMMAND_SET_DRAFT.md` Section B.
+- Does not modify `DEVKIT_PROGRESS.md` (historical master preserved).
+
+### 10B-v.5 Next gate
+
+Phase 10B-v removes the abstraction barrier between Phase 10A planning
+and Phase 10B implementation. Further Phase 10B candidates (`L`, `d`,
+`T`) remain `USER_DECISION_REQUIRED`; user must approve a specific row
+before another phase opens.
 
 ---
 

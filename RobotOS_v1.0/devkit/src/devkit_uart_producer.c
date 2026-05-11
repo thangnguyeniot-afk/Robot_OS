@@ -35,6 +35,7 @@
 
 #include "robotos_core.h"
 #include "devkit_app_state.h"
+#include "devkit_runtime.h"
 
 LOG_MODULE_REGISTER(devkit_uart, LOG_LEVEL_INF);
 
@@ -202,6 +203,17 @@ static void devkit_uart_emit_tx_response(uint8_t byte,
 			     (unsigned)after->button_count,
 			     (unsigned)after->uart_count,
 			     (unsigned)after->ignored_count);
+		break;
+
+	case 'v':
+		/* Phase 10B-v: bounded build/version query response. Deterministic
+		 * across builds (no __DATE__/__TIME__); fixed stack buffer; no
+		 * parser, no registry, no framing beyond \r\n; one response line.
+		 * Total length is well under sizeof(buf)=96. */
+		n = snprintf(buf, sizeof(buf),
+			     "INFO phase=10b-v app=devkit board=%s tick_ms=%d uart=minimal\r\n",
+			     CONFIG_BOARD,
+			     DEVKIT_TICK_MS);
 		break;
 
 	default:

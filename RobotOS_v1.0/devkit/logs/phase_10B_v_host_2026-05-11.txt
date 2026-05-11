@@ -1,0 +1,10 @@
+﻿# Phase 10B-v build/version query transcript
+# Date: 2026-05-11 18:18:01  Port: COM5  Baud: 115200
+# Sequence: v a v r ?
+# InterByteDelayMs: 600  ReadTimeoutMs: 1200
+
+SEND 'v' (0x76) -> RECV: INFO phase=10b-v app=devkit board=stm32f411e_disco tick_ms=500 uart=minimal
+SEND 'a' (0x61) -> RECV: OK state=ARMED
+SEND 'v' (0x76) -> RECV: INFO phase=10b-v app=devkit board=stm32f411e_disco tick_ms=500 uart=minimal
+SEND 'r' (0x72) -> RECV: OK state=IDLE
+SEND '?' (0x3f) -> RECV: STATE state=IDLE transitions=2 button=0 uart=5 ignored=0
