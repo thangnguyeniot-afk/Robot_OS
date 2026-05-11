@@ -57,6 +57,7 @@ anchors.
 | 10A | Product Command Set Planning (docs-only) | CLOSED_DOCS_ONLY | [→](#phase-10a) |
 | 9G ‡ | Bounded UART Burst Characterization (hardware evidence captured) | CLOSED_WITH_HARDWARE_EVIDENCE | [→](#phase-9g-late) |
 | 10B-v | Build/Version Query Command `v` | CLOSED_WITH_HARDWARE_EVIDENCE | [→](#phase-10b-v) |
+| 10B-L | LED Physical-Effect Command `L` | CLOSED_WITH_HARDWARE_EVIDENCE (PHYSICAL_OBSERVATION_AMBIGUOUS) | [→](#phase-10b-l) |
 | 10Z | RESERVED — future checkpoint / closeout slot | NOT_STARTED | [→](#phase-10z) |
 
 `‡` = **non-linear insert.** Phase 9G is a Phase-9-series late evidence
@@ -501,6 +502,89 @@ Phase 10B-v removes the abstraction barrier between Phase 10A planning
 and Phase 10B implementation. Further Phase 10B candidates (`L`, `d`,
 `T`) remain `USER_DECISION_REQUIRED`; user must approve a specific row
 before another phase opens.
+
+---
+
+<a id="phase-10b-l"></a>
+## Phase 10B-L — LED Physical-Effect Command `L`
+
+**Status:** `CLOSED_WITH_HARDWARE_EVIDENCE` (electrical/RTT) +
+`PHYSICAL_OBSERVATION_AMBIGUOUS` (visual LED not human-witnessed in this
+autonomous run).
+**Type:** Second Phase 10B-class implementation; **first physical-effect
+command**. Single-byte command added to the proven Phase 9E/10B-v UART
+RX/TX path; devkit-local source changes only. Reuses the existing
+`devkit_status_led_toggle()` one-shot API (LED module unchanged). No
+core, platform, scheduler, queue, event-type, test, CMake, Zephyr,
+board, or `prj.conf` change.
+**Date opened/closed:** 2026-05-11 (same-day hardware run).
+**Branch:** master.
+**Companion closeout:** [`PHASE_10B_L_CLOSE.md`](PHASE_10B_L_CLOSE.md).
+**Evidence logs:**
+[`../logs/phase_10B_L_host_2026-05-11.txt`](../logs/phase_10B_L_host_2026-05-11.txt),
+[`../logs/phase_10B_L_rtt_2026-05-11.txt`](../logs/phase_10B_L_rtt_2026-05-11.txt).
+
+### 10B-L.1 Command
+
+| Byte | 0x4c (`L`; case-insensitive, `l` also accepted) |
+|---|---|
+| Meaning | LED physical-effect smoke (single GPIO toggle) |
+| Precondition | Any app state |
+| App-state side effect | None (no transition, `ignored` not incremented) |
+| Physical side effect | One call to `devkit_status_led_toggle()` from thread-context UART handler. The 500 ms heartbeat blink in `devkit_runtime_run()` continues; the `L` toggle shifts its phase by one half-cycle. No new LED API, no LED state machine, no LED service. |
+| Response | `OK led=toggle state=<S>\r\n` (26 bytes on `stm32f411e_disco`) |
+| Error response | `ERR led=toggle ret=<N> state=<S>\r\n` (not observed in this run) |
+
+### 10B-L.2 Implementation surface
+
+Three files changed, all devkit-local:
+
+- `devkit/src/devkit_app_state.c` — `case 'l':` recognition (no transition, not ignored); emits `Phase 10B-L LED command: state=<S>` LOG_INF.
+- `devkit/src/devkit_uart_producer.c` — `case 'l': { ... }` block calls `devkit_status_led_toggle()` then emits `OK led=toggle state=<S>\r\n` via existing 96-byte stack buffer; added `#include "devkit_status_led.h"`.
+- `tools/runtime/run_phase10b_l_led_command_demo.ps1` — new demo harness (PowerShell 5.1, pure ASCII, Phase 6O capture discipline).
+
+**Not touched:** `devkit_status_led.{h,c}` (LED module unchanged), `devkit_runtime.c` (heartbeat unchanged), `core/`, `platform/`, `tests/`, `CMakeLists.txt`, `prj.conf`, `boards/`.
+
+### 10B-L.3 Build + flash + hardware-run summary
+
+| Stage | Result |
+|---|---|
+| `west build --pristine` (`stm32f411e_disco`) | PASS; FLASH 36628 B (6.99%; +212 B vs Phase 10B-v 36416 B); RAM 12224 B (unchanged); no new warnings. |
+| `west flash` | PASS; 49152 bytes; 1.574 s; clean shutdown. |
+| `run_phase10b_l_led_command_demo.ps1 -ComPort COM5` | PASS; 6 required patterns FOUND (including `Phase 10B-L LED command`); CFSR/HFSR all `0x00000000` (13 occurrences); 22744-byte RTT log over 60.4 s; manual RESET not required. |
+| Host transcript | 4/4 responses in send order: `OK led=toggle state=IDLE`, `INFO phase=10b-v …`, `OK led=toggle state=IDLE` (byte-identical to first `L`), `STATE state=IDLE transitions=0 button=0 uart=4 ignored=0`. |
+| RTT counters | `ROBOTOS_UART rx=4 ok=4 full=0 handled=4 last=0x3f`; `ROBOTOS_APP transitions=0 button=0 uart=4 ignored=0`; `ROBOTOS_OBS peak=2 dropped=0 dispatched=63 accepted=64`; `ROBOTOS_PROD attempted=60 ok=60`. |
+| Invariants | `accepted(64) - dispatched(63) = pending(1)` ✓; `PROD(60) + UART(4) = accepted(64)` ✓; `transitions=0` (no a/s/r) ✓; `L` did not transition and did not increment `ignored`. |
+| Heartbeat preservation | 139 `tick count=` lines across the 60.4 s window; no `LED toggle failed` errors; cadence uninterrupted. |
+| Physical LED observation | **PHYSICAL_OBSERVATION_AMBIGUOUS** — autonomous run, no human watched the LED. RTT confirms the toggle calls fired (`Phase 10B-L LED command` ×2 + `cmd=0x4c len=26 state=IDLE` ×2; no toggle-failure log). Visible effect (single phase-shift in heartbeat) is predicted but not human-verified. |
+
+### 10B-L.4 What this entry does not do
+
+- Does not change `core/`, `platform/`, `tests/`, `CMakeLists.txt`, or
+  `prj.conf`.
+- Does not alter `ROBOTOS_CORE_MAX_EVENTS_PER_TICK` or
+  `ROBOTOS_EVENT_QUEUE_CAPACITY`.
+- Does not modify `devkit_status_led.{h,c}` (no new LED API).
+- Does not modify `devkit_runtime.c` (heartbeat loop unchanged).
+- Does not change Phase 9E behavior for `a`, `s`, `?`, `r`, `x`.
+- Does not change Phase 10B-v `v` behavior (response byte-identical).
+- Does not change the `?` response format (no LED field added).
+- Does not introduce parser, shell, command registry, framing protocol,
+  response queue, ACK/retry, heap allocation, ISR-context TX, or
+  core/platform UART abstraction.
+- Does not promote `devkit_app_state` to `core/` or Robot Framework.
+- Does not implement `d` or `T`; those remain `USER_DECISION_REQUIRED`.
+- Does not modify `DEVKIT_PROGRESS.md` (historical master preserved).
+- Does not reopen Scheduler 7A / 7B-1 (still DEFER).
+- Does not reopen Phase 8A / F407 (still HOLD/DEFER).
+
+### 10B-L.5 Next gate
+
+Phase 10B-L demonstrates the smallest safe physical-effect product
+command. Further candidates (`d`, `T`) remain `USER_DECISION_REQUIRED`;
+user must approve a specific row before another phase opens. An
+operator-witnessed re-run is recommended if visible LED feedback is a
+product requirement.
 
 ---
 

@@ -9,6 +9,25 @@
 
 ## Last Closed Phase
 
+### Phase 10B-L — LED Physical-Effect Command `L` (hardware evidence + PHYSICAL_OBSERVATION_AMBIGUOUS)
+
+- **Date:** 2026-05-11
+- **Type:** Second Phase 10B-class implementation; first physical-effect command. Single-byte command added to the proven Phase 9E/10B-v UART RX/TX path. Devkit-local source changes only. Reuses the existing `devkit_status_led_toggle()` one-shot API. No LED subsystem redesign, no new LED service, no new LED API. No core, platform, scheduler, queue, event-type, test, CMake, Zephyr, board, or `prj.conf` change.
+- **Close status:** `CLOSED_WITH_HARDWARE_EVIDENCE` (electrical/RTT) + `PHYSICAL_OBSERVATION_AMBIGUOUS` (visual LED, autonomous run)
+- **Closeout doc:** `RobotOS_v1.0/devkit/docs/PHASE_10B_L_CLOSE.md`
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/DEVKIT_PROGRESS_PHASE_10.md` `<a id="phase-10b-l"></a>`
+- **Companion command spec update:** `RobotOS_v1.0/devkit/docs/COMMAND_SET_DRAFT.md` (the `L` row was promoted from Section B DRAFT to Section A IMPLEMENTED).
+- **Evidence:** `RobotOS_v1.0/devkit/logs/phase_10B_L_rtt_2026-05-11.txt` (22744 B, 60.4 s) + `RobotOS_v1.0/devkit/logs/phase_10B_L_host_2026-05-11.txt` (host transcript)
+- **Source change:** `devkit/src/devkit_app_state.c` (+9 lines, `case 'l'` recognition; no transition, not ignored) and `devkit/src/devkit_uart_producer.c` (+24 lines, `case 'l'` toggle + response; new `#include "devkit_status_led.h"`); plus new host harness `tools/runtime/run_phase10b_l_led_command_demo.ps1`. `devkit_status_led.{h,c}` and `devkit_runtime.c` are zero-diff.
+- **Response format:** `OK led=toggle state=<S>\r\n` (26 bytes; deterministic). Error variant `ERR led=toggle ret=<N> state=<S>\r\n` (not observed this run).
+- **Physical effect mechanism:** Single `devkit_status_led_toggle()` (existing API) called from thread-context UART handler. The 500 ms heartbeat blink in `devkit_runtime_run()` is unchanged and continues per-tick; an `L` between heartbeat ticks adds one extra toggle, shifting the heartbeat phase by one half-cycle. No new state, no scheduler, no service.
+- **Build delta:** FLASH 36416 B → 36628 B (+212 B); RAM 12224 B unchanged.
+- **Verdict:** PASS electrical/RTT. Sequence `L v L ?` on COM5; both `L` responses byte-identical; `v` response unchanged (Phase 10B-v preserved); `?` reports `transitions=0 button=0 uart=4 ignored=0` confirming `L` did not transition and did not increment `ignored`. ROBOTOS_UART `rx=ok=handled=4`; ROBOTOS_OBS `peak=2 dropped=0`; CFSR/HFSR `0x00000000` (13×); Phase 6M producer healthy `attempted=ok=60` at ticks=120; `accepted(64) - dispatched(63) = pending(1)` invariant holds; heartbeat continued (139 tick-count lines). Visual LED is `PHYSICAL_OBSERVATION_AMBIGUOUS` — autonomous run, no human watched the LED.
+- **Other Phase 10B candidates (`d`, `T`):** remain `USER_DECISION_REQUIRED` in `COMMAND_SET_DRAFT.md` Section B; **NOT implemented**.
+- **Next gate:** User to decide between (a) operator-witnessed re-run of Phase 10B-L to flip visual evidence from `PHYSICAL_OBSERVATION_AMBIGUOUS` to confirmed, (b) Phase 10B-`d` (smallest remaining behavioral surface), (c) Phase 10B-`T` (sensor read, requires sensor part choice + driver), or (d) continued hold. Phase 10B-L itself does not authorize any of these.
+
+---
+
 ### Phase 10B-v — Build/Version Query Command `v` (hardware evidence)
 
 - **Date:** 2026-05-11

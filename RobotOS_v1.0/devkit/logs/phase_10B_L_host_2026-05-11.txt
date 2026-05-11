@@ -1,0 +1,9 @@
+﻿# Phase 10B-L LED physical-effect command transcript
+# Date: 2026-05-11 18:37:02  Port: COM5  Baud: 115200
+# Sequence: L v L ?
+# InterByteDelayMs: 600  ReadTimeoutMs: 1200
+
+SEND 'L' (0x4c) -> RECV: OK led=toggle state=IDLE
+SEND 'v' (0x76) -> RECV: INFO phase=10b-v app=devkit board=stm32f411e_disco tick_ms=500 uart=minimal
+SEND 'L' (0x4c) -> RECV: OK led=toggle state=IDLE
+SEND '?' (0x3f) -> RECV: STATE state=IDLE transitions=0 button=0 uart=4 ignored=0

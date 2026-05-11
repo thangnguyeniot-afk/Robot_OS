@@ -36,6 +36,7 @@
 #include "robotos_core.h"
 #include "devkit_app_state.h"
 #include "devkit_runtime.h"
+#include "devkit_status_led.h"
 
 LOG_MODULE_REGISTER(devkit_uart, LOG_LEVEL_INF);
 
@@ -215,6 +216,29 @@ static void devkit_uart_emit_tx_response(uint8_t byte,
 			     CONFIG_BOARD,
 			     DEVKIT_TICK_MS);
 		break;
+
+	case 'l': {
+		/* Phase 10B-L: LED physical-effect smoke. Single GPIO toggle via
+		 * the existing devkit_status_led_toggle() one-shot API. No new
+		 * LED API, no scheduler, no state machine, no service. Called
+		 * from thread context (handler dispatch); never from ISR. The
+		 * heartbeat loop in devkit_runtime_run() continues to toggle the
+		 * LED every tick independently of this command -- one extra
+		 * toggle here shifts the heartbeat phase by one half-cycle.
+		 * Bounded fixed response. */
+		int led_ret = devkit_status_led_toggle();
+		if (led_ret < 0) {
+			n = snprintf(buf, sizeof(buf),
+				     "ERR led=toggle ret=%d state=%s\r\n",
+				     led_ret,
+				     devkit_app_state_state_name(after->state));
+		} else {
+			n = snprintf(buf, sizeof(buf),
+				     "OK led=toggle state=%s\r\n",
+				     devkit_app_state_state_name(after->state));
+		}
+		break;
+	}
 
 	default:
 		n = snprintf(buf, sizeof(buf), "ERR ignored byte=0x%02x state=%s\r\n",

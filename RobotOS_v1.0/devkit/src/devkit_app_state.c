@@ -158,6 +158,15 @@ void devkit_app_state_on_uart_byte(uint8_t byte, uint32_t handler_count)
 		LOG_INF("Phase 10B-v build query: state=%s",
 			state_name(s_state));
 		break;
+	case 'l':
+		/* Phase 10B-L: LED physical-effect command. No app-state change;
+		 * not an ignored command. The actual GPIO toggle is performed
+		 * in the UART TX layer (devkit_uart_producer.c) so this module
+		 * stays hardware-free. Case-insensitive: `L` and `l` both land
+		 * here via the upcase normalization above. */
+		LOG_INF("Phase 10B-L LED command: state=%s",
+			state_name(s_state));
+		break;
 	default:
 		s_ignored_count++;
 		break;
