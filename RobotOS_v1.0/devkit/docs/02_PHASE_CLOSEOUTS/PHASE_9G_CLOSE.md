@@ -10,10 +10,10 @@ core, platform, test, CMake, Zephyr, board, or runtime-behavior change.
 ends at Phase 9E (`587dab7`); Phase 9G adds characterization evidence only,
 no runtime change.
 **Companion docs:**
-[`DEVKIT_PROGRESS_PHASE_10.md`](DEVKIT_PROGRESS_PHASE_10.md) Phase 9G entry,
+[`DEVKIT_PROGRESS_PHASE_10.md`](../01_PROGRESS/DEVKIT_PROGRESS_PHASE_10.md) Phase 9G entry,
 [`PHASE_9EZ_CHECKPOINT.md`](PHASE_9EZ_CHECKPOINT.md) section J Option C
 (the original deferred Phase 9G candidate),
-[`COMMAND_SET_DRAFT.md`](COMMAND_SET_DRAFT.md) section 5 (Phase 9G named as a
+[`COMMAND_SET_DRAFT.md`](../03_SPECS/COMMAND_SET_DRAFT.md) section 5 (Phase 9G named as a
 direction-independent supporting phase).
 
 ---
@@ -240,12 +240,12 @@ convention; the historical master remains untouched.
 
 ## H. Evidence artifacts
 
-- Host transcript: [`../logs/phase_9G_uart_burst_host_2026-05-11.txt`](../logs/phase_9G_uart_burst_host_2026-05-11.txt)
+- Host transcript: [`../logs/phase_9G_uart_burst_host_2026-05-11.txt`](../../logs/phase_9G_uart_burst_host_2026-05-11.txt)
   -- SEND_BURST t/idx/byte rows + RECV t/idx/line rows + BURST/READ/RECV
   count totals.
-- RTT log: [`../logs/phase_9G_uart_burst_rtt_2026-05-11.txt`](../logs/phase_9G_uart_burst_rtt_2026-05-11.txt)
+- RTT log: [`../logs/phase_9G_uart_burst_rtt_2026-05-11.txt`](../../logs/phase_9G_uart_burst_rtt_2026-05-11.txt)
   -- 22929 bytes, 60.7 s stream window.
-- Log index row in [`../logs/INDEX.md`](../logs/INDEX.md) -- added in this
+- Log index row in [`../logs/INDEX.md`](../../logs/INDEX.md) -- added in this
   commit.
 
 ### H.1 Selected RTT lines (final state, ticks=120)
@@ -341,10 +341,10 @@ Phase 9G does not authorize any of the above by itself.
 ## K. Cross-references
 
 - Phase 9E-Z direction guard: [`PHASE_9EZ_CHECKPOINT.md`](PHASE_9EZ_CHECKPOINT.md)
-- Phase history (Phase 9E and earlier): [`DEVKIT_PROGRESS.md`](DEVKIT_PROGRESS.md)
-- Phase 10+ log: [`DEVKIT_PROGRESS_PHASE_10.md`](DEVKIT_PROGRESS_PHASE_10.md)
+- Phase history (Phase 9E and earlier): [`DEVKIT_PROGRESS.md`](../01_PROGRESS/DEVKIT_PROGRESS.md)
+- Phase 10+ log: [`DEVKIT_PROGRESS_PHASE_10.md`](../01_PROGRESS/DEVKIT_PROGRESS_PHASE_10.md)
 - Phase 10A planning: [`PHASE_10A_CLOSE.md`](PHASE_10A_CLOSE.md)
-- DRAFT command vocabulary: [`COMMAND_SET_DRAFT.md`](COMMAND_SET_DRAFT.md)
-- Live state snapshot: [`../../../CURRENT_STATE.md`](../../../CURRENT_STATE.md)
-- Telemetry reference: [`TELEMETRY_REFERENCE.md`](TELEMETRY_REFERENCE.md)
+- DRAFT command vocabulary: [`COMMAND_SET_DRAFT.md`](../03_SPECS/COMMAND_SET_DRAFT.md)
+- Live state snapshot: [`../../../CURRENT_STATE.md`](../../../../CURRENT_STATE.md)
+- Telemetry reference: [`TELEMETRY_REFERENCE.md`](../03_SPECS/TELEMETRY_REFERENCE.md)
 - Runtime tools: [`../../tools/runtime/README.md`](../../tools/runtime/README.md)

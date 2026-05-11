@@ -1,7 +1,7 @@
 # RobotOS — Current State Snapshot
 
 > **Purpose:** Canonical startup snapshot for agents (Claude, Copilot, GPT, GLM).
-> Detailed phase history remains in `RobotOS_v1.0/devkit/docs/DEVKIT_PROGRESS.md`.
+> Detailed phase history remains in `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS.md`.
 > Update this file only at phase close, from validated evidence only.
 > Do not record assumptions as fact. If unknown, mark **Pending / Unknown**.
 
@@ -15,9 +15,9 @@
 - **Type:** Docs-only checkpoint / design-state consolidation. No source, runtime, test, CMake, Zephyr, board, host-tool, script, or `prj.conf` change. Snapshots the validated non-sensor command group after Phase 10B-d closes; prevents blind opening of `T` or ACTIVE disarm widening.
 - **Close status:** `CLOSED_DOCS_ONLY`
 - **Published baseline at open:** `origin/master = 7e250dc`
-- **Closeout doc:** `RobotOS_v1.0/devkit/docs/PHASE_10C_COMMAND_SET_CHECKPOINT.md`
-- **Phase log entry:** `RobotOS_v1.0/devkit/docs/DEVKIT_PROGRESS_PHASE_10.md` `<a id="phase-10c"></a>`
-- **Companion docs:** `RobotOS_v1.0/devkit/docs/COMMAND_SET_DRAFT.md` (header status updated; Section B intro clarified to track both the `T` row and the ACTIVE disarm widening as `USER_DECISION_REQUIRED`; no command semantics changed).
+- **Closeout doc:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_10C_COMMAND_SET_CHECKPOINT.md`
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_10.md` `<a id="phase-10c"></a>`
+- **Companion docs:** `RobotOS_v1.0/devkit/docs/03_SPECS/COMMAND_SET_DRAFT.md` (header status updated; Section B intro clarified to track both the `T` row and the ACTIVE disarm widening as `USER_DECISION_REQUIRED`; no command semantics changed).
 - **Validated non-sensor command set at checkpoint:** `a / s / r / ? / x / v / L / d` — all eight hardware-validated; all fit the single-byte / fixed 96-byte stack-buffer / no-parser / no-registry / no-framing / thread-context-TX pattern.
 - **Runtime behavior baseline:** Unchanged — last runtime behavior phase is Phase 10B-d (firmware `125779c`, evidence-close `7e250dc`). Phase 10C adds no new runtime behavior and runs no new validation.
 - **Remaining `USER_DECISION_REQUIRED`:** (1) `T` sensor read — largest open surface (sensor part, driver / `prj.conf` change, response format, error variant, fixed-buffer compliance — five open prerequisites); (2) ACTIVE disarm widening — `USER_DECISION_REQUIRED_ACTIVE_DISARM`; current behavior is recognized no-op (no transition, no `ignored++`).
@@ -33,9 +33,9 @@
 - **Type:** Third Phase 10B-class implementation; smallest remaining behavioral surface from `COMMAND_SET_DRAFT.md` Section B. Single-byte app-state command added to the proven Phase 9E/10B-v/10B-L UART RX/TX path. Devkit-local source changes only. No new driver, no `prj.conf` change, no physical effect, no state-machine redesign. Provides explicit user-vocabulary "disarm" distinct from `r` (`r` is preserved zero-diff and remains the canonical reset path).
 - **Close status:** `CLOSED_WITH_HARDWARE_EVIDENCE`
 - **Implementation commit:** `125779c` (`feat: add Phase 10B-d disarm command`)
-- **Closeout doc:** `RobotOS_v1.0/devkit/docs/PHASE_10B_D_CLOSE.md`
-- **Phase log entry:** `RobotOS_v1.0/devkit/docs/DEVKIT_PROGRESS_PHASE_10.md` `<a id="phase-10b-d"></a>`
-- **Companion command spec update:** `RobotOS_v1.0/devkit/docs/COMMAND_SET_DRAFT.md` (the `d` row was promoted from Section B DRAFT to Section A IMPLEMENTED).
+- **Closeout doc:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_10B_D_CLOSE.md`
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_10.md` `<a id="phase-10b-d"></a>`
+- **Companion command spec update:** `RobotOS_v1.0/devkit/docs/03_SPECS/COMMAND_SET_DRAFT.md` (the `d` row was promoted from Section B DRAFT to Section A IMPLEMENTED).
 - **Evidence:** `RobotOS_v1.0/devkit/logs/phase_10B_d_rtt_2026-05-11.txt` (22623 B, 60.4 s) + `RobotOS_v1.0/devkit/logs/phase_10B_d_host_2026-05-11.txt` (401 B host transcript).
 - **Source change:** `devkit/src/devkit_app_state.c` (+13 lines, `case 'd'` recognition — ARMED→IDLE via existing `transition()`; otherwise no-op LOG_INF), `devkit/src/devkit_app_state.h` (+3 lines, doc-only), and `devkit/src/devkit_uart_producer.c` (+14 lines, `case 'd'` TX response — `OK disarm state=IDLE\r\n` when changed, `OK disarm no-op state=<S>\r\n` otherwise; no new include); plus new host harness `tools/runtime/run_phase10b_d_disarm_demo.ps1`. `core/`, `platform/`, `devkit_runtime.{c,h}`, `devkit_status_led.{h,c}`, `prj.conf`, `CMakeLists.txt`, `boards/`, and `tests/` are zero-diff.
 - **Response format:** `OK disarm state=IDLE\r\n` (22 B) on ARMED → IDLE transition; `OK disarm no-op state=IDLE\r\n` (28 B) or `OK disarm no-op state=ACTIVE\r\n` (30 B) on the recognized-no-op paths. All variants fit the existing 96-byte stack buffer.
@@ -53,9 +53,9 @@
 - **Date:** 2026-05-11
 - **Type:** Second Phase 10B-class implementation; first physical-effect command. Single-byte command added to the proven Phase 9E/10B-v UART RX/TX path. Devkit-local source changes only. Reuses the existing `devkit_status_led_toggle()` one-shot API. No LED subsystem redesign, no new LED service, no new LED API. No core, platform, scheduler, queue, event-type, test, CMake, Zephyr, board, or `prj.conf` change.
 - **Close status:** `CLOSED_WITH_HARDWARE_EVIDENCE` (electrical/RTT) + **`OPERATOR_VISUAL_CONFIRMED`** (visual LED witnessed by operator in a follow-up re-run on 2026-05-11 ~18:57 local; original autonomous-run `PHYSICAL_OBSERVATION_AMBIGUOUS` preserved historically in `PHASE_10B_L_CLOSE.md` section F; visual confirmation recorded in section P)
-- **Closeout doc:** `RobotOS_v1.0/devkit/docs/PHASE_10B_L_CLOSE.md`
-- **Phase log entry:** `RobotOS_v1.0/devkit/docs/DEVKIT_PROGRESS_PHASE_10.md` `<a id="phase-10b-l"></a>`
-- **Companion command spec update:** `RobotOS_v1.0/devkit/docs/COMMAND_SET_DRAFT.md` (the `L` row was promoted from Section B DRAFT to Section A IMPLEMENTED).
+- **Closeout doc:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_10B_L_CLOSE.md`
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_10.md` `<a id="phase-10b-l"></a>`
+- **Companion command spec update:** `RobotOS_v1.0/devkit/docs/03_SPECS/COMMAND_SET_DRAFT.md` (the `L` row was promoted from Section B DRAFT to Section A IMPLEMENTED).
 - **Evidence (autonomous run):** `RobotOS_v1.0/devkit/logs/phase_10B_L_rtt_2026-05-11.txt` (22744 B, 60.4 s) + `RobotOS_v1.0/devkit/logs/phase_10B_L_host_2026-05-11.txt` (host transcript)
 - **Evidence (operator-witnessed visual re-run):** `RobotOS_v1.0/devkit/logs/phase_10B_L_visual_rtt_2026-05-11.txt` (22744 B, 60.4 s) + `RobotOS_v1.0/devkit/logs/phase_10B_L_visual_host_2026-05-11.txt` (host transcript). Operator verdict: observed visible phase-shift in the 500 ms heartbeat blink correlated with both `L` commands. Same firmware (`f1db2fa`); same wiring; sidecar `reset run`; manual RESET not required.
 - **Source change:** `devkit/src/devkit_app_state.c` (+9 lines, `case 'l'` recognition; no transition, not ignored) and `devkit/src/devkit_uart_producer.c` (+24 lines, `case 'l'` toggle + response; new `#include "devkit_status_led.h"`); plus new host harness `tools/runtime/run_phase10b_l_led_command_demo.ps1`. `devkit_status_led.{h,c}` and `devkit_runtime.c` are zero-diff.
@@ -73,9 +73,9 @@
 - **Date:** 2026-05-11
 - **Type:** First Phase 10B-class implementation. Single-byte command added to the proven Phase 9E UART RX/TX path; devkit-local source changes only. No core, platform, scheduler, queue, event-type, test, CMake, Zephyr, board, or `prj.conf` change.
 - **Close status:** `CLOSED_WITH_HARDWARE_EVIDENCE`
-- **Closeout doc:** `RobotOS_v1.0/devkit/docs/PHASE_10B_V_CLOSE.md`
-- **Phase log entry:** `RobotOS_v1.0/devkit/docs/DEVKIT_PROGRESS_PHASE_10.md` `<a id="phase-10b-v"></a>`
-- **Companion command spec update:** `RobotOS_v1.0/devkit/docs/COMMAND_SET_DRAFT.md` (the `v` row was promoted from Section B DRAFT to Section A IMPLEMENTED).
+- **Closeout doc:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_10B_V_CLOSE.md`
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_10.md` `<a id="phase-10b-v"></a>`
+- **Companion command spec update:** `RobotOS_v1.0/devkit/docs/03_SPECS/COMMAND_SET_DRAFT.md` (the `v` row was promoted from Section B DRAFT to Section A IMPLEMENTED).
 - **Evidence:** `RobotOS_v1.0/devkit/logs/phase_10B_v_rtt_2026-05-11.txt` (23226 B, 61.2 s) + `RobotOS_v1.0/devkit/logs/phase_10B_v_host_2026-05-11.txt` (host transcript)
 - **Source change:** `devkit/src/devkit_app_state.c` (+6 lines, `case 'v'` recognition; no transition, not ignored) and `devkit/src/devkit_uart_producer.c` (+12 lines, `case 'v'` response; new `#include "devkit_runtime.h"`); plus new host harness `tools/runtime/run_phase10b_v_build_query_demo.ps1`.
 - **Response format:** `INFO phase=10b-v app=devkit board=stm32f411e_disco tick_ms=500 uart=minimal\r\n` (77 bytes; deterministic across identical builds; fits within existing 96-byte stack buffer).
@@ -93,8 +93,8 @@
 - **Close status:** `CLOSED_WITH_HARDWARE_EVIDENCE`
 - **Open commit:** `e9a1d62` (`tools: add Phase 9G UART burst characterization harness`)
 - **Close commit:** this commit (`docs: close Phase 9G UART burst characterization with hardware evidence`)
-- **Closeout doc:** `RobotOS_v1.0/devkit/docs/PHASE_9G_CLOSE.md`
-- **Phase log entry:** `RobotOS_v1.0/devkit/docs/DEVKIT_PROGRESS_PHASE_10.md` `<a id="phase-9g-late"></a>` (non-linear `‡` insert per §4 rule 6 — late-9-series post-split)
+- **Closeout doc:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_9G_CLOSE.md`
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_10.md` `<a id="phase-9g-late"></a>` (non-linear `‡` insert per §4 rule 6 — late-9-series post-split)
 - **Evidence:** `RobotOS_v1.0/devkit/logs/phase_9G_uart_burst_rtt_2026-05-11.txt` (22929 B, 60.7 s) + `RobotOS_v1.0/devkit/logs/phase_9G_uart_burst_host_2026-05-11.txt` (host transcript)
 - **Verdict:** PASS. 5-byte burst (`a s ? r x` at 30 ms spacing, ~185 ms total) sent on COM5 to Phase 9E firmware; 5/5 responses arrived in send order; ROBOTOS_OBS `peak=5` (vs Phase 9E `peak=2`), `dropped=0`, `herr=0`, `unhandled=0`; ROBOTOS_UART `rx=ok=handled=5 full=0`; ROBOTOS_APP `transitions=3 uart=5 ignored=1`; Phase 6M producer healthy (`attempted=ok=60` at ticks=120); CFSR/HFSR `0x00000000` (13×); `accepted - dispatched = pending` invariant holds (65 − 64 = 1).
 - **Runtime baseline:** Unchanged — still Phase 9E (`587dab7`). Phase 9G characterized the existing runtime; it added no firmware, no scheduler change, no UART TX scope change.
@@ -107,9 +107,9 @@
 - **Date:** 2026-05-11
 - **Type:** Docs-only planning. No source, runtime, test, CMake, Zephyr, board, or script change.
 - **Close status:** `CLOSED_DOCS_ONLY`
-- **Closeout doc:** `RobotOS_v1.0/devkit/docs/PHASE_10A_CLOSE.md`
-- **Companion doc:** `RobotOS_v1.0/devkit/docs/COMMAND_SET_DRAFT.md`
-- **Phase log entry:** `RobotOS_v1.0/devkit/docs/DEVKIT_PROGRESS_PHASE_10.md` §5 (`<a id="phase-10a"></a>`)
+- **Closeout doc:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_10A_CLOSE.md`
+- **Companion doc:** `RobotOS_v1.0/devkit/docs/03_SPECS/COMMAND_SET_DRAFT.md`
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_10.md` §5 (`<a id="phase-10a"></a>`)
 - **Purpose:** Capture product command vocabulary and workload intent in writing before any Phase 10B-class implementation is authorized.
 - **Runtime baseline:** Unchanged — still ends at **Phase 9E-Z** (audit) / **Phase 9E** (implementation, commit `587dab7`). Phase 10A does not introduce or modify any runtime behavior.
 - **Next gate:** User must explicitly select one of (a) a `USER_DECISION_REQUIRED` row from `COMMAND_SET_DRAFT.md` §3 with its open notes answered, (b) a direction-independent supporting phase (Phase 9F demo polish or Phase 9G UART burst characterization), or (c) a continued hold. **No Phase 10B implementation is authorized.**
@@ -121,7 +121,7 @@
 - **Date:** 2026-05-09
 - **Type:** Audit-only. No source, runtime, test, or Kconfig change.
 - **Close status:** `CLOSED`
-- **Full checkpoint:** `RobotOS_v1.0/devkit/docs/PHASE_9EZ_CHECKPOINT.md`
+- **Full checkpoint:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_9EZ_CHECKPOINT.md`
 - **Verdict:** ON_TRACK. Phase 9A–9E stream proven complete. Scheduler DEFER confirmed. UART TX scope frozen (no shell/parser/protocol). Awaiting user product-direction decision (now captured in Phase 10A planning artifacts above).
 
 ---
@@ -169,7 +169,7 @@ No core/, platform/, tests/, CMakeLists.txt, or prj.conf change.
 - **Type:** Audit-only / checkpoint. No firmware, CMake, Kconfig, or runtime change.
 - **Close status:** `CLOSED`
 - **Tag:** `v0.9d-workload-baseline`
-- **Full audit:** `RobotOS_v1.0/devkit/docs/PHASE_9Z_CHECKPOINT.md`
+- **Full audit:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_9Z_CHECKPOINT.md`
 - **Prior phase:** Phase 9D (`8e8c801`), Workload Demo Script & Runbook
 
 **Phase 9Z verdict:** ON_TRACK_WITH_WATCHPOINTS. Core/platform boundaries intact.
@@ -180,10 +180,10 @@ Phase 8A (F407) HOLD/DEFER. Next step: user product-direction decision.
 **Phase 9D delivered:**
 
 - `RobotOS_v1.0/tools/runtime/run_phase9d_demo.ps1` — PowerShell runner that orchestrates: wiring reminder → Phase 6O RTT capture (background job) → boot-settle wait → scripted UART `a`/`s`/`r` send to a configurable COM port → operator prompt for button presses → verification checklist printout. PowerShell 5.1 compatible; no parsing/automation overreach.
-- `RobotOS_v1.0/devkit/docs/WORKLOAD_DEMO_9D.md` — canonical runbook covering hardware setup, build/flash, scripted and semi-scripted demo paths, the canonical demo scenario, full pass/fail criteria (required string patterns, deterministic counter targets, architecture invariants, fault registers), and known caveats (operator timing, line-ending, bounce, etc.).
+- `RobotOS_v1.0/devkit/docs/03_SPECS/WORKLOAD_DEMO_9D.md` — canonical runbook covering hardware setup, build/flash, scripted and semi-scripted demo paths, the canonical demo scenario, full pass/fail criteria (required string patterns, deterministic counter targets, architecture invariants, fault registers), and known caveats (operator timing, line-ending, bounce, etc.).
 - `RobotOS_v1.0/devkit/logs/phase_9D_workload_demo_2026-05-08.txt` — RTT capture from one execution of `run_phase9d_demo.ps1 -ComPort COM5`; 90 s window, 37930 bytes; harness exit 0 with 12 default + Phase 9D-specific patterns.
 - `RobotOS_v1.0/devkit/logs/INDEX.md` — Phase 9D row.
-- `RobotOS_v1.0/devkit/docs/DEVKIT_PROGRESS.md` — Phase 9D section.
+- `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS.md` — Phase 9D section.
 
 **Workload demo anchor:** the runbook + runner are now the canonical entry point for demonstrating the current devkit workload (button + UART → app state machine). Future phases that depend on the Phase 9A-C/9B/9C event-pipeline contract can rerun the same demo to assert no regression.
 
@@ -233,7 +233,7 @@ from Phase 9C. The evidence below is from one execution of
 
 Capture log: `RobotOS_v1.0/devkit/logs/phase_9D_workload_demo_2026-05-08.txt`
 Runner script: `RobotOS_v1.0/tools/runtime/run_phase9d_demo.ps1`
-Runbook: `RobotOS_v1.0/devkit/docs/WORKLOAD_DEMO_9D.md`
+Runbook: `RobotOS_v1.0/devkit/docs/03_SPECS/WORKLOAD_DEMO_9D.md`
 
 **Phase 6Z verification highlights:**
 
@@ -268,7 +268,7 @@ Phase 6K / 6L / 6M and are confirmed by the Phase 6Z RTT capture:
 | File | Change |
 | ---- | ------ |
 | `RobotOS_v1.0/devkit/logs/phase_6Z_rtt_2026-05-07.txt` | New -- raw RTT capture, 60 s, 16,560 bytes |
-| `RobotOS_v1.0/devkit/docs/DEVKIT_PROGRESS.md` | Phase 6K/6L/6M close-status flips; Phase 6Z section appended |
+| `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS.md` | Phase 6K/6L/6M close-status flips; Phase 6Z section appended |
 | `CURRENT_STATE.md` | Last-closed phase advanced to Phase 6M (closed via Phase 6Z) |
 
 No source code, tests, CMake, Kconfig, prj.conf, or runtime behavior

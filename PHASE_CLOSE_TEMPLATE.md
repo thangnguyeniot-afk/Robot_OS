@@ -125,7 +125,7 @@ HFSR:    [0x00000000 / not checked]
 
 | Doc | Updated? | What changed |
 |-----|----------|-------------|
-| `DEVKIT_PROGRESS.md` | Yes / No | [phase section added/updated] |
+| `01_PROGRESS/DEVKIT_PROGRESS.md` | Yes / No | [phase section added/updated] |
 | `core/README.md` | Yes / No | [phase section added] |
 | `platform/README.md` | Yes / No | [phase section added] |
 | `CURRENT_STATE.md` | Yes / No / See section 12 | [last closed phase updated] |

@@ -5,10 +5,10 @@
 - **Section A — IMPLEMENTED + hardware-validated:** `a` (0x61), `s`
   (0x73), `r` (0x72), `?` (0x3f), `x` (0x78) (Phase 9E baseline);
   `v` (0x76) per Phase 10B-v
-  ([`PHASE_10B_V_CLOSE.md`](PHASE_10B_V_CLOSE.md)); `L` (0x4c) per
-  Phase 10B-L ([`PHASE_10B_L_CLOSE.md`](PHASE_10B_L_CLOSE.md)) with
+  ([`PHASE_10B_V_CLOSE.md`](../02_PHASE_CLOSEOUTS/PHASE_10B_V_CLOSE.md)); `L` (0x4c) per
+  Phase 10B-L ([`PHASE_10B_L_CLOSE.md`](../02_PHASE_CLOSEOUTS/PHASE_10B_L_CLOSE.md)) with
   `OPERATOR_VISUAL_CONFIRMED`; `d` (0x64) per Phase 10B-d
-  ([`PHASE_10B_D_CLOSE.md`](PHASE_10B_D_CLOSE.md)).
+  ([`PHASE_10B_D_CLOSE.md`](../02_PHASE_CLOSEOUTS/PHASE_10B_D_CLOSE.md)).
 - **Section B — `USER_DECISION_REQUIRED` (not implemented):** `T`
   (0x54) sensor read; **AND** the ACTIVE disarm widening for `d`
   (currently no-op from ACTIVE; remains
@@ -24,14 +24,14 @@ disarm widening are NOT implemented.**
 
 **Authoritative cross-references:**
 
-- Phase 10A entry (initial planning): [`DEVKIT_PROGRESS_PHASE_10.md`](DEVKIT_PROGRESS_PHASE_10.md) `<a id="phase-10a"></a>`
-- Phase 10C entry (post-10B-d checkpoint): [`DEVKIT_PROGRESS_PHASE_10.md`](DEVKIT_PROGRESS_PHASE_10.md) `<a id="phase-10c"></a>`
-- Phase 10C checkpoint doc: [`PHASE_10C_COMMAND_SET_CHECKPOINT.md`](PHASE_10C_COMMAND_SET_CHECKPOINT.md)
-- Phase 9E-Z direction guard: [`PHASE_9EZ_CHECKPOINT.md`](PHASE_9EZ_CHECKPOINT.md)
-- UART TX scope guard: [`PHASE_9EZ_CHECKPOINT.md §H`](PHASE_9EZ_CHECKPOINT.md)
+- Phase 10A entry (initial planning): [`DEVKIT_PROGRESS_PHASE_10.md`](../01_PROGRESS/DEVKIT_PROGRESS_PHASE_10.md) `<a id="phase-10a"></a>`
+- Phase 10C entry (post-10B-d checkpoint): [`DEVKIT_PROGRESS_PHASE_10.md`](../01_PROGRESS/DEVKIT_PROGRESS_PHASE_10.md) `<a id="phase-10c"></a>`
+- Phase 10C checkpoint doc: [`PHASE_10C_COMMAND_SET_CHECKPOINT.md`](../02_PHASE_CLOSEOUTS/PHASE_10C_COMMAND_SET_CHECKPOINT.md)
+- Phase 9E-Z direction guard: [`PHASE_9EZ_CHECKPOINT.md`](../02_PHASE_CLOSEOUTS/PHASE_9EZ_CHECKPOINT.md)
+- UART TX scope guard: [`PHASE_9EZ_CHECKPOINT.md §H`](../02_PHASE_CLOSEOUTS/PHASE_9EZ_CHECKPOINT.md)
 - Phase history (Phase 9E and earlier):
-  [`DEVKIT_PROGRESS.md`](DEVKIT_PROGRESS.md)
-- Live state snapshot: [`../../../CURRENT_STATE.md`](../../../CURRENT_STATE.md)
+  [`DEVKIT_PROGRESS.md`](../01_PROGRESS/DEVKIT_PROGRESS.md)
+- Live state snapshot: [`../../../CURRENT_STATE.md`](../../../../CURRENT_STATE.md)
 
 ---
 
@@ -70,9 +70,9 @@ listed here for reference only; Phase 10A does not modify them.
 | `?` (0x3f) | Query | any | `uart += 1` only | `STATE state=<S> transitions=<N> button=<N> uart=<N> ignored=<N>\r\n` | same |
 | `r` (0x72) | Reset to IDLE | any (`ACTIVE → IDLE` proven; `ARMED → IDLE` not explicitly shown in Phase 9E transcript) | `* → IDLE`; `transitions += 1` if state changed; `uart += 1` | `OK state=IDLE\r\n` | same |
 | `x` (0x78) | Negative-path probe (unrecognized byte) | any | `uart += 1`; `ignored += 1` | `ERR ignored byte=0x78 state=<S>\r\n` | same |
-| `v` (0x76) | Build/version/info query | any | `uart += 1` only (no transition, no ignored) | `INFO phase=10b-v app=devkit board=<CONFIG_BOARD> tick_ms=<DEVKIT_TICK_MS> uart=minimal\r\n` (77 B on `stm32f411e_disco` at `DEVKIT_TICK_MS=500`) | **Phase 10B-v** — hardware-validated 2026-05-11; see [`PHASE_10B_V_CLOSE.md`](PHASE_10B_V_CLOSE.md) and `phase_10B_v_{host,rtt}_2026-05-11.txt`. Promoted from Section B at Phase 10B-v close. |
-| `L` (0x4c) | LED physical-effect smoke (single GPIO toggle) | any | `uart += 1` only (no transition, no ignored). Side effect: one `devkit_status_led_toggle()` call from thread-context UART handler. | `OK led=toggle state=<S>\r\n` (26 B) | **Phase 10B-L** — hardware-validated 2026-05-11 (electrical/RTT evidence + `OPERATOR_VISUAL_CONFIRMED` per operator-witnessed re-run); see [`PHASE_10B_L_CLOSE.md`](PHASE_10B_L_CLOSE.md) and `phase_10B_L_{host,rtt}_2026-05-11.txt` plus `phase_10B_L_visual_{host,rtt}_2026-05-11.txt`. Promoted from Section B at Phase 10B-L close. |
-| `d` (0x64) | Explicit disarm | `ARMED` (transition); `IDLE` or `ACTIVE` (no-op) | ARMED → IDLE: `transitions += 1`; `uart += 1`. IDLE / ACTIVE: `uart += 1` only (no transition, no ignored). `d` does not replace or alter `r`. | `OK disarm state=IDLE\r\n` (22 B) on ARMED→IDLE; `OK disarm no-op state=<S>\r\n` (28 B IDLE / 30 B ACTIVE) otherwise. | **Phase 10B-d** — hardware-validated 2026-05-11; see [`PHASE_10B_D_CLOSE.md`](PHASE_10B_D_CLOSE.md) and `phase_10B_d_{host,rtt}_2026-05-11.txt`. Promoted from Section B at Phase 10B-d close. ACTIVE disarm remains `USER_DECISION_REQUIRED_ACTIVE_DISARM`; current ACTIVE behavior is a recognized no-op. |
+| `v` (0x76) | Build/version/info query | any | `uart += 1` only (no transition, no ignored) | `INFO phase=10b-v app=devkit board=<CONFIG_BOARD> tick_ms=<DEVKIT_TICK_MS> uart=minimal\r\n` (77 B on `stm32f411e_disco` at `DEVKIT_TICK_MS=500`) | **Phase 10B-v** — hardware-validated 2026-05-11; see [`PHASE_10B_V_CLOSE.md`](../02_PHASE_CLOSEOUTS/PHASE_10B_V_CLOSE.md) and `phase_10B_v_{host,rtt}_2026-05-11.txt`. Promoted from Section B at Phase 10B-v close. |
+| `L` (0x4c) | LED physical-effect smoke (single GPIO toggle) | any | `uart += 1` only (no transition, no ignored). Side effect: one `devkit_status_led_toggle()` call from thread-context UART handler. | `OK led=toggle state=<S>\r\n` (26 B) | **Phase 10B-L** — hardware-validated 2026-05-11 (electrical/RTT evidence + `OPERATOR_VISUAL_CONFIRMED` per operator-witnessed re-run); see [`PHASE_10B_L_CLOSE.md`](../02_PHASE_CLOSEOUTS/PHASE_10B_L_CLOSE.md) and `phase_10B_L_{host,rtt}_2026-05-11.txt` plus `phase_10B_L_visual_{host,rtt}_2026-05-11.txt`. Promoted from Section B at Phase 10B-L close. |
+| `d` (0x64) | Explicit disarm | `ARMED` (transition); `IDLE` or `ACTIVE` (no-op) | ARMED → IDLE: `transitions += 1`; `uart += 1`. IDLE / ACTIVE: `uart += 1` only (no transition, no ignored). `d` does not replace or alter `r`. | `OK disarm state=IDLE\r\n` (22 B) on ARMED→IDLE; `OK disarm no-op state=<S>\r\n` (28 B IDLE / 30 B ACTIVE) otherwise. | **Phase 10B-d** — hardware-validated 2026-05-11; see [`PHASE_10B_D_CLOSE.md`](../02_PHASE_CLOSEOUTS/PHASE_10B_D_CLOSE.md) and `phase_10B_d_{host,rtt}_2026-05-11.txt`. Promoted from Section B at Phase 10B-d close. ACTIVE disarm remains `USER_DECISION_REQUIRED_ACTIVE_DISARM`; current ACTIVE behavior is a recognized no-op. |
 
 Notes:
 
@@ -105,7 +105,7 @@ Section B at Phase 10C contains:
   from ACTIVE should *transition* to IDLE is recorded as
   `USER_DECISION_REQUIRED_ACTIVE_DISARM` and tracked in the `d` row of
   Section A and in
-  [`PHASE_10C_COMMAND_SET_CHECKPOINT.md §5.1`](PHASE_10C_COMMAND_SET_CHECKPOINT.md).
+  [`PHASE_10C_COMMAND_SET_CHECKPOINT.md §5.1`](../02_PHASE_CLOSEOUTS/PHASE_10C_COMMAND_SET_CHECKPOINT.md).
   Phase 10C does **not** widen ACTIVE disarm; the current ACTIVE no-op
   behavior is preserved pending an explicit user decision.
 
@@ -116,9 +116,9 @@ traceability and must not be re-edited as if they were live drafts.
 
 | Byte | Human meaning | Precondition | Proposed side effect | Proposed response | Phase 10B? | New driver/config? | Scope-guard violation? | `USER_DECISION_REQUIRED` notes |
 |---|---|---|---|---|---|---|---|---|
-| ~~`d` (0x64)~~ | **PROMOTED to Section A** — implemented at Phase 10B-d, 2026-05-11 | — | — | `OK disarm state=IDLE\r\n` (ARMED → IDLE) / `OK disarm no-op state=<S>\r\n` (IDLE or ACTIVE) | **DONE** | No | No | See [`PHASE_10B_D_CLOSE.md`](PHASE_10B_D_CLOSE.md). `d` from ARMED transitions to IDLE; `d` from IDLE is a recognized no-op (not ignored — distinct from `r`); `d` from ACTIVE remains `USER_DECISION_REQUIRED_ACTIVE_DISARM` and is treated as a recognized no-op for now. `r` is preserved zero-diff and remains the canonical reset path. |
-| ~~`v` (0x76)~~ | **PROMOTED to Section A** — implemented at Phase 10B-v, 2026-05-11 | — | — | `INFO phase=10b-v app=devkit board=<CONFIG_BOARD> tick_ms=<DEVKIT_TICK_MS> uart=minimal\r\n` | **DONE** | No | No | See [`PHASE_10B_V_CLOSE.md`](PHASE_10B_V_CLOSE.md). Phase tag `10b-v` is the closeout identifier; the response format may be reviewed in a future planning phase but is **frozen** as published baseline. |
-| ~~`L` (0x4c)~~ | **PROMOTED to Section A** — implemented at Phase 10B-L, 2026-05-11 | — | — | `OK led=toggle state=<S>\r\n` | **DONE** | No (existing `devkit_status_led_toggle()` API reused; no new LED function) | No | See [`PHASE_10B_L_CLOSE.md`](PHASE_10B_L_CLOSE.md). Physical effect: single GPIO toggle interleaved with the existing 500 ms heartbeat. LED state is **not** exposed in `?` (existing toggle is stateless). Visual LED observation is `PHYSICAL_OBSERVATION_AMBIGUOUS` pending operator-witnessed re-run. |
+| ~~`d` (0x64)~~ | **PROMOTED to Section A** — implemented at Phase 10B-d, 2026-05-11 | — | — | `OK disarm state=IDLE\r\n` (ARMED → IDLE) / `OK disarm no-op state=<S>\r\n` (IDLE or ACTIVE) | **DONE** | No | No | See [`PHASE_10B_D_CLOSE.md`](../02_PHASE_CLOSEOUTS/PHASE_10B_D_CLOSE.md). `d` from ARMED transitions to IDLE; `d` from IDLE is a recognized no-op (not ignored — distinct from `r`); `d` from ACTIVE remains `USER_DECISION_REQUIRED_ACTIVE_DISARM` and is treated as a recognized no-op for now. `r` is preserved zero-diff and remains the canonical reset path. |
+| ~~`v` (0x76)~~ | **PROMOTED to Section A** — implemented at Phase 10B-v, 2026-05-11 | — | — | `INFO phase=10b-v app=devkit board=<CONFIG_BOARD> tick_ms=<DEVKIT_TICK_MS> uart=minimal\r\n` | **DONE** | No | No | See [`PHASE_10B_V_CLOSE.md`](../02_PHASE_CLOSEOUTS/PHASE_10B_V_CLOSE.md). Phase tag `10b-v` is the closeout identifier; the response format may be reviewed in a future planning phase but is **frozen** as published baseline. |
+| ~~`L` (0x4c)~~ | **PROMOTED to Section A** — implemented at Phase 10B-L, 2026-05-11 | — | — | `OK led=toggle state=<S>\r\n` | **DONE** | No (existing `devkit_status_led_toggle()` API reused; no new LED function) | No | See [`PHASE_10B_L_CLOSE.md`](../02_PHASE_CLOSEOUTS/PHASE_10B_L_CLOSE.md). Physical effect: single GPIO toggle interleaved with the existing 500 ms heartbeat. LED state is **not** exposed in `?` (existing toggle is stateless). Visual LED observation is `PHYSICAL_OBSERVATION_AMBIGUOUS` pending operator-witnessed re-run. |
 | `T` (0x54) | DRAFT — Onboard sensor read placeholder (e.g. core temperature) | any | Sensor read; no actuator change | `TEMP <value>\r\n` (or `ERR sensor unavailable\r\n`); units / precision / sensor identity `USER_DECISION_REQUIRED` | Yes | Yes — sensor driver dependency; `prj.conf` flag(s); Zephyr sensor API path | Conditional — fixed-buffer compliance must be verified for the chosen format | Which sensor (STM32 internal temp? external sensor on the dev board? new I²C/SPI part?); whether a driver exists; response format. |
 
 DRAFT rows that were considered and intentionally **omitted** from
@@ -164,18 +164,18 @@ evidence), RTT counter table, host transcript table, architecture-boundary
 preservation audit, scope-guard restated, and a dedicated closeout document.
 
 1. ~~**Phase 10B-`v` (build query)**~~ — **IMPLEMENTED 2026-05-11**;
-   see [`PHASE_10B_V_CLOSE.md`](PHASE_10B_V_CLOSE.md). Hardware-validated
+   see [`PHASE_10B_V_CLOSE.md`](../02_PHASE_CLOSEOUTS/PHASE_10B_V_CLOSE.md). Hardware-validated
    on STM32F411E-DISCO; 77-byte fixed response; no parser/registry; no
    driver dependency; no state-change side effect; `ignored` does not
    increment.
 2. ~~**Phase 10B-`L` (LED toggle)**~~ — **IMPLEMENTED 2026-05-11**;
-   see [`PHASE_10B_L_CLOSE.md`](PHASE_10B_L_CLOSE.md). Hardware-validated
+   see [`PHASE_10B_L_CLOSE.md`](../02_PHASE_CLOSEOUTS/PHASE_10B_L_CLOSE.md). Hardware-validated
    electrical/RTT evidence on STM32F411E-DISCO + `OPERATOR_VISUAL_CONFIRMED`
    per operator-witnessed re-run; 26-byte fixed response; existing
    `devkit_status_led_toggle()` reused (no new LED API); heartbeat
    semantics preserved.
 3. ~~**Phase 10B-`d` (explicit disarm)**~~ — **IMPLEMENTED 2026-05-11**;
-   see [`PHASE_10B_D_CLOSE.md`](PHASE_10B_D_CLOSE.md). Hardware-validated
+   see [`PHASE_10B_D_CLOSE.md`](../02_PHASE_CLOSEOUTS/PHASE_10B_D_CLOSE.md). Hardware-validated
    on STM32F411E-DISCO; 22-byte (transition) / 28-30-byte (no-op) fixed
    response; no parser/registry; no driver dependency. ARMED → IDLE
    transition; IDLE no-op (recognized, not ignored — distinct from `r`).

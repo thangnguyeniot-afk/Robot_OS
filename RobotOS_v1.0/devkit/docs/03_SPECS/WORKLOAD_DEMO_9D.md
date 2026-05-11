@@ -229,6 +229,6 @@ the runbook.
 
 - Capture harness: [`tools/runtime/capture_devkit_rtt.ps1`](../../tools/runtime/capture_devkit_rtt.ps1) — Phase 6O.
 - Telemetry field reference: [`devkit/docs/TELEMETRY_REFERENCE.md`](TELEMETRY_REFERENCE.md).
-- Phase history (full audit trail): [`devkit/docs/DEVKIT_PROGRESS.md`](DEVKIT_PROGRESS.md) Phase 9A-A through 9D.
-- Per-phase RTT logs: [`devkit/logs/INDEX.md`](../logs/INDEX.md).
-- Lightweight startup snapshot: [`CURRENT_STATE.md`](../../../CURRENT_STATE.md).
+- Phase history (full audit trail): [`devkit/docs/DEVKIT_PROGRESS.md`](../01_PROGRESS/DEVKIT_PROGRESS.md) Phase 9A-A through 9D.
+- Per-phase RTT logs: [`devkit/logs/INDEX.md`](../../logs/INDEX.md).
+- Lightweight startup snapshot: [`CURRENT_STATE.md`](../../../../CURRENT_STATE.md).

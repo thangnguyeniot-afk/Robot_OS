@@ -704,7 +704,7 @@ contract, 52 cases), 6J-C/D (snapshot coherence + peak, 192 cases). Total: 19 su
 
 `ROBOTOS_CORE_MAX_EVENTS_PER_TICK` and all scheduler/queue semantics unchanged.
 
-Full phase narrative: `devkit/docs/DEVKIT_PROGRESS.md` Phase 6J section.
+Full phase narrative: `devkit/docs/01_PROGRESS/DEVKIT_PROGRESS.md` Phase 6J section.
 
 ---
 
@@ -720,8 +720,8 @@ API. It does not participate in scheduling, admission, dispatch, throttle, or
 retry decisions. No new mutable state was added to `core/`.
 
 `ROBOTOS_OBS` log cadence and field semantics:
-→ `devkit/docs/TELEMETRY_REFERENCE.md` section ROBOTOS_OBS
-→ `devkit/docs/DEVKIT_PROGRESS.md` Phase 6K
+→ `devkit/docs/03_SPECS/TELEMETRY_REFERENCE.md` section ROBOTOS_OBS
+→ `devkit/docs/01_PROGRESS/DEVKIT_PROGRESS.md` Phase 6K
 
 RTT confirmed by Phase 6Z (2026-05-07): ROBOTOS_OBS present at baseline and
 12 periodic emissions over 60 s, all fields coherent with snapshot invariants.
@@ -744,7 +744,7 @@ interface extension. No fault recovery, no reset, no scheduler influence.
 RTT confirmed by Phase 6Z: `cfsr=0x00000000 hfsr=0x00000000 active=0 context=none`
 across all 13 fault emissions (1 baseline + 12 periodic) in the 60 s capture.
 
-Field details: `devkit/docs/TELEMETRY_REFERENCE.md` section ROBOTOS_FAULT.
+Field details: `devkit/docs/03_SPECS/TELEMETRY_REFERENCE.md` section ROBOTOS_FAULT.
 
 ---
 
@@ -768,7 +768,7 @@ RTT confirmed by Phase 6Z: `attempted` grew exactly +5 per 10 ticks over 60 s;
 `ok=attempted`, `dropped=0` throughout; cross-check at ticks=120 confirmed
 `accepted(77) = Phase-6I-ok(17) + Phase-6M-ok(60)`.
 
-Field details: `devkit/docs/TELEMETRY_REFERENCE.md` section ROBOTOS_PROD.
+Field details: `devkit/docs/03_SPECS/TELEMETRY_REFERENCE.md` section ROBOTOS_PROD.
 
 ---
 
@@ -791,4 +791,4 @@ Core invariants confirmed by Phase 6Z hardware evidence:
 - All CFSR/HFSR readings zero for the full 60 s capture.
 
 RTT evidence log: `devkit/logs/phase_6Z_rtt_2026-05-07.txt`
-Full Phase 6Z narrative: `devkit/docs/DEVKIT_PROGRESS.md` Phase 6Z section.
+Full Phase 6Z narrative: `devkit/docs/01_PROGRESS/DEVKIT_PROGRESS.md` Phase 6Z section.

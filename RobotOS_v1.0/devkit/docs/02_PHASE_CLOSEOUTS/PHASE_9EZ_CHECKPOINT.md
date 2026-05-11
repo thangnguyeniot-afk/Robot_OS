@@ -476,10 +476,10 @@ No source, test, runtime, CMake, Kconfig, or evidence log change in this commit.
 ## Cross-references
 
 - Phase 9Z workload checkpoint: [`PHASE_9Z_CHECKPOINT.md`](PHASE_9Z_CHECKPOINT.md)
-- Phase history (full): [`DEVKIT_PROGRESS.md`](DEVKIT_PROGRESS.md)
-- Phase 9E RTT log: [`../logs/phase_9E_uart_tx_response_rtt_2026-05-09.txt`](../logs/phase_9E_uart_tx_response_rtt_2026-05-09.txt)
-- Phase 9E host transcript: [`../logs/phase_9E_uart_tx_response_host_2026-05-09.txt`](../logs/phase_9E_uart_tx_response_host_2026-05-09.txt)
-- Workload demo runbook: [`WORKLOAD_DEMO_9D.md`](WORKLOAD_DEMO_9D.md)
-- Telemetry reference: [`TELEMETRY_REFERENCE.md`](TELEMETRY_REFERENCE.md)
-- Live phase state: [`../../../CURRENT_STATE.md`](../../../CURRENT_STATE.md)
+- Phase history (full): [`DEVKIT_PROGRESS.md`](../01_PROGRESS/DEVKIT_PROGRESS.md)
+- Phase 9E RTT log: [`../logs/phase_9E_uart_tx_response_rtt_2026-05-09.txt`](../../logs/phase_9E_uart_tx_response_rtt_2026-05-09.txt)
+- Phase 9E host transcript: [`../logs/phase_9E_uart_tx_response_host_2026-05-09.txt`](../../logs/phase_9E_uart_tx_response_host_2026-05-09.txt)
+- Workload demo runbook: [`WORKLOAD_DEMO_9D.md`](../03_SPECS/WORKLOAD_DEMO_9D.md)
+- Telemetry reference: [`TELEMETRY_REFERENCE.md`](../03_SPECS/TELEMETRY_REFERENCE.md)
+- Live phase state: [`../../../CURRENT_STATE.md`](../../../../CURRENT_STATE.md)
 - Runtime tools: [`../../tools/runtime/README.md`](../../tools/runtime/README.md)

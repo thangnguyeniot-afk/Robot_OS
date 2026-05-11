@@ -12,9 +12,9 @@ canonical reset path).
 **Prior runtime baseline:** Phase 10B-L (`a96ce17`).
 **Implementation commit:** `125779c` (`feat: add Phase 10B-d disarm command`)
 **Companion docs:**
-[`DEVKIT_PROGRESS_PHASE_10.md`](DEVKIT_PROGRESS_PHASE_10.md) Phase 10B-d
+[`DEVKIT_PROGRESS_PHASE_10.md`](../01_PROGRESS/DEVKIT_PROGRESS_PHASE_10.md) Phase 10B-d
 entry (`<a id="phase-10b-d"></a>`),
-[`COMMAND_SET_DRAFT.md`](COMMAND_SET_DRAFT.md) Section A (the `d` row
+[`COMMAND_SET_DRAFT.md`](../03_SPECS/COMMAND_SET_DRAFT.md) Section A (the `d` row
 was promoted from draft Section B in this close).
 
 ---
@@ -44,7 +44,7 @@ redundant IDLE reset. `T` remains `USER_DECISION_REQUIRED` in
 ## B. Confirmed existing `r` behavior
 
 Read from
-[`devkit_app_state.c:141-149`](../src/devkit_app_state.c#L141-L149)
+[`devkit_app_state.c:141-149`](../../src/devkit_app_state.c#L141-L149)
 before any change was made:
 
 ```c
@@ -264,7 +264,7 @@ Default arguments applied: `Sequence=@('d','a','d','?')`,
 ## J. Host transcript
 
 Saved to
-[`phase_10B_d_host_2026-05-11.txt`](../logs/phase_10B_d_host_2026-05-11.txt)
+[`phase_10B_d_host_2026-05-11.txt`](../../logs/phase_10B_d_host_2026-05-11.txt)
 (401 B):
 
 ```
@@ -298,7 +298,7 @@ Notable verifications from the transcript:
 ## K. RTT counter summary
 
 Saved to
-[`phase_10B_d_rtt_2026-05-11.txt`](../logs/phase_10B_d_rtt_2026-05-11.txt)
+[`phase_10B_d_rtt_2026-05-11.txt`](../../logs/phase_10B_d_rtt_2026-05-11.txt)
 (22623 B, 60.4 s capture, 13 OBS/FAULT/PROD periodic triplets):
 
 ### K.1 Per-event RTT lines (in send order)

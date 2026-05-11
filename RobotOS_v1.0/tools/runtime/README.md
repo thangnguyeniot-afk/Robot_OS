@@ -39,7 +39,7 @@ rtt server start 9090 0
 
 The `reset run` command starts the firmware cleanly post-flash, mitigating the
 known `POST_FLASH_AUTOSTART` unreliable-auto-start issue on STM32F411E-DISCO
-(Phase 3B Open Issue in `devkit/docs/DEVKIT_PROGRESS.md` — root cause remains
+(Phase 3B Open Issue in `devkit/docs/01_PROGRESS/DEVKIT_PROGRESS.md` — root cause remains
 OPEN; this harness is workflow mitigation, not a firmware/runner/hardware fix).
 Plain `west flash` alone remains insufficient as runtime-start evidence; this
 harness or manual RESET is required.

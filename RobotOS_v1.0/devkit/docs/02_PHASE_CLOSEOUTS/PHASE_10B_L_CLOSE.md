@@ -12,9 +12,9 @@ change.
 **Branch:** master
 **Prior runtime baseline:** Phase 10B-v (`d8346db`).
 **Companion docs:**
-[`DEVKIT_PROGRESS_PHASE_10.md`](DEVKIT_PROGRESS_PHASE_10.md) Phase 10B-L
+[`DEVKIT_PROGRESS_PHASE_10.md`](../01_PROGRESS/DEVKIT_PROGRESS_PHASE_10.md) Phase 10B-L
 entry (`<a id="phase-10b-l"></a>`),
-[`COMMAND_SET_DRAFT.md`](COMMAND_SET_DRAFT.md) Section A (the `L` row was
+[`COMMAND_SET_DRAFT.md`](../03_SPECS/COMMAND_SET_DRAFT.md) Section A (the `L` row was
 promoted from draft Section B in this commit).
 
 ---
@@ -394,10 +394,10 @@ Not recommended:
 - Phase 9G burst characterization closeout: [`PHASE_9G_CLOSE.md`](PHASE_9G_CLOSE.md)
 - Phase 10A planning closeout: [`PHASE_10A_CLOSE.md`](PHASE_10A_CLOSE.md)
 - Phase 10B-v closeout: [`PHASE_10B_V_CLOSE.md`](PHASE_10B_V_CLOSE.md)
-- DRAFT command vocabulary: [`COMMAND_SET_DRAFT.md`](COMMAND_SET_DRAFT.md)
-- Phase log: [`DEVKIT_PROGRESS_PHASE_10.md`](DEVKIT_PROGRESS_PHASE_10.md)
-- Live state snapshot: [`../../../CURRENT_STATE.md`](../../../CURRENT_STATE.md)
-- Telemetry reference: [`TELEMETRY_REFERENCE.md`](TELEMETRY_REFERENCE.md)
+- DRAFT command vocabulary: [`COMMAND_SET_DRAFT.md`](../03_SPECS/COMMAND_SET_DRAFT.md)
+- Phase log: [`DEVKIT_PROGRESS_PHASE_10.md`](../01_PROGRESS/DEVKIT_PROGRESS_PHASE_10.md)
+- Live state snapshot: [`../../../CURRENT_STATE.md`](../../../../CURRENT_STATE.md)
+- Telemetry reference: [`TELEMETRY_REFERENCE.md`](../03_SPECS/TELEMETRY_REFERENCE.md)
 - Runtime tools: [`../../tools/runtime/README.md`](../../tools/runtime/README.md)
 
 ---
@@ -444,9 +444,9 @@ window.
 ### P.3 Evidence artifacts
 
 - Host transcript:
-  [`../logs/phase_10B_L_visual_host_2026-05-11.txt`](../logs/phase_10B_L_visual_host_2026-05-11.txt)
+  [`../logs/phase_10B_L_visual_host_2026-05-11.txt`](../../logs/phase_10B_L_visual_host_2026-05-11.txt)
 - RTT log:
-  [`../logs/phase_10B_L_visual_rtt_2026-05-11.txt`](../logs/phase_10B_L_visual_rtt_2026-05-11.txt)
+  [`../logs/phase_10B_L_visual_rtt_2026-05-11.txt`](../../logs/phase_10B_L_visual_rtt_2026-05-11.txt)
   (22744 B, 60.4 s)
 
 ### P.4 Host transcript (visual re-run)

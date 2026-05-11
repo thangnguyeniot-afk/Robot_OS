@@ -7,8 +7,8 @@
 **Prior runtime checkpoint:** Phase 9E-Z (`30bae27`). Runtime baseline ends
 at Phase 9E (`587dab7`).
 **Companion docs:**
-[`DEVKIT_PROGRESS_PHASE_10.md`](DEVKIT_PROGRESS_PHASE_10.md) §5 (`<a id="phase-10a"></a>`),
-[`COMMAND_SET_DRAFT.md`](COMMAND_SET_DRAFT.md).
+[`DEVKIT_PROGRESS_PHASE_10.md`](../01_PROGRESS/DEVKIT_PROGRESS_PHASE_10.md) §5 (`<a id="phase-10a"></a>`),
+[`COMMAND_SET_DRAFT.md`](../03_SPECS/COMMAND_SET_DRAFT.md).
 
 ---
 
@@ -50,7 +50,7 @@ arguments, ACK/sequence protocols, streaming UART telemetry, command
 registry, responses larger than 96 bytes, commands that touch `core/` or
 `platform/`, ISR-context TX, authentication, fault-injection.
 
-See [`COMMAND_SET_DRAFT.md`](COMMAND_SET_DRAFT.md) for the full rationale.
+See [`COMMAND_SET_DRAFT.md`](../03_SPECS/COMMAND_SET_DRAFT.md) for the full rationale.
 
 ---
 
@@ -163,9 +163,9 @@ Phase 10A does not authorize any of these by itself.
 ## H. Cross-references
 
 - Phase 9E-Z direction guard: [`PHASE_9EZ_CHECKPOINT.md`](PHASE_9EZ_CHECKPOINT.md)
-- Phase history (Phase 9E and earlier): [`DEVKIT_PROGRESS.md`](DEVKIT_PROGRESS.md)
-- Phase 10+ log: [`DEVKIT_PROGRESS_PHASE_10.md`](DEVKIT_PROGRESS_PHASE_10.md)
-- DRAFT command vocabulary: [`COMMAND_SET_DRAFT.md`](COMMAND_SET_DRAFT.md)
-- Live state snapshot: [`../../../CURRENT_STATE.md`](../../../CURRENT_STATE.md)
-- Telemetry reference: [`TELEMETRY_REFERENCE.md`](TELEMETRY_REFERENCE.md)
+- Phase history (Phase 9E and earlier): [`DEVKIT_PROGRESS.md`](../01_PROGRESS/DEVKIT_PROGRESS.md)
+- Phase 10+ log: [`DEVKIT_PROGRESS_PHASE_10.md`](../01_PROGRESS/DEVKIT_PROGRESS_PHASE_10.md)
+- DRAFT command vocabulary: [`COMMAND_SET_DRAFT.md`](../03_SPECS/COMMAND_SET_DRAFT.md)
+- Live state snapshot: [`../../../CURRENT_STATE.md`](../../../../CURRENT_STATE.md)
+- Telemetry reference: [`TELEMETRY_REFERENCE.md`](../03_SPECS/TELEMETRY_REFERENCE.md)
 - Runtime tools: [`../../tools/runtime/README.md`](../../tools/runtime/README.md)

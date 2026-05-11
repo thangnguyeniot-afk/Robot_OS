@@ -271,8 +271,8 @@ further implementation begins.
 
 ## Cross-references
 
-- Phase history: [`DEVKIT_PROGRESS.md`](DEVKIT_PROGRESS.md) Phases 9A-A through 9D
-- Workload demo runbook: [`WORKLOAD_DEMO_9D.md`](WORKLOAD_DEMO_9D.md)
-- RTT log index: [`../logs/INDEX.md`](../logs/INDEX.md)
-- Live phase state: [`../../../CURRENT_STATE.md`](../../../CURRENT_STATE.md)
-- Telemetry reference: [`TELEMETRY_REFERENCE.md`](TELEMETRY_REFERENCE.md)
+- Phase history: [`DEVKIT_PROGRESS.md`](../01_PROGRESS/DEVKIT_PROGRESS.md) Phases 9A-A through 9D
+- Workload demo runbook: [`WORKLOAD_DEMO_9D.md`](../03_SPECS/WORKLOAD_DEMO_9D.md)
+- RTT log index: [`../logs/INDEX.md`](../../logs/INDEX.md)
+- Live phase state: [`../../../CURRENT_STATE.md`](../../../../CURRENT_STATE.md)
+- Telemetry reference: [`TELEMETRY_REFERENCE.md`](../03_SPECS/TELEMETRY_REFERENCE.md)

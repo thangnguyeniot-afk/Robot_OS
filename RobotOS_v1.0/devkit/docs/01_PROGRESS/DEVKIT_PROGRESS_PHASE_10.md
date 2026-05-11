@@ -120,8 +120,8 @@ or script change.
 **Prior runtime checkpoint:** Phase 9E-Z (`30bae27`); runtime baseline ends at
 Phase 9E (`587dab7`).
 **Companion docs:**
-[`COMMAND_SET_DRAFT.md`](COMMAND_SET_DRAFT.md),
-[`PHASE_10A_CLOSE.md`](PHASE_10A_CLOSE.md).
+[`COMMAND_SET_DRAFT.md`](../03_SPECS/COMMAND_SET_DRAFT.md),
+[`PHASE_10A_CLOSE.md`](../02_PHASE_CLOSEOUTS/PHASE_10A_CLOSE.md).
 
 ### 5.1 Purpose
 
@@ -327,10 +327,10 @@ the new sibling harness) change.
 preference to leave the historical master untouched; §4 rule 6 (non-linear
 edits explicit) — flagged with `‡` in the Phase Index and the
 `phase-9g-late` anchor id.
-**Companion closeout:** [`PHASE_9G_CLOSE.md`](PHASE_9G_CLOSE.md).
+**Companion closeout:** [`PHASE_9G_CLOSE.md`](../02_PHASE_CLOSEOUTS/PHASE_9G_CLOSE.md).
 **Evidence logs:**
-[`../logs/phase_9G_uart_burst_host_2026-05-11.txt`](../logs/phase_9G_uart_burst_host_2026-05-11.txt),
-[`../logs/phase_9G_uart_burst_rtt_2026-05-11.txt`](../logs/phase_9G_uart_burst_rtt_2026-05-11.txt).
+[`../logs/phase_9G_uart_burst_host_2026-05-11.txt`](../../logs/phase_9G_uart_burst_host_2026-05-11.txt),
+[`../logs/phase_9G_uart_burst_rtt_2026-05-11.txt`](../../logs/phase_9G_uart_burst_rtt_2026-05-11.txt).
 
 ### 9G.1 Purpose
 
@@ -360,7 +360,7 @@ authorize Phase 10B implementation.
     anomalies are observed).
   - Pure ASCII (encoding-safe for PowerShell `ParseFile`/`PSParser` on
     Windows code-page hosts).
-- **New docs:** [`PHASE_9G_CLOSE.md`](PHASE_9G_CLOSE.md) closeout document
+- **New docs:** [`PHASE_9G_CLOSE.md`](../02_PHASE_CLOSEOUTS/PHASE_9G_CLOSE.md) closeout document
   (now `CLOSED_WITH_HARDWARE_EVIDENCE` after the 2026-05-11 hardware run).
 - **Existing scripts:** untouched (`capture_devkit_rtt.ps1`,
   `run_phase9d_demo.ps1`, `run_phase9e_uart_response_demo.ps1`,
@@ -394,7 +394,7 @@ in order; 22929-byte RTT log over 60.7 s.
 | CFSR / HFSR | 0x00000000 (13×) | 0x00000000 (13×) |
 | Phase 6M producer (attempted/ok at ticks=120) | 60 / 60 | 60 / 60 |
 
-See [`PHASE_9G_CLOSE.md`](PHASE_9G_CLOSE.md) sections D, E, F, H for the
+See [`PHASE_9G_CLOSE.md`](../02_PHASE_CLOSEOUTS/PHASE_9G_CLOSE.md) sections D, E, F, H for the
 full evidence record and finding classification.
 
 ### 9G.4 What this entry does not do
@@ -439,10 +439,10 @@ No core, platform, scheduler, queue, event-type, test, CMake, Zephyr,
 board, or prj.conf change.
 **Date opened/closed:** 2026-05-11 (same-day hardware run).
 **Branch:** master.
-**Companion closeout:** [`PHASE_10B_V_CLOSE.md`](PHASE_10B_V_CLOSE.md).
+**Companion closeout:** [`PHASE_10B_V_CLOSE.md`](../02_PHASE_CLOSEOUTS/PHASE_10B_V_CLOSE.md).
 **Evidence logs:**
-[`../logs/phase_10B_v_host_2026-05-11.txt`](../logs/phase_10B_v_host_2026-05-11.txt),
-[`../logs/phase_10B_v_rtt_2026-05-11.txt`](../logs/phase_10B_v_rtt_2026-05-11.txt).
+[`../logs/phase_10B_v_host_2026-05-11.txt`](../../logs/phase_10B_v_host_2026-05-11.txt),
+[`../logs/phase_10B_v_rtt_2026-05-11.txt`](../../logs/phase_10B_v_rtt_2026-05-11.txt).
 
 ### 10B-v.1 Command
 
@@ -521,13 +521,13 @@ core, platform, scheduler, queue, event-type, test, CMake, Zephyr,
 board, or `prj.conf` change.
 **Date opened/closed:** 2026-05-11 (same-day hardware run).
 **Branch:** master.
-**Companion closeout:** [`PHASE_10B_L_CLOSE.md`](PHASE_10B_L_CLOSE.md).
+**Companion closeout:** [`PHASE_10B_L_CLOSE.md`](../02_PHASE_CLOSEOUTS/PHASE_10B_L_CLOSE.md).
 **Evidence logs:**
-[`../logs/phase_10B_L_host_2026-05-11.txt`](../logs/phase_10B_L_host_2026-05-11.txt),
-[`../logs/phase_10B_L_rtt_2026-05-11.txt`](../logs/phase_10B_L_rtt_2026-05-11.txt)
+[`../logs/phase_10B_L_host_2026-05-11.txt`](../../logs/phase_10B_L_host_2026-05-11.txt),
+[`../logs/phase_10B_L_rtt_2026-05-11.txt`](../../logs/phase_10B_L_rtt_2026-05-11.txt)
 (autonomous run, electrical/RTT);
-[`../logs/phase_10B_L_visual_host_2026-05-11.txt`](../logs/phase_10B_L_visual_host_2026-05-11.txt),
-[`../logs/phase_10B_L_visual_rtt_2026-05-11.txt`](../logs/phase_10B_L_visual_rtt_2026-05-11.txt)
+[`../logs/phase_10B_L_visual_host_2026-05-11.txt`](../../logs/phase_10B_L_visual_host_2026-05-11.txt),
+[`../logs/phase_10B_L_visual_rtt_2026-05-11.txt`](../../logs/phase_10B_L_visual_rtt_2026-05-11.txt)
 (operator-witnessed re-run; visual LED confirmed).
 
 ### 10B-L.1 Command
@@ -603,11 +603,11 @@ between the heartbeat blink and the `L` toggle.
 **Date opened/closed:** 2026-05-11 (same-day implement + hardware validation)
 **Implementation commit:** `125779c` (`feat: add Phase 10B-d disarm command`)
 **Prior runtime baseline:** Phase 10B-L (`a96ce17`).
-**Closeout doc:** [`PHASE_10B_D_CLOSE.md`](PHASE_10B_D_CLOSE.md).
+**Closeout doc:** [`PHASE_10B_D_CLOSE.md`](../02_PHASE_CLOSEOUTS/PHASE_10B_D_CLOSE.md).
 **Evidence:**
-[`phase_10B_d_host_2026-05-11.txt`](../logs/phase_10B_d_host_2026-05-11.txt)
+[`phase_10B_d_host_2026-05-11.txt`](../../logs/phase_10B_d_host_2026-05-11.txt)
 (401 B host transcript) +
-[`phase_10B_d_rtt_2026-05-11.txt`](../logs/phase_10B_d_rtt_2026-05-11.txt)
+[`phase_10B_d_rtt_2026-05-11.txt`](../../logs/phase_10B_d_rtt_2026-05-11.txt)
 (22623 B, 60.4 s RTT capture).
 
 ### 10B-d.1 Type
@@ -695,7 +695,7 @@ the existing guard plus a supplemental validation run with sequence
 ### 10B-d.7 Scope-guard restatement
 
 All 12 UART TX scope-guard constraints from
-[`PHASE_9EZ_CHECKPOINT.md §H`](PHASE_9EZ_CHECKPOINT.md) remain intact.
+[`PHASE_9EZ_CHECKPOINT.md §H`](../02_PHASE_CLOSEOUTS/PHASE_9EZ_CHECKPOINT.md) remain intact.
 No parser, shell, registry, framing, response queue, ACK/retry, heap,
 ISR-context TX, or core-UART abstraction was introduced. Single-byte
 command vocabulary preserved. Response fits the existing 96-byte stack
@@ -729,8 +729,8 @@ change.
 evidence-close `7e250dc`).
 **Prior docs-only checkpoint:** Phase 10A (planning) / Phase 9E-Z
 (direction guard).
-**Closeout doc:** [`PHASE_10C_COMMAND_SET_CHECKPOINT.md`](PHASE_10C_COMMAND_SET_CHECKPOINT.md).
-**Companion doc:** [`COMMAND_SET_DRAFT.md`](COMMAND_SET_DRAFT.md).
+**Closeout doc:** [`PHASE_10C_COMMAND_SET_CHECKPOINT.md`](../02_PHASE_CLOSEOUTS/PHASE_10C_COMMAND_SET_CHECKPOINT.md).
+**Companion doc:** [`COMMAND_SET_DRAFT.md`](../03_SPECS/COMMAND_SET_DRAFT.md).
 
 ### 10C.1 Purpose
 
@@ -748,9 +748,9 @@ complete and `T` remains the only unbounded decision.
 hardware-validated under the same Phase 9E / 10B discipline; all fit
 the fixed 96-byte stack-buffer / thread-context-TX / no-parser /
 no-registry / no-framing pattern. See
-[`PHASE_10C_COMMAND_SET_CHECKPOINT.md §3`](PHASE_10C_COMMAND_SET_CHECKPOINT.md)
+[`PHASE_10C_COMMAND_SET_CHECKPOINT.md §3`](../02_PHASE_CLOSEOUTS/PHASE_10C_COMMAND_SET_CHECKPOINT.md)
 for the single-page inventory and
-[`COMMAND_SET_DRAFT.md`](COMMAND_SET_DRAFT.md) Section A for the
+[`COMMAND_SET_DRAFT.md`](../03_SPECS/COMMAND_SET_DRAFT.md) Section A for the
 authoritative row table.
 
 ### 10C.3 Open decisions at checkpoint
@@ -765,12 +765,12 @@ authoritative row table.
 ### 10C.4 Scope guards restated
 
 All 12 UART TX scope-guard constraints from
-[`PHASE_9EZ_CHECKPOINT.md §H`](PHASE_9EZ_CHECKPOINT.md) are intact at
+[`PHASE_9EZ_CHECKPOINT.md §H`](../02_PHASE_CLOSEOUTS/PHASE_9EZ_CHECKPOINT.md) are intact at
 Phase 10C. `core/`, `platform/`, `devkit_runtime.{c,h}`,
 `devkit_status_led.{h,c}`, `devkit_button.{c,h}`, `prj.conf`,
 `CMakeLists.txt`, `boards/`, `zephyr/`, `tests/`, and
 `DEVKIT_PROGRESS.md` are zero-diff at this checkpoint. See
-[`PHASE_10C_COMMAND_SET_CHECKPOINT.md §6`](PHASE_10C_COMMAND_SET_CHECKPOINT.md)
+[`PHASE_10C_COMMAND_SET_CHECKPOINT.md §6`](../02_PHASE_CLOSEOUTS/PHASE_10C_COMMAND_SET_CHECKPOINT.md)
 for the per-constraint table.
 
 ### 10C.5 POST_FLASH_AUTOSTART
@@ -784,7 +784,7 @@ evidence. Phase 10C does not change any of this.
 
 Phase 10C does not run any new validation. The current published
 evidence stack (referenced in
-[`../logs/INDEX.md`](../logs/INDEX.md), unchanged by Phase 10C):
+[`../logs/INDEX.md`](../../logs/INDEX.md), unchanged by Phase 10C):
 
 - Phase 9E (`587dab7`) -- UART TX minimal response, `peak=2 dropped=0`.
 - Phase 9G (harness `e9a1d62`) -- bounded UART burst, `peak=5

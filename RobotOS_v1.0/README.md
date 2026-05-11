@@ -13,9 +13,9 @@
 
 These directories contain the live implementation that runs on hardware.
 See [`CURRENT_STATE.md`](../CURRENT_STATE.md) for the latest validated state and
-[`devkit/docs/DEVKIT_PROGRESS.md`](devkit/docs/DEVKIT_PROGRESS.md) for full
+[`devkit/docs/01_PROGRESS/DEVKIT_PROGRESS.md`](devkit/docs/01_PROGRESS/DEVKIT_PROGRESS.md) for full
 phase history up to Phase 9E / 9E-Z, and
-[`devkit/docs/DEVKIT_PROGRESS_PHASE_10.md`](devkit/docs/DEVKIT_PROGRESS_PHASE_10.md)
+[`devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_10.md`](devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_10.md)
 for Phase 10+.
 
 **Historical reference tree** (`src/`, `include/`, `boards/`):

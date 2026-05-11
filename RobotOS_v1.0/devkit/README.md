@@ -46,7 +46,7 @@ The following lines appear at boot, taken verbatim from
 
 Periodic ROBOTOS_OBS / ROBOTOS_FAULT / ROBOTOS_PROD triplets appear every 10
 runtime ticks (~5 s at `DEVKIT_TICK_MS = 500`). For full telemetry field
-definitions see `devkit/docs/TELEMETRY_REFERENCE.md`.
+definitions see `devkit/docs/03_SPECS/TELEMETRY_REFERENCE.md`.
 
 ## Future Custom Board Migration Checklist
 When migrating to custom STM32F407VET6 board:

@@ -14,7 +14,7 @@ evidence-close `7e250dc`).
 **Prior docs-only checkpoint:** Phase 10A (planning) / Phase 9E-Z
 (direction guard).
 **Companion docs:**
-[`COMMAND_SET_DRAFT.md`](COMMAND_SET_DRAFT.md),
+[`COMMAND_SET_DRAFT.md`](../03_SPECS/COMMAND_SET_DRAFT.md),
 [`PHASE_10A_CLOSE.md`](PHASE_10A_CLOSE.md),
 [`PHASE_9EZ_CHECKPOINT.md`](PHASE_9EZ_CHECKPOINT.md),
 [`PHASE_10B_V_CLOSE.md`](PHASE_10B_V_CLOSE.md),
@@ -76,9 +76,9 @@ of Scheduler 7A/7B or F407.
 
 This table is the authoritative single-page snapshot of the closed
 command set at Phase 10C. It is sourced from
-[`COMMAND_SET_DRAFT.md`](COMMAND_SET_DRAFT.md) Section A, the four
+[`COMMAND_SET_DRAFT.md`](../03_SPECS/COMMAND_SET_DRAFT.md) Section A, the four
 Phase 9E and Phase 10B-{v,L,d} closeouts, and the hardware RTT/host
-evidence listed in [`../logs/INDEX.md`](../logs/INDEX.md). Phase 10C
+evidence listed in [`../logs/INDEX.md`](../../logs/INDEX.md). Phase 10C
 does **not** modify any of these contracts.
 
 | Cmd | Meaning | Phase | Evidence | State effect | Physical effect | Response shape | Notes / limitations |
@@ -255,7 +255,7 @@ Architecture boundaries also unchanged at Phase 10C:
 
 Phase 10C does not run any new validation. The table below is a
 single-page citation of the evidence already published in
-[`../logs/INDEX.md`](../logs/INDEX.md) and the linked closeout docs.
+[`../logs/INDEX.md`](../../logs/INDEX.md) and the linked closeout docs.
 Phase 10C does **not** modify any of these logs.
 
 | Phase | Status | Evidence locations | Key counters |

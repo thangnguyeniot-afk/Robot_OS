@@ -9,9 +9,9 @@ only. No core, platform, scheduler, queue, event-type, or test change.
 **Prior runtime checkpoint:** Phase 9E-Z (`30bae27`). Prior characterization:
 Phase 9G (commit `21ab1f0`). Prior planning: Phase 10A (`31a498b`).
 **Companion docs:**
-[`DEVKIT_PROGRESS_PHASE_10.md`](DEVKIT_PROGRESS_PHASE_10.md) Phase 10B-v
+[`DEVKIT_PROGRESS_PHASE_10.md`](../01_PROGRESS/DEVKIT_PROGRESS_PHASE_10.md) Phase 10B-v
 entry (`<a id="phase-10b-v"></a>`),
-[`COMMAND_SET_DRAFT.md`](COMMAND_SET_DRAFT.md) Section A (the `v` row was
+[`COMMAND_SET_DRAFT.md`](../03_SPECS/COMMAND_SET_DRAFT.md) Section A (the `v` row was
 promoted from draft Section B in this commit).
 
 ---
@@ -296,10 +296,10 @@ Devkit-local changes (the only files modified):
 
 ## J. Evidence artifacts
 
-- Host transcript: [`../logs/phase_10B_v_host_2026-05-11.txt`](../logs/phase_10B_v_host_2026-05-11.txt)
-- RTT log: [`../logs/phase_10B_v_rtt_2026-05-11.txt`](../logs/phase_10B_v_rtt_2026-05-11.txt)
+- Host transcript: [`../logs/phase_10B_v_host_2026-05-11.txt`](../../logs/phase_10B_v_host_2026-05-11.txt)
+- RTT log: [`../logs/phase_10B_v_rtt_2026-05-11.txt`](../../logs/phase_10B_v_rtt_2026-05-11.txt)
   -- 23226 bytes, 61.2 s
-- Log index row: added to [`../logs/INDEX.md`](../logs/INDEX.md) in this
+- Log index row: added to [`../logs/INDEX.md`](../../logs/INDEX.md) in this
   commit.
 
 ---
@@ -351,8 +351,8 @@ Not recommended:
 - Phase 9E-Z direction guard: [`PHASE_9EZ_CHECKPOINT.md`](PHASE_9EZ_CHECKPOINT.md)
 - Phase 9G burst characterization closeout: [`PHASE_9G_CLOSE.md`](PHASE_9G_CLOSE.md)
 - Phase 10A planning closeout: [`PHASE_10A_CLOSE.md`](PHASE_10A_CLOSE.md)
-- DRAFT command vocabulary: [`COMMAND_SET_DRAFT.md`](COMMAND_SET_DRAFT.md)
-- Phase log: [`DEVKIT_PROGRESS_PHASE_10.md`](DEVKIT_PROGRESS_PHASE_10.md)
-- Live state snapshot: [`../../../CURRENT_STATE.md`](../../../CURRENT_STATE.md)
-- Telemetry reference: [`TELEMETRY_REFERENCE.md`](TELEMETRY_REFERENCE.md)
+- DRAFT command vocabulary: [`COMMAND_SET_DRAFT.md`](../03_SPECS/COMMAND_SET_DRAFT.md)
+- Phase log: [`DEVKIT_PROGRESS_PHASE_10.md`](../01_PROGRESS/DEVKIT_PROGRESS_PHASE_10.md)
+- Live state snapshot: [`../../../CURRENT_STATE.md`](../../../../CURRENT_STATE.md)
+- Telemetry reference: [`TELEMETRY_REFERENCE.md`](../03_SPECS/TELEMETRY_REFERENCE.md)
 - Runtime tools: [`../../tools/runtime/README.md`](../../tools/runtime/README.md)

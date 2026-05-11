@@ -303,4 +303,4 @@ scheduling, admission, throttle, dispatch, or retry decisions. This is
 structural, not behavioral — the helpers hold no mutable state of their own.
 
 Phase 6Z RTT evidence log:
-[devkit/logs/phase_6Z_rtt_2026-05-07.txt](../logs/phase_6Z_rtt_2026-05-07.txt)
+[devkit/logs/phase_6Z_rtt_2026-05-07.txt](../../logs/phase_6Z_rtt_2026-05-07.txt)
