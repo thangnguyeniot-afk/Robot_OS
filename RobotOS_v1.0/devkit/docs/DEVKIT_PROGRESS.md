@@ -303,7 +303,7 @@ the reset but the MemManage fault. See Phase 3B-R for corrected analysis.
 | Gate | Status | Notes |
 | ---- | ------ | ----- |
 | `FLASH_WRITE` | `PASS` | Firmware programmed and verified successfully. |
-| `POST_FLASH_AUTOSTART` | `OPEN / UNRELIABLE` | See Open Issue section. Manual RESET is required workaround. |
+| `POST_FLASH_AUTOSTART` | `OPEN / UNRELIABLE` | Historical at this phase: manual RESET required. Resolved-by-workflow at Phase 6Z via RTT sidecar OpenOCD `reset run`; manual RESET is now fallback-only under Phase 6Z+ harness. |
 | `RUNTIME_AFTER_MANUAL_RESET` | `PASS` | All features confirmed: build metadata log, fault visibility, tick counter, LED blink, RTT. |
 
 #### RTT Log Evidence
@@ -553,7 +553,20 @@ src/devkit_fault.c
 
 ### Open Issue — Post-flash Auto-start Unreliable (ST-LINK/SWD)
 
-**Status: OPEN — no clean fix found. Manual RESET is the required workaround.**
+**Status: RESOLVED_BY_WORKFLOW as of Phase 6Z (2026-05-07). Historical evidence preserved below.**
+
+Early validation confirmed that plain `west flash` / earlier capture flows could leave the
+STM32F411E-DISCO firmware not cleanly running, so physical RESET was required before runtime
+observation (Phases 3A–6I).
+
+From Phase 6Z onward, the validated RTT capture harness (`capture_devkit_rtt.ps1`) opens a
+sidecar OpenOCD session and issues `reset run` before RTT setup/streaming. This functionally
+replaces the manual physical RESET step for the current validation workflow.
+
+Manual RESET remains a fallback recovery step, not the mandatory default, when using the
+Phase 6Z+ capture harness. Plain `west flash` alone must still not be treated as proof that
+firmware has started. This is a workflow resolution — **not** a firmware fix, **not** a
+hardware fix, and **not** a confirmed global `west flash` / OpenOCD runner fix.
 
 #### Symptom
 
@@ -642,10 +655,17 @@ sequence and enters the tick loop cleanly.
 - `adapter srst pulse_width` tuning to extend NRST assertion time.
 - Investigation of whether specific ST-LINK firmware versions handle shutdown differently.
 
-#### Workaround
+#### Workaround (historical — Phases 3A–6I)
 
 Press the physical **RESET button** on the Discovery board immediately after `west flash`
 completes. Firmware starts on button release. LED blinks at 500ms.
+
+#### Current procedure (Phase 6Z+)
+
+Run the `capture_devkit_rtt.ps1` harness after flash. The sidecar OpenOCD cfg issues
+`reset run` before RTT streaming begins, starting the firmware cleanly. Physical RESET
+is the fallback if runtime signals do not appear — press RESET and rerun the harness
+(without `-FlashFirst`) before classifying as firmware failure.
 
 ---
 
@@ -809,7 +829,7 @@ shutdown command invoked
 | Gate | Status | Notes |
 | ---- | ------ | ----- |
 | `FLASH_WRITE` | `PASS` | Firmware programmed and verified. |
-| `POST_FLASH_AUTOSTART` | `OPEN / UNRELIABLE` | Manual RESET required. See Phase 3B Open Issue. |
+| `POST_FLASH_AUTOSTART` | `OPEN / UNRELIABLE` | Historical at this phase: manual RESET required. Resolved-by-workflow at Phase 6Z; fallback-only under Phase 6Z+ harness. |
 | `CORE_INIT` | `PASS` | `robotos_core_init()` confirmed via RTT log and memory read. |
 | `CORE_TICK` | `PASS` | `core_tick_count` increments at exact 500ms interval (confirmed via memory read). |
 | `RUNTIME_AFTER_MANUAL_RESET` | `PASS` | All Phase 3B features preserved plus core active. |
@@ -1036,7 +1056,7 @@ Phase 4A baseline: FLASH 26180 B, RAM 8576 B. Delta: FLASH +108 B, RAM unchanged
 | Gate | Status | Notes |
 | ---- | ------ | ----- |
 | `FLASH_WRITE` | `PASS` | Firmware programmed and verified. |
-| `POST_FLASH_AUTOSTART` | `OPEN / UNRELIABLE` | Manual RESET required. See Phase 3B Open Issue. |
+| `POST_FLASH_AUTOSTART` | `OPEN / UNRELIABLE` | Historical at this phase: manual RESET required. Resolved-by-workflow at Phase 6Z; fallback-only under Phase 6Z+ harness. |
 | `CORE_STATE_READY` | `PASS` | `core_state` = `0x01` = `ROBOTOS_CORE_STATE_READY` confirmed. |
 | `CORE_INIT_COUNT` | `PASS` | `core_init_count` = `1` — initialized exactly once. |
 | `CORE_TICK` | `PASS` | `core_tick_count`: 86 → 87 in 500ms — exact interval confirmed. |
@@ -1471,7 +1491,7 @@ No app warnings.
 | Gate | Status | Notes |
 | ---- | ------ | ----- |
 | `FLASH_WRITE` | `PASS` | Firmware programmed, 32768 B verified. |
-| `POST_FLASH_AUTOSTART` | `OPEN` | Manual RESET required per known workaround. |
+| `POST_FLASH_AUTOSTART` | `OPEN` | Historical at this phase: manual RESET required. Resolved-by-workflow at Phase 6Z; fallback-only under Phase 6Z+ harness. |
 | `CORE_STATE_READY` | `PASS` | `core_state` @ `0x200009f9` = `0x01` = READY. |
 | `EVENT_QUEUE_INITIALIZED` | `PASS` | `s_core_event_queue.initialized` @ `0x200007b8` = `0x01` = true. |
 | `EVENT_QUEUE_COUNT_ZERO` | `PASS` | `s_core_event_queue.count` @ `0x200007b0` = `0x00000000` = 0 (no events pushed). |
@@ -1654,7 +1674,7 @@ No app warnings.
 | Gate | Status | Notes |
 | ---- | ------ | ----- |
 | `FLASH_WRITE` | `PASS` | Firmware programmed, 32768 B verified. |
-| `POST_FLASH_AUTOSTART` | `OPEN` | Manual RESET required per known workaround. |
+| `POST_FLASH_AUTOSTART` | `OPEN` | Historical at this phase: manual RESET required. Resolved-by-workflow at Phase 6Z; fallback-only under Phase 6Z+ harness. |
 | `CORE_STATE_READY` | `PASS` | `core_state` @ `0x20000a11` = `0x01` = READY. |
 | `DISPATCHER_INITIALIZED` | `PASS` | `s_core_dispatcher.initialized` @ `0x200006b4` = `0x01` = true. |
 | `DISPATCHER_COUNT_ZERO` | `PASS` | `dispatched_count` @ `0x200006b8` = `0x00000000` — no events dispatched. |
@@ -1967,7 +1987,7 @@ Delta: FLASH +188 B (dispatch logic added to tick), RAM unchanged.
 | Gate | Status | Notes |
 | ---- | ------ | ----- |
 | `FLASH_WRITE` | `PASS` | Firmware programmed and verified. |
-| `POST_FLASH_AUTOSTART` | `OPEN` | Manual RESET required per known workaround. |
+| `POST_FLASH_AUTOSTART` | `OPEN` | Historical at this phase: manual RESET required. Resolved-by-workflow at Phase 6Z; fallback-only under Phase 6Z+ harness. |
 | `RTT_BOOT_LOG` | `PASS` | Boot sequence confirmed: devkit_fault, devkit_build_info, core init. |
 | `LED` | `PASS` | GPIOD_ODR `0x00002000` → `0x00000000` — 500ms blink confirmed. |
 | `FAULT_STATUS` | `PASS` | No fault. Clean runtime. |
@@ -2135,7 +2155,7 @@ Delta: FLASH +108 B, RAM +192 B (8 handler table entries × ~24 B each).
 | Gate | Status | Notes |
 | ---- | ------ | ----- |
 | `FLASH_WRITE` | `PASS` | Firmware programmed and verified. |
-| `POST_FLASH_AUTOSTART` | `OPEN` | Manual RESET required per known workaround. |
+| `POST_FLASH_AUTOSTART` | `OPEN` | Historical at this phase: manual RESET required. Resolved-by-workflow at Phase 6Z; fallback-only under Phase 6Z+ harness. |
 | `LED` | `PASS` | GPIOD_ODR toggles `0x00000000` → `0x00002000` — 500ms blink. |
 | `FAULT_STATUS` | `PASS` | DHCSR=`0x00050001` — S_SLEEP=1, S_HALT=0 — firmware in WFI, no fault. |
 | `HANDLER_ROUTING_VISIBLE` | `N/A` | No handlers registered in devkit; unregistered tick events counted as unhandled silently. |
@@ -7083,8 +7103,13 @@ Confirmed unchanged in Phase 6Z:
 ### Phase 6Z Residual Risks / Follow-ups
 
 - **Manual RESET requirement:** not observed in this session; OpenOCD
-  `reset run` was sufficient. The known operational caveat remains
-  documented but did not trigger here.
+  `reset run` in the RTT sidecar cfg was sufficient. **This is the first
+  confirmed transition point for `POST_FLASH_AUTOSTART` behavior.** From
+  this phase onward, the RTT capture harness issues `reset run` via its
+  sidecar OpenOCD cfg, functionally replacing the manual physical RESET
+  step. This is a workflow resolution — not a firmware, runner, or
+  hardware fix. Plain `west flash` alone remains insufficient as
+  runtime-start evidence. Manual RESET is retained as fallback.
 - **Custom STM32F407 target:** still unvalidated. Phase 6Z exercised
   only STM32F411E-DISCO. Migration to a custom F407 board remains a
   separate validation activity outside Phase 6Z scope.
@@ -7278,11 +7303,13 @@ Confirmed unchanged in Phase 6O:
 - **Port 9090 conflict.** If another process binds port 9090, the script prints
   a warning and the caller should use `-Port <other>`. It does not auto-select
   a free port.
-- **Manual RESET not required in this session**, but the known `POST_FLASH_AUTOSTART`
-  unreliable-auto-start issue (Phase 3B OPEN) remains. If the board does not
-  start after flash, the `reset run` in the sidecar cfg will restart it when
-  the script connects. If that also fails, a physical RESET followed by
-  rerunning the script (without `-FlashFirst`) is the workaround.
+- **Manual RESET not required** under the current harness. The `POST_FLASH_AUTOSTART`
+  issue is resolved-by-workflow from Phase 6Z: the `reset run` in the sidecar cfg
+  starts the firmware cleanly after flash. Plain `west flash` alone remains
+  insufficient as runtime-start evidence. If runtime signals do not appear after
+  flash, the sidecar `reset run` will restart the board when the script connects.
+  If that also fails, a physical RESET followed by rerunning the script
+  (without `-FlashFirst`) is the fallback before classifying firmware failure.
 - **Custom STM32F407 target still unvalidated.** The script is designed to support
   it via `-OpenOcdConfig` and `-RttSearchSize 0x40000`, but no F407 session has
   been run yet. Phase 8A will be the first real test of these override paths.
