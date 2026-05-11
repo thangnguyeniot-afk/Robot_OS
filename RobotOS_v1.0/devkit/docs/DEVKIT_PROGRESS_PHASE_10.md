@@ -55,7 +55,15 @@ anchors.
 | Phase | Title | Status | Jump |
 |-------|-------|--------|------|
 | 10A | Product Command Set Planning (docs-only) | CLOSED_DOCS_ONLY | [→](#phase-10a) |
+| 9G ‡ | Bounded UART Burst Characterization (tooling + docs; hardware pending) | OPEN_HARDWARE_VALIDATION_PENDING | [→](#phase-9g-late) |
 | 10Z | RESERVED — future checkpoint / closeout slot | NOT_STARTED | [→](#phase-10z) |
+
+`‡` = **non-linear insert.** Phase 9G is a Phase-9-series late evidence
+entry opened *after* the seed-split and *after* Phase 10A. It lives in this
+file (not in `DEVKIT_PROGRESS.md`) per the user-stated preference to leave
+the historical master untouched. Anchor id `phase-9g-late` makes the
+non-linear placement explicit and avoids collision with any future
+chronological `phase-9*` slot in the historical master.
 
 When future phases are added:
 
@@ -298,6 +306,95 @@ Before any Phase 10B opening, the user must explicitly select one of:
 - a continued hold (no Phase 10B opening).
 
 Phase 10A does not authorize any of these by itself.
+
+---
+
+<a id="phase-9g-late"></a>
+## Phase 9G — Bounded UART Burst Characterization (late-9-series, non-linear insert)
+
+**Status:** `OPEN_HARDWARE_VALIDATION_PENDING`
+**Type:** Host-side tooling + docs. No firmware, core, platform, test,
+CMake, Zephyr, board, or runtime-script (other than the new sibling
+harness) change.
+**Date opened:** 2026-05-11
+**Branch:** master
+**Authority for placement here (not in `DEVKIT_PROGRESS.md`):** user
+preference to leave the historical master untouched; §4 rule 6 (non-linear
+edits explicit) — flagged with `‡` in the Phase Index and the
+`phase-9g-late` anchor id.
+**Companion closeout:** [`PHASE_9G_CLOSE.md`](PHASE_9G_CLOSE.md).
+
+### 9G.1 Purpose
+
+Characterize bounded UART input burst behavior on the proven Phase 9E
+command/response loop. Closes the highest-priority outstanding unknown
+identified in `PHASE_9EZ_CHECKPOINT.md` section E: *high-rate UART input
+not stress-tested*.
+
+This phase is **evidence-only**. It does not change firmware, scheduler,
+queue capacity, command vocabulary, or UART TX scope. It does not
+authorize Phase 10B implementation.
+
+### 9G.2 Approved implementation surface
+
+- **New host tool:** `RobotOS_v1.0/tools/runtime/run_phase9g_uart_burst_demo.ps1`.
+  - Sends the Phase 9E byte vocabulary (`a s ? r x`) as a bounded burst
+    (default 30 ms between bytes, ~120 ms total) — faster than the 500 ms
+    dispatch tick.
+  - Then opens a ~5 s read window and collects all response lines with
+    per-byte and per-line wallclock timestamps.
+  - Launches the Phase 6O `capture_devkit_rtt.ps1` harness in a background
+    PowerShell job for RTT evidence (sidecar `reset run`; manual RESET
+    retained as fallback; plain `west flash` alone is not runtime-start
+    evidence).
+  - Prints PASS-checklist criteria (RECV_COUNT, ordering, cadence) and
+    finding-discipline reminders (do NOT mutate scheduler / TX path if
+    anomalies are observed).
+  - Pure ASCII (encoding-safe for PowerShell `ParseFile`/`PSParser` on
+    Windows code-page hosts).
+- **New docs:** [`PHASE_9G_CLOSE.md`](PHASE_9G_CLOSE.md) closeout document
+  (currently `OPEN_HARDWARE_VALIDATION_PENDING`).
+- **Existing scripts:** untouched (`capture_devkit_rtt.ps1`,
+  `run_phase9d_demo.ps1`, `run_phase9e_uart_response_demo.ps1`,
+  `capture_phase6h_runtime.ps1`).
+- **No firmware change.** Phase 9G uses the existing Phase 9E firmware
+  (`587dab7`).
+
+### 9G.3 Hardware validation status
+
+Hardware evidence is **not** captured at this commit because no
+STM32F411E-DISCO is available to the authoring environment. The harness
+is parse-validated; the closeout document explicitly marks the phase as
+`OPEN_HARDWARE_VALIDATION_PENDING` with an operator checklist to flip to
+`CLOSED`. See [`PHASE_9G_CLOSE.md`](PHASE_9G_CLOSE.md) section F.
+
+### 9G.4 What this entry does not do
+
+- Does not change `core/`, `platform/`, `tests/`, `devkit/src/`,
+  `CMakeLists.txt`, or `prj.conf`.
+- Does not alter `ROBOTOS_CORE_MAX_EVENTS_PER_TICK` or
+  `ROBOTOS_EVENT_QUEUE_CAPACITY`.
+- Does not change Phase 9E firmware, UART TX behavior, or the
+  IDLE/ARMED/ACTIVE state model.
+- Does not reopen Scheduler 7A / 7B-1 (still DEFER).
+- Does not reopen Phase 8A / F407 (still HOLD/DEFER).
+- Does not start Phase 10B; `COMMAND_SET_DRAFT.md` section B rows remain
+  `USER_DECISION_REQUIRED`.
+- Does not modify `DEVKIT_PROGRESS.md` (historical master preserved).
+- Does not modify `CURRENT_STATE.md` (the maintenance rule there says to
+  update only at phase close from validated evidence; Phase 9G is not
+  closed yet).
+- Does not introduce parser, shell, command registry, framing protocol,
+  response queue, ACK/retry, heap allocation, ISR-context TX, or
+  core/platform UART abstraction.
+
+### 9G.5 Next gate
+
+The hardware run described in `PHASE_9G_CLOSE.md` section F must happen
+before Phase 9G can be flipped to `CLOSED`. Until then, the phase is held
+at `OPEN_HARDWARE_VALIDATION_PENDING` and the Phase 10A "next gate" wording
+(user must choose a Section B row, a supporting phase, or a continued
+hold) remains in force.
 
 ---
 
