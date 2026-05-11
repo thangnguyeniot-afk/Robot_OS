@@ -37,8 +37,12 @@ rtt start
 rtt server start 9090 0
 ```
 
-The `reset run` command starts the firmware cleanly post-flash (resolving the
-known `POST_FLASH_AUTOSTART` unreliable-auto-start issue on STM32F411E-DISCO).
+The `reset run` command starts the firmware cleanly post-flash, mitigating the
+known `POST_FLASH_AUTOSTART` unreliable-auto-start issue on STM32F411E-DISCO
+(Phase 3B Open Issue in `devkit/docs/DEVKIT_PROGRESS.md` — root cause remains
+OPEN; this harness is workflow mitigation, not a firmware/runner/hardware fix).
+Plain `west flash` alone remains insufficient as runtime-start evidence; this
+harness or manual RESET is required.
 The RTT TCP server on port 9090 streams live RTT output to a PowerShell TcpClient.
 
 `_SEGGER_RTT` address is resolved dynamically from the ELF via
