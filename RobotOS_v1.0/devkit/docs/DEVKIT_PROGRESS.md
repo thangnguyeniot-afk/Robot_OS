@@ -2,6 +2,18 @@
 
 ---
 
+## Split Note — Phase 10+ Continues Elsewhere
+
+This file is the **historical master** for RobotOS devkit phases up to
+**Phase 9E / Phase 9E-Z**. All Phase 10 and later progress entries continue in
+[`DEVKIT_PROGRESS_PHASE_10.md`](DEVKIT_PROGRESS_PHASE_10.md).
+
+Old sections in this file are preserved for historical trace. They must not be
+rewritten, reordered, or deduplicated as part of the Phase 10+ split. Do not
+append new Phase 10+ entries here.
+
+---
+
 ## Phase Index
 
 Sections appear in **insertion / session order**, not in phase-number order.
