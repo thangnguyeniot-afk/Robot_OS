@@ -59,6 +59,7 @@ anchors.
 | 10B-v | Build/Version Query Command `v` | CLOSED_WITH_HARDWARE_EVIDENCE | [→](#phase-10b-v) |
 | 10B-L | LED Physical-Effect Command `L` | CLOSED_WITH_HARDWARE_EVIDENCE + OPERATOR_VISUAL_CONFIRMED | [→](#phase-10b-l) |
 | 10B-d | Explicit Disarm Command `d` | CLOSED_WITH_HARDWARE_EVIDENCE | [→](#phase-10b-d) |
+| 10C | Command-Set Checkpoint (docs-only) | CLOSED_DOCS_ONLY | [→](#phase-10c) |
 | 10Z | RESERVED — future checkpoint / closeout slot | NOT_STARTED | [→](#phase-10z) |
 
 `‡` = **non-linear insert.** Phase 9G is a Phase-9-series late evidence
@@ -712,6 +713,107 @@ choice + driver), (b) widen `d` to cover ACTIVE -> IDLE (supplemental
 validation only), (c) open a Phase 10C command-set checkpoint
 (equivalent of Phase 10A for the post-10B-d vocabulary), or (d)
 continued hold. Phase 10B-d itself authorizes none of these.
+
+---
+
+<a id="phase-10c"></a>
+## Phase 10C — Command-Set Checkpoint
+
+**Status:** `CLOSED_DOCS_ONLY`
+**Type:** Docs-only checkpoint / design-state consolidation. No source,
+runtime, test, CMake, Zephyr, board, host-tool, script, or `prj.conf`
+change.
+**Date opened/closed:** 2026-05-11
+**Published baseline at open:** `origin/master = 7e250dc`
+**Prior runtime behavior phase:** Phase 10B-d (firmware `125779c`,
+evidence-close `7e250dc`).
+**Prior docs-only checkpoint:** Phase 10A (planning) / Phase 9E-Z
+(direction guard).
+**Closeout doc:** [`PHASE_10C_COMMAND_SET_CHECKPOINT.md`](PHASE_10C_COMMAND_SET_CHECKPOINT.md).
+**Companion doc:** [`COMMAND_SET_DRAFT.md`](COMMAND_SET_DRAFT.md).
+
+### 10C.1 Purpose
+
+Phase 10C is a docs-only checkpoint that snapshots the validated
+non-sensor command group after Phase 10B-d closes, and prevents blind
+opening of `T` or other large-surface candidates. It is the
+operationalization of the Phase 9E-Z direction guard repeated against
+the post-10B-d vocabulary: same role Phase 10A served before Phase
+10B-v, applied again at the boundary where the non-sensor surface is
+complete and `T` remains the only unbounded decision.
+
+### 10C.2 Validated command set at checkpoint
+
+`a / s / r / ? / x / v / L / d` -- eight single-byte commands; all
+hardware-validated under the same Phase 9E / 10B discipline; all fit
+the fixed 96-byte stack-buffer / thread-context-TX / no-parser /
+no-registry / no-framing pattern. See
+[`PHASE_10C_COMMAND_SET_CHECKPOINT.md §3`](PHASE_10C_COMMAND_SET_CHECKPOINT.md)
+for the single-page inventory and
+[`COMMAND_SET_DRAFT.md`](COMMAND_SET_DRAFT.md) Section A for the
+authoritative row table.
+
+### 10C.3 Open decisions at checkpoint
+
+| Decision | Status | Surface if approved |
+|---|---|---|
+| `T` sensor read | `USER_DECISION_REQUIRED` (not implemented) | Largest open surface: sensor part, driver / `prj.conf` change, response format, error variant. None decided. Do not open blind. |
+| ACTIVE disarm widening (`d` from ACTIVE -> IDLE) | `USER_DECISION_REQUIRED_ACTIVE_DISARM` | Smallest open surface: one-line guard widening in `devkit_app_state.c` plus a supplemental hardware run (`d a s d ?`). Current behavior preserved as recognized no-op. |
+| Scheduler 7A / 7B-1 | `DEFER` (unchanged) | No new workload evidence (Phase 9G `peak=5 dropped=0`; 10B-* all `peak=2 dropped=0`) justifies opening. |
+| STM32F407 / custom board | `HOLD/DEFER` (unchanged) | No new workload requires the platform shift. |
+
+### 10C.4 Scope guards restated
+
+All 12 UART TX scope-guard constraints from
+[`PHASE_9EZ_CHECKPOINT.md §H`](PHASE_9EZ_CHECKPOINT.md) are intact at
+Phase 10C. `core/`, `platform/`, `devkit_runtime.{c,h}`,
+`devkit_status_led.{h,c}`, `devkit_button.{c,h}`, `prj.conf`,
+`CMakeLists.txt`, `boards/`, `zephyr/`, `tests/`, and
+`DEVKIT_PROGRESS.md` are zero-diff at this checkpoint. See
+[`PHASE_10C_COMMAND_SET_CHECKPOINT.md §6`](PHASE_10C_COMMAND_SET_CHECKPOINT.md)
+for the per-constraint table.
+
+### 10C.5 POST_FLASH_AUTOSTART
+
+Root cause remains `OPEN`. `MITIGATED_BY_WORKFLOW` from Phase 6O
+onward via `capture_devkit_rtt.ps1` sidecar `reset run`. Manual RESET
+retained as fallback. Plain `west flash` alone is not runtime-start
+evidence. Phase 10C does not change any of this.
+
+### 10C.6 Evidence summary at checkpoint
+
+Phase 10C does not run any new validation. The current published
+evidence stack (referenced in
+[`../logs/INDEX.md`](../logs/INDEX.md), unchanged by Phase 10C):
+
+- Phase 9E (`587dab7`) -- UART TX minimal response, `peak=2 dropped=0`.
+- Phase 9G (harness `e9a1d62`) -- bounded UART burst, `peak=5
+  dropped=0`.
+- Phase 10B-v (`d8346db`) -- build/version query, `peak=2 dropped=0`,
+  both `v` responses byte-identical.
+- Phase 10B-L (`f1db2fa`) -- LED physical-effect,
+  `CLOSED_WITH_HARDWARE_EVIDENCE` + `OPERATOR_VISUAL_CONFIRMED` per
+  operator-witnessed re-run (`a96ce17`).
+- Phase 10B-d (`125779c` impl + `7e250dc` evidence close) --
+  explicit disarm; `d` from IDLE recognized no-op (NOT ignored);
+  `d` from ARMED transitioned to IDLE.
+
+Cross-phase invariants holding at Phase 10C: `accepted - dispatched =
+pending`, `PROD ok + UART ok = accepted`, `peak <= QUEUE_CAPACITY`,
+CFSR/HFSR `0x00000000` at every fault sample.
+
+### 10C.7 Next gate
+
+1. Hold. The current vocabulary is internally consistent,
+   hardware-validated, self-contained, and aligned with all scope
+   guards.
+2. Decide ACTIVE disarm widening (cheap, one-line + supplemental run).
+3. Decide `T` prerequisites (expensive; five open questions). Do not
+   open `T` blindly.
+4. Do not reopen Scheduler 7A/7B.
+5. Do not reopen F407 / custom board.
+
+Phase 10C itself authorizes none of these.
 
 ---
 

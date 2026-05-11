@@ -1,18 +1,32 @@
-# COMMAND_SET_DRAFT.md — RobotOS Devkit Product Command Vocabulary (DRAFT)
+# COMMAND_SET_DRAFT.md — RobotOS Devkit Product Command Vocabulary
 
-**Status:** `DRAFT` for the remaining Section B row (`T`). **Section A
-rows `v` (0x76), `L` (0x4c), and `d` (0x64) are now IMPLEMENTED** per
-Phase 10B-v (see [`PHASE_10B_V_CLOSE.md`](PHASE_10B_V_CLOSE.md)), Phase
-10B-L (see [`PHASE_10B_L_CLOSE.md`](PHASE_10B_L_CLOSE.md)), and Phase
-10B-d (see [`PHASE_10B_D_CLOSE.md`](PHASE_10B_D_CLOSE.md)). **No
-implementation exists for the remaining Section B DRAFT row** (`T`).
-This document is a planning input for a future Phase 10B-class
-implementation phase; it is neither a specification nor a behavioral
-claim for unimplemented rows.
+**Status at Phase 10C checkpoint (`origin/master = 7e250dc`):**
+
+- **Section A — IMPLEMENTED + hardware-validated:** `a` (0x61), `s`
+  (0x73), `r` (0x72), `?` (0x3f), `x` (0x78) (Phase 9E baseline);
+  `v` (0x76) per Phase 10B-v
+  ([`PHASE_10B_V_CLOSE.md`](PHASE_10B_V_CLOSE.md)); `L` (0x4c) per
+  Phase 10B-L ([`PHASE_10B_L_CLOSE.md`](PHASE_10B_L_CLOSE.md)) with
+  `OPERATOR_VISUAL_CONFIRMED`; `d` (0x64) per Phase 10B-d
+  ([`PHASE_10B_D_CLOSE.md`](PHASE_10B_D_CLOSE.md)).
+- **Section B — `USER_DECISION_REQUIRED` (not implemented):** `T`
+  (0x54) sensor read; **AND** the ACTIVE disarm widening for `d`
+  (currently no-op from ACTIVE; remains
+  `USER_DECISION_REQUIRED_ACTIVE_DISARM`).
+- **Section C — rejected / deferred shapes:** unchanged from Phase 10A.
+
+This document is the authoritative row table for Section A
+implemented commands and Section B `USER_DECISION_REQUIRED`
+candidates. It is **not** a specification of behavior beyond the
+referenced closeouts; behavior is anchored in the per-phase closeout
+docs and the hardware evidence under `../logs/`. **`T` and the ACTIVE
+disarm widening are NOT implemented.**
 
 **Authoritative cross-references:**
 
-- Phase 10A entry: [`DEVKIT_PROGRESS_PHASE_10.md`](DEVKIT_PROGRESS_PHASE_10.md)
+- Phase 10A entry (initial planning): [`DEVKIT_PROGRESS_PHASE_10.md`](DEVKIT_PROGRESS_PHASE_10.md) `<a id="phase-10a"></a>`
+- Phase 10C entry (post-10B-d checkpoint): [`DEVKIT_PROGRESS_PHASE_10.md`](DEVKIT_PROGRESS_PHASE_10.md) `<a id="phase-10c"></a>`
+- Phase 10C checkpoint doc: [`PHASE_10C_COMMAND_SET_CHECKPOINT.md`](PHASE_10C_COMMAND_SET_CHECKPOINT.md)
 - Phase 9E-Z direction guard: [`PHASE_9EZ_CHECKPOINT.md`](PHASE_9EZ_CHECKPOINT.md)
 - UART TX scope guard: [`PHASE_9EZ_CHECKPOINT.md §H`](PHASE_9EZ_CHECKPOINT.md)
 - Phase history (Phase 9E and earlier):
@@ -75,12 +89,30 @@ Notes:
 
 ---
 
-## 3. Section B — DRAFT candidate product commands (`USER_DECISION_REQUIRED`)
+## 3. Section B — `USER_DECISION_REQUIRED` (not implemented)
 
 Each row is a **planning artifact only**. No row is approved. No row is
 implemented. Opening a Phase 10B-class implementation for any row requires
 explicit user approval of that specific row, including answering its
 `USER_DECISION_REQUIRED` notes.
+
+Section B at Phase 10C contains:
+
+- **One unimplemented command:** `T` (sensor read, 0x54).
+- **One unresolved semantic decision** on an already-implemented
+  command: ACTIVE disarm widening for `d`. Phase 10B-d implemented `d`
+  with ARMED -> IDLE plus IDLE / ACTIVE recognized no-op; whether `d`
+  from ACTIVE should *transition* to IDLE is recorded as
+  `USER_DECISION_REQUIRED_ACTIVE_DISARM` and tracked in the `d` row of
+  Section A and in
+  [`PHASE_10C_COMMAND_SET_CHECKPOINT.md §5.1`](PHASE_10C_COMMAND_SET_CHECKPOINT.md).
+  Phase 10C does **not** widen ACTIVE disarm; the current ACTIVE no-op
+  behavior is preserved pending an explicit user decision.
+
+The strikethrough rows below are historical records of commands that
+were promoted from Section B to Section A as their respective Phase
+10B-{v,L,d} closeouts hardware-validated them. They are kept for
+traceability and must not be re-edited as if they were live drafts.
 
 | Byte | Human meaning | Precondition | Proposed side effect | Proposed response | Phase 10B? | New driver/config? | Scope-guard violation? | `USER_DECISION_REQUIRED` notes |
 |---|---|---|---|---|---|---|---|---|

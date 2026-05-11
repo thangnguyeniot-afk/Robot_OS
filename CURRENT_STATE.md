@@ -9,6 +9,24 @@
 
 ## Last Closed Phase
 
+### Phase 10C — Command-Set Checkpoint (docs-only)
+
+- **Date:** 2026-05-11
+- **Type:** Docs-only checkpoint / design-state consolidation. No source, runtime, test, CMake, Zephyr, board, host-tool, script, or `prj.conf` change. Snapshots the validated non-sensor command group after Phase 10B-d closes; prevents blind opening of `T` or ACTIVE disarm widening.
+- **Close status:** `CLOSED_DOCS_ONLY`
+- **Published baseline at open:** `origin/master = 7e250dc`
+- **Closeout doc:** `RobotOS_v1.0/devkit/docs/PHASE_10C_COMMAND_SET_CHECKPOINT.md`
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/DEVKIT_PROGRESS_PHASE_10.md` `<a id="phase-10c"></a>`
+- **Companion docs:** `RobotOS_v1.0/devkit/docs/COMMAND_SET_DRAFT.md` (header status updated; Section B intro clarified to track both the `T` row and the ACTIVE disarm widening as `USER_DECISION_REQUIRED`; no command semantics changed).
+- **Validated non-sensor command set at checkpoint:** `a / s / r / ? / x / v / L / d` — all eight hardware-validated; all fit the single-byte / fixed 96-byte stack-buffer / no-parser / no-registry / no-framing / thread-context-TX pattern.
+- **Runtime behavior baseline:** Unchanged — last runtime behavior phase is Phase 10B-d (firmware `125779c`, evidence-close `7e250dc`). Phase 10C adds no new runtime behavior and runs no new validation.
+- **Remaining `USER_DECISION_REQUIRED`:** (1) `T` sensor read — largest open surface (sensor part, driver / `prj.conf` change, response format, error variant, fixed-buffer compliance — five open prerequisites); (2) ACTIVE disarm widening — `USER_DECISION_REQUIRED_ACTIVE_DISARM`; current behavior is recognized no-op (no transition, no `ignored++`).
+- **Scope guards:** All 12 UART TX scope-guard constraints from `PHASE_9EZ_CHECKPOINT.md §H` intact. `core/`, `platform/`, `devkit_runtime.{c,h}`, `devkit_status_led.{h,c}`, `devkit_button.{c,h}`, `prj.conf`, `CMakeLists.txt`, `boards/`, `zephyr/`, `tests/`, and `DEVKIT_PROGRESS.md` all zero-diff at this checkpoint. Scheduler 7A/7B remains DEFER. F407 / custom board remains HOLD/DEFER. UART TX remains minimal response only. POST_FLASH_AUTOSTART discipline unchanged (root cause OPEN; mitigated-by-workflow via `capture_devkit_rtt.ps1` sidecar `reset run`; manual RESET fallback; plain `west flash` not runtime-start evidence).
+- **Verdict:** Docs-only close. No firmware change, no test change, no scope expansion, no semantics change.
+- **Next gate:** (a) hold, (b) decide ACTIVE disarm widening (cheap, one-line + supplemental run), (c) decide `T` prerequisites (expensive; five open questions — do not open blind), (d) do not reopen Scheduler 7A/7B or F407. Phase 10C itself authorizes none of these.
+
+---
+
 ### Phase 10B-d — Explicit Disarm Command `d` (hardware evidence)
 
 - **Date:** 2026-05-11
