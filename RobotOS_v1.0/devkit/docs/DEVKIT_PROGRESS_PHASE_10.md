@@ -58,6 +58,7 @@ anchors.
 | 9G ‡ | Bounded UART Burst Characterization (hardware evidence captured) | CLOSED_WITH_HARDWARE_EVIDENCE | [→](#phase-9g-late) |
 | 10B-v | Build/Version Query Command `v` | CLOSED_WITH_HARDWARE_EVIDENCE | [→](#phase-10b-v) |
 | 10B-L | LED Physical-Effect Command `L` | CLOSED_WITH_HARDWARE_EVIDENCE + OPERATOR_VISUAL_CONFIRMED | [→](#phase-10b-l) |
+| 10B-d | Explicit Disarm Command `d` | CLOSED_WITH_HARDWARE_EVIDENCE | [→](#phase-10b-d) |
 | 10Z | RESERVED — future checkpoint / closeout slot | NOT_STARTED | [→](#phase-10z) |
 
 `‡` = **non-linear insert.** Phase 9G is a Phase-9-series late evidence
@@ -591,6 +592,126 @@ candidates (`d`, `T`) remain `USER_DECISION_REQUIRED`; user must
 approve a specific row before another phase opens. No LED-semantics
 design phase is warranted; no LED ownership conflict was observed
 between the heartbeat blink and the `L` toggle.
+
+---
+
+<a id="phase-10b-d"></a>
+## Phase 10B-d — Explicit Disarm Command `d`
+
+**Status:** `CLOSED_WITH_HARDWARE_EVIDENCE`
+**Date opened/closed:** 2026-05-11 (same-day implement + hardware validation)
+**Implementation commit:** `125779c` (`feat: add Phase 10B-d disarm command`)
+**Prior runtime baseline:** Phase 10B-L (`a96ce17`).
+**Closeout doc:** [`PHASE_10B_D_CLOSE.md`](PHASE_10B_D_CLOSE.md).
+**Evidence:**
+[`phase_10B_d_host_2026-05-11.txt`](../logs/phase_10B_d_host_2026-05-11.txt)
+(401 B host transcript) +
+[`phase_10B_d_rtt_2026-05-11.txt`](../logs/phase_10B_d_rtt_2026-05-11.txt)
+(22623 B, 60.4 s RTT capture).
+
+### 10B-d.1 Type
+
+Third Phase 10B-class implementation; smallest remaining behavioral
+surface from the `COMMAND_SET_DRAFT.md` Section B list. Single-byte
+app-state command added to the proven Phase 9E/10B-v/10B-L UART RX/TX
+path. Devkit-local source changes only. No new driver, no `prj.conf`
+change, no physical effect, no state-machine redesign.
+
+### 10B-d.2 Approved semantics
+
+| Source state | Action | `transitions++` | `ignored++` | Response |
+|---|---|---|---|---|
+| ARMED | -> IDLE via existing `transition()` | yes | no | `OK disarm state=IDLE\r\n` (22 B) |
+| IDLE | recognized no-op (distinct from `r`) | no | no | `OK disarm no-op state=IDLE\r\n` (28 B) |
+| ACTIVE (`USER_DECISION_REQUIRED_ACTIVE_DISARM`) | recognized no-op for now | no | no | `OK disarm no-op state=ACTIVE\r\n` (30 B) |
+
+`d` does **not** replace or alter `r`. `r` is preserved zero-diff and
+retains its existing `* -> IDLE` semantics (including `ignored++` on
+the redundant IDLE-reset edge).
+
+### 10B-d.3 Source change summary
+
+| File | Delta |
+|---|---|
+| `devkit/src/devkit_app_state.c` | +13 -- `case 'd':` recognition (ARMED→IDLE via `transition()`; otherwise `LOG_INF("Phase 10B-d disarm no-op: ...")`). |
+| `devkit/src/devkit_app_state.h` | +3 -- recognized-command list and state-machine diagram updated to include `d`/`D`. Doc-only. |
+| `devkit/src/devkit_uart_producer.c` | +14 -- `case 'd':` TX response (`OK disarm state=IDLE\r\n` when changed, `OK disarm no-op state=<S>\r\n` otherwise). No new include. |
+| `tools/runtime/run_phase10b_d_disarm_demo.ps1` | new -- PowerShell 5.1 compatible host harness, default sequence `d a d ?`. |
+
+**Not touched:** `core/`, `platform/`, `tests/`, `CMakeLists.txt`,
+`prj.conf`, `boards/`, `devkit/src/devkit_runtime.{c,h}`,
+`devkit/src/devkit_status_led.{h,c}`,
+`DEVKIT_PROGRESS.md`.
+
+### 10B-d.4 Build delta
+
+`west build --pristine -b stm32f411e_disco RobotOS_v1.0/devkit` PASS
+(152/152):
+
+| Region | Before (10B-L `f1db2fa`) | After (10B-d `125779c`) | Delta |
+|---|---|---|---|
+| FLASH | 36628 B | 36780 B | +152 B |
+| RAM   | 12224 B | 12224 B | 0 |
+
+### 10B-d.5 Hardware evidence
+
+Sequence `d a d ?` sent on COM5 (CP210x USB-UART @ 115200 8N1) into a
+Phase 6O 60-second RTT capture (sidecar `reset run`; manual RESET not
+required this session but retained as fallback). Host transcript
+showed 4 of 4 responses byte-exact in send order:
+
+```
+SEND 'd' (0x64) -> RECV: OK disarm no-op state=IDLE
+SEND 'a' (0x61) -> RECV: OK state=ARMED
+SEND 'd' (0x64) -> RECV: OK disarm state=IDLE
+SEND '?' (0x3f) -> RECV: STATE state=IDLE transitions=2 button=0 uart=4 ignored=0
+```
+
+Final RTT counters at ticks=120 (t=59.525s):
+
+- OBS: `accepted=64 dispatched=63 pending=1 peak=2 dropped=0 herr=0 throttled=0 rejected=0 unhandled=0`
+- PROD: `attempted=60 ok=60` (Phase 6M producer healthy)
+- UART: `rx=4 ok=4 full=0 handled=4 last=0x3f`
+- APP: `state=IDLE transitions=2 button=0 uart=4 ignored=0 last_byte=0x3f`
+- CFSR/HFSR: `0x00000000` (13 occurrences each)
+
+Cross-check invariants all hold:
+
+- `accepted(64) - dispatched(63) = pending(1)` ✓
+- `PROD ok(60) + UART ok(4) = accepted(64)` ✓
+- `UART rx = UART handled = APP uart` (4 = 4 = 4) ✓
+- `?` response format identical to Phase 9E baseline (no field change) ✓
+
+### 10B-d.6 ACTIVE disarm
+
+`USER_DECISION_REQUIRED_ACTIVE_DISARM`. Current implementation treats
+ACTIVE the same as IDLE (recognized no-op). No safety semantics were
+invented. The default validation sequence does not exercise the ACTIVE
+branch. Future approval of `ACTIVE -> IDLE` is a one-line widening of
+the existing guard plus a supplemental validation run with sequence
+`d a s d ?`; out of scope for Phase 10B-d.
+
+### 10B-d.7 Scope-guard restatement
+
+All 12 UART TX scope-guard constraints from
+[`PHASE_9EZ_CHECKPOINT.md §H`](PHASE_9EZ_CHECKPOINT.md) remain intact.
+No parser, shell, registry, framing, response queue, ACK/retry, heap,
+ISR-context TX, or core-UART abstraction was introduced. Single-byte
+command vocabulary preserved. Response fits the existing 96-byte stack
+buffer (max 30 B used). Scheduler 7A/7B remains DEFER; F407 remains
+HOLD/DEFER; UART TX remains minimal response only; POST_FLASH_AUTOSTART
+remains OPEN / MITIGATED_BY_WORKFLOW.
+
+### 10B-d.8 Next gate
+
+The non-sensor command group is now hardware-validated end-to-end:
+`a / s / r / ? / x / v / L / d`. `T` is the only remaining
+`USER_DECISION_REQUIRED` row in `COMMAND_SET_DRAFT.md` Section B.
+User options: (a) Phase 10B-`T` (sensor read, requires sensor part
+choice + driver), (b) widen `d` to cover ACTIVE -> IDLE (supplemental
+validation only), (c) open a Phase 10C command-set checkpoint
+(equivalent of Phase 10A for the post-10B-d vocabulary), or (d)
+continued hold. Phase 10B-d itself authorizes none of these.
 
 ---
 

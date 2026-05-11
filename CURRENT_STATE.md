@@ -9,6 +9,27 @@
 
 ## Last Closed Phase
 
+### Phase 10B-d — Explicit Disarm Command `d` (hardware evidence)
+
+- **Date:** 2026-05-11
+- **Type:** Third Phase 10B-class implementation; smallest remaining behavioral surface from `COMMAND_SET_DRAFT.md` Section B. Single-byte app-state command added to the proven Phase 9E/10B-v/10B-L UART RX/TX path. Devkit-local source changes only. No new driver, no `prj.conf` change, no physical effect, no state-machine redesign. Provides explicit user-vocabulary "disarm" distinct from `r` (`r` is preserved zero-diff and remains the canonical reset path).
+- **Close status:** `CLOSED_WITH_HARDWARE_EVIDENCE`
+- **Implementation commit:** `125779c` (`feat: add Phase 10B-d disarm command`)
+- **Closeout doc:** `RobotOS_v1.0/devkit/docs/PHASE_10B_D_CLOSE.md`
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/DEVKIT_PROGRESS_PHASE_10.md` `<a id="phase-10b-d"></a>`
+- **Companion command spec update:** `RobotOS_v1.0/devkit/docs/COMMAND_SET_DRAFT.md` (the `d` row was promoted from Section B DRAFT to Section A IMPLEMENTED).
+- **Evidence:** `RobotOS_v1.0/devkit/logs/phase_10B_d_rtt_2026-05-11.txt` (22623 B, 60.4 s) + `RobotOS_v1.0/devkit/logs/phase_10B_d_host_2026-05-11.txt` (401 B host transcript).
+- **Source change:** `devkit/src/devkit_app_state.c` (+13 lines, `case 'd'` recognition — ARMED→IDLE via existing `transition()`; otherwise no-op LOG_INF), `devkit/src/devkit_app_state.h` (+3 lines, doc-only), and `devkit/src/devkit_uart_producer.c` (+14 lines, `case 'd'` TX response — `OK disarm state=IDLE\r\n` when changed, `OK disarm no-op state=<S>\r\n` otherwise; no new include); plus new host harness `tools/runtime/run_phase10b_d_disarm_demo.ps1`. `core/`, `platform/`, `devkit_runtime.{c,h}`, `devkit_status_led.{h,c}`, `prj.conf`, `CMakeLists.txt`, `boards/`, and `tests/` are zero-diff.
+- **Response format:** `OK disarm state=IDLE\r\n` (22 B) on ARMED → IDLE transition; `OK disarm no-op state=IDLE\r\n` (28 B) or `OK disarm no-op state=ACTIVE\r\n` (30 B) on the recognized-no-op paths. All variants fit the existing 96-byte stack buffer.
+- **Approved state semantics:** ARMED → IDLE with transition (`transitions++`); IDLE recognized no-op (NOT ignored — distinct from `r`); ACTIVE recognized no-op for now (`USER_DECISION_REQUIRED_ACTIVE_DISARM`, no safety semantics invented).
+- **Build delta:** FLASH 36628 B → 36780 B (+152 B); RAM 12224 B unchanged.
+- **Verdict:** PASS. Sequence `d a d ?` on COM5 (CP210x USB-UART @ 115200 8N1) into a Phase 6O 60-second RTT capture (sidecar `reset run`; manual RESET not required); 4/4 host responses byte-exact in send order. RTT final counters at ticks=120: ROBOTOS_UART `rx=ok=handled=4 last=0x3f`; ROBOTOS_APP `state=IDLE transitions=2 button=0 uart=4 ignored=0`; ROBOTOS_OBS `accepted=64 dispatched=63 pending=1 peak=2 dropped=0 herr=0 throttled=0 rejected=0 unhandled=0`; Phase 6M producer healthy `attempted=ok=60`; CFSR/HFSR `0x00000000` (13× each). Invariants `accepted - dispatched = pending`, `PROD ok + UART ok = accepted`, and `?` response format identity all hold. `d` from IDLE did NOT increment `ignored`; `d` from ARMED added exactly one transition.
+- **ACTIVE disarm:** `USER_DECISION_REQUIRED_ACTIVE_DISARM`. Default validation sequence avoids ACTIVE. Future approval is a one-line widening of the existing guard plus a supplemental run with `d a s d ?`; out of scope for Phase 10B-d.
+- **Other Phase 10B candidates (`T`):** remains `USER_DECISION_REQUIRED` in `COMMAND_SET_DRAFT.md` Section B; **NOT implemented**.
+- **Next gate:** Non-sensor command group complete and hardware-validated end-to-end (`a / s / r / ? / x / v / L / d`). User to decide between (a) Phase 10B-`T` (sensor read, requires sensor part choice + driver), (b) widen `d` to cover ACTIVE → IDLE (supplemental validation only), (c) a Phase 10C command-set checkpoint (equivalent of Phase 10A for the post-10B-d vocabulary), or (d) continued hold. Phase 10B-d itself authorizes none of these.
+
+---
+
 ### Phase 10B-L — LED Physical-Effect Command `L` (hardware evidence + OPERATOR_VISUAL_CONFIRMED)
 
 - **Date:** 2026-05-11

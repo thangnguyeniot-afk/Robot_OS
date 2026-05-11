@@ -1,0 +1,9 @@
+﻿# Phase 10B-d explicit disarm command transcript
+# Date: 2026-05-11 19:28:14  Port: COM5  Baud: 115200
+# Sequence: d a d ?
+# InterByteDelayMs: 600  ReadTimeoutMs: 1200
+
+SEND 'd' (0x64) -> RECV: OK disarm no-op state=IDLE
+SEND 'a' (0x61) -> RECV: OK state=ARMED
+SEND 'd' (0x64) -> RECV: OK disarm state=IDLE
+SEND '?' (0x3f) -> RECV: STATE state=IDLE transitions=2 button=0 uart=4 ignored=0
