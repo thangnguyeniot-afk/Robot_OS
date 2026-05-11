@@ -1,13 +1,14 @@
 # Phase 9G — Bounded UART Burst Characterization (Close)
 
-**Type:** Evidence/tooling phase. Host-side script + docs only at this
-commit. No firmware, core, platform, test, CMake, Zephyr, board, or runtime
-script change.
-**Status:** `OPEN_HARDWARE_VALIDATION_PENDING`
+**Type:** Evidence/tooling phase. Host-side script + docs only. No firmware,
+core, platform, test, CMake, Zephyr, board, or runtime-behavior change.
+**Status:** `CLOSED_WITH_HARDWARE_EVIDENCE`
 **Date opened:** 2026-05-11
+**Date closed:** 2026-05-11 (same-day hardware run on STM32F411E-DISCO)
 **Branch:** master
 **Prior runtime checkpoint:** Phase 9E-Z (`30bae27`). Runtime baseline still
-ends at Phase 9E (`587dab7`).
+ends at Phase 9E (`587dab7`); Phase 9G adds characterization evidence only,
+no runtime change.
 **Companion docs:**
 [`DEVKIT_PROGRESS_PHASE_10.md`](DEVKIT_PROGRESS_PHASE_10.md) Phase 9G entry,
 [`PHASE_9EZ_CHECKPOINT.md`](PHASE_9EZ_CHECKPOINT.md) section J Option C
@@ -34,14 +35,20 @@ queued before the dispatcher drains them.
 
 ## B. Scope classification
 
-This commit lands **tooling and docs only** under
-`OPEN_HARDWARE_VALIDATION_PENDING`. Hardware evidence is **not** captured at
-this commit because no STM32F411E-DISCO board is available to the authoring
-environment. An operator with a wired board can run the harness in a
-follow-up session and amend this document with the captured evidence.
+Phase 9G is closed with hardware evidence. Two commits land its content:
 
-The phase is **not** marked `CLOSED` until hardware evidence is captured per
-the validation checklist in section F.
+- `e9a1d62` — `tools: add Phase 9G UART burst characterization harness`
+  (host-side script + docs; phase opened as `OPEN_HARDWARE_VALIDATION_PENDING`).
+- (this commit) — `docs: close Phase 9G UART burst characterization with
+  hardware evidence` (evidence ingestion; phase flipped to
+  `CLOSED_WITH_HARDWARE_EVIDENCE`).
+
+Hardware run was executed on STM32F411E-DISCO via ST-LINK V2 (firmware
+V2J47S0) + Silicon Labs CP210x USB-UART adapter on COM5, using the existing
+Phase 9E firmware build (`build/zephyr/zephyr.elf`, ELF modtime 2026-05-09
+matching commit `587dab7`). Flashing used `west flash` with the runner's
+own `reset run`; runtime-start observation used the Phase 6O
+`capture_devkit_rtt.ps1` sidecar `reset run` discipline.
 
 ---
 
@@ -91,58 +98,110 @@ without firmware fault; Phase 9G's bounded 5-byte burst is much smaller.
 
 ---
 
-## E. Findings (record only — do NOT "fix" in this phase)
+## E. Findings (record only -- no fix in Phase 9G)
 
-This section is intentionally empty pending hardware run. The harness
-itself enumerates the four classes of finding to record (see the
-"Phase 9G findings" subsection of its verification checklist):
+### E.1 Queue-pressure finding (positive characterization, no regression)
 
-1. If `peak` > Phase 9E `peak=2`, record as positive evidence for a
-   future scheduler discussion. Not a regression; not a trigger to mutate
-   `ROBOTOS_CORE_MAX_EVENTS_PER_TICK`.
-2. If `dropped > 0`, record as Phase 9G finding for the scheduler /
-   queue-capacity decision gate. Phase 9G **does not** change budget,
-   capacity, admission, throttle, retry, or dispatch policy.
-3. If response ordering does not match send ordering, record as Phase 9G
-   finding for the UART decision gate. Phase 9G **does not** patch
-   `uart_poll_out()`, the handler, or the TX path.
-4. If `RECV_COUNT < BURST_COUNT`, record as Phase 9G finding. Phase 9G
-   **does not** introduce a retry/ACK protocol, response queue, or
-   parser/framing change.
+`ROBOTOS_OBS peak` rose from Phase 9E's `peak=2` to Phase 9G's `peak=5`.
+This is the **designed** outcome of the 30 ms-spaced burst: 5 UART events
+queued before the dispatcher (`MAX_EVENTS_PER_TICK = 1`, ~500 ms tick) had
+drained the first. The queue safely held all 5, plus a concurrent Phase 6M
+producer event, with `dropped=0`, `herr=0`, `unhandled=0`.
 
-A future amendment to this document should add a "Findings" table
-under this section with `metric | expected | observed | classification`
-rows, plus the RTT log path under section H.
+Classification: **positive characterization evidence**. Not a regression.
+Not a trigger to mutate `ROBOTOS_CORE_MAX_EVENTS_PER_TICK` or
+`ROBOTOS_EVENT_QUEUE_CAPACITY`. Scheduler 7A / 7B-1 remain DEFER.
+
+### E.2 Inter-response timing observation (expected, not a finding to fix)
+
+Inter-response wallclock intervals in firmware time:
+
+| Response | Cmd | Firmware time | Δ vs prior |
+|---|---|---|---|
+| 1 | 0x61 `a` | 00:13.505 | -- |
+| 2 | 0x73 `s` | 00:14.006 | 501 ms (~1 tick) |
+| 3 | 0x3f `?` | 00:14.511 | 505 ms (~1 tick) |
+| 4 | 0x72 `r` | 00:15.513 | 1002 ms (~2 ticks) |
+| 5 | 0x78 `x` | 00:16.016 | 503 ms (~1 tick) |
+
+The 1002 ms gap between responses 3 and 4 is consistent with the
+`MAX_EVENTS_PER_TICK = 1` model: a concurrent Phase 6M producer event
+consumed that tick's dispatch slot, deferring the next UART event by one
+tick. `accepted=65 = PROD ok(60) + UART ok(5)` confirms the interleaving.
+
+Classification: **expected behavior of budget=1 dispatch under mixed
+event sources**. Documents the cost: with 5 UART events plus one
+producer event per 2 ticks, drain of a 5-byte UART burst takes ~5-6
+ticks rather than exactly 5. No fix required; no UART-path patch
+permitted in this phase regardless.
+
+### E.3 Response ordering, count, faults
+
+All match expectations:
+
+- Response ordering preserved: `0x61 → 0x73 → 0x3f → 0x72 → 0x78`,
+  matching the burst send order exactly. The board's app state at
+  query time was `ACTIVE transitions=2 button=0 uart=3 ignored=0`,
+  meaning a (transition 1), s (transition 2), and ? itself (uart=3) had
+  all been processed before the query response went out -- expected.
+- `RECV_COUNT == BURST_COUNT == 5`. No retry/ACK/response-queue need.
+- CFSR/HFSR `0x00000000` for all 13 ROBOTOS_FAULT emissions in the
+  60 s window; `active=0` throughout.
+
+No finding requires a Phase 9G-internal fix. No scope-guard constraint
+was crossed.
 
 ---
 
-## F. Hardware validation checklist (when board is available)
+## F. Hardware validation executed
 
-Operator steps:
+Hardware run completed 2026-05-11 17:58 local. Steps actually taken:
 
-1. Wire STM32F411E-DISCO USART2 (PA2 TX / PA3 RX / GND) to a USB-UART
-   adapter. Confirm CP210x (or equivalent) at known COM port.
-2. From repo root, capture/flash the current Phase 9E firmware using the
-   `capture_devkit_rtt.ps1`-discipline. Manual RESET as fallback if the
-   harness `reset run` fails; plain `west flash` alone is not runtime-start
-   evidence.
-3. Run:
-   ```powershell
-   .\RobotOS_v1.0\tools\runtime\run_phase9g_uart_burst_demo.ps1 -ComPort COMn
-   ```
-4. Save the host transcript and RTT log paths reported by the harness.
-5. Verify the host-side checklist printed by the harness (RECV_COUNT,
-   ordering, response-arrival cadence).
-6. Verify the RTT-side checklist printed by the harness (ROBOTOS_UART,
-   ROBOTOS_APP, ROBOTOS_OBS, CFSR/HFSR, Phase 6M producer).
-7. Amend section E ("Findings") of this document with a row per metric.
-8. Amend the "Date closed" line of this document and flip status from
-   `OPEN_HARDWARE_VALIDATION_PENDING` to `CLOSED`.
-9. Add a log-index row to `RobotOS_v1.0/devkit/logs/INDEX.md`.
-10. Advance `CURRENT_STATE.md` "Last Closed Phase" to Phase 9G.
+1. **Wiring** (pre-existing from Phase 9B/9C/9E): STM32F411E-DISCO USART2
+   PA2 → CP210x USB-UART RX, PA3 → CP210x USB-UART TX, common GND.
+   USB-UART enumerated as COM5 (Silicon Labs CP210x).
+2. **Tool verification:** ST-LINK V2 (V2J47S0) on USB; OpenOCD xpack
+   0.12.0+dev-02228-ge5888bda3-dirty resolved on PATH; west 1.5.0
+   resolved on PATH. `arm-zephyr-eabi-nm` not on PATH; the capture
+   harness's RAM-search fallback was not exercised because `nm`
+   resolved `_SEGGER_RTT` from the Phase 9E ELF directly at `0x20000a5c`.
+3. **Flash:** `west flash --build-dir D:\Robot_OS\build`. The existing
+   build at `D:\Robot_OS\build` was confirmed Phase 9E-aligned before
+   flashing: `BOARD=stm32f411e_disco`, `APPLICATION_SOURCE_DIR=
+   D:/Robot_OS/RobotOS_v1.0/devkit`, ELF modtime 2026-05-09 matching
+   Phase 9E commit `587dab7`, ELF strings include `devkit_uart_emit_tx_response`,
+   `Phase 9E UART response sent cmd=...`, and `ERR ignored byte=...`.
+   OpenOCD wrote 49152 bytes in 1.561 s; exit 0; clean shutdown.
+4. **Burst demo execution:** `RobotOS_v1.0\tools\runtime\run_phase9g_uart_burst_demo.ps1 -ComPort COM5`
+   with all defaults (sequence `a s ? r x`, BurstSpacingMs=30,
+   ReadWindowMs=5000, CaptureSeconds=60, WaitBeforeInputSeconds=15).
+   The harness launched `capture_devkit_rtt.ps1` in a background job
+   (sidecar OpenOCD with `init; reset run; rtt setup 0x20000a5c 64 "SEGGER RTT";
+   rtt start; rtt server start 9090 0`); waited 15 s for boot; sent the
+   burst over 185 ms wallclock (3a phase); read responses for 5018 ms
+   (3b phase); waited for the RTT capture job to complete (60.7 s total
+   stream window, 22929 bytes).
+5. **Harness verdict:** PASS. All 5 required patterns FOUND
+   (`ROBOTOS_OBS state=READY`, `ROBOTOS_FAULT active=0`,
+   `ROBOTOS_PROD attempted=`, `ROBOTOS_UART`, `ROBOTOS_APP`);
+   CFSR/HFSR `0x00000000` for all 13 occurrences.
+6. **Evidence files saved:**
+   - Host transcript: `RobotOS_v1.0/devkit/logs/phase_9G_uart_burst_host_2026-05-11.txt`
+   - RTT log: `RobotOS_v1.0/devkit/logs/phase_9G_uart_burst_rtt_2026-05-11.txt`
+7. **POST_FLASH_AUTOSTART status:** As is normal for cold flash, the
+   initial OpenOCD examination from the `west flash` invocation hit
+   `Failed to read memory at 0xe000ed04` once, then the subsequent
+   examination succeeded; firmware was loaded and shutdown was clean.
+   Runtime-start observation (RTT stream + responses) was driven by the
+   Phase 6O `capture_devkit_rtt.ps1` sidecar `reset run` -- the
+   documented mitigation. **Manual RESET was not required this session.**
+   Plain `west flash` alone was, per discipline, **not** treated as
+   runtime-start evidence; the harness's RTT capture is the
+   authoritative runtime-start signal.
 
-Until steps 4–10 are completed, Phase 9G remains
-`OPEN_HARDWARE_VALIDATION_PENDING`.
+All checklist items completed. Phase 9G status flipped from
+`OPEN_HARDWARE_VALIDATION_PENDING` to `CLOSED_WITH_HARDWARE_EVIDENCE` in
+this commit.
 
 ---
 
@@ -179,16 +238,46 @@ convention; the historical master remains untouched.
 
 ---
 
-## H. Evidence artifacts (populated by future hardware run)
+## H. Evidence artifacts
 
-- Host transcript: `RobotOS_v1.0/devkit/logs/phase_9G_uart_burst_host_<date>.txt`
-  *(pending)*
-- RTT log: `RobotOS_v1.0/devkit/logs/phase_9G_uart_burst_rtt_<date>.txt`
-  *(pending)*
-- Log index row in `RobotOS_v1.0/devkit/logs/INDEX.md` *(pending)*
+- Host transcript: [`../logs/phase_9G_uart_burst_host_2026-05-11.txt`](../logs/phase_9G_uart_burst_host_2026-05-11.txt)
+  -- SEND_BURST t/idx/byte rows + RECV t/idx/line rows + BURST/READ/RECV
+  count totals.
+- RTT log: [`../logs/phase_9G_uart_burst_rtt_2026-05-11.txt`](../logs/phase_9G_uart_burst_rtt_2026-05-11.txt)
+  -- 22929 bytes, 60.7 s stream window.
+- Log index row in [`../logs/INDEX.md`](../logs/INDEX.md) -- added in this
+  commit.
 
-This document will be amended with concrete paths and findings after the
-hardware run completes.
+### H.1 Selected RTT lines (final state, ticks=120)
+
+```text
+ROBOTOS_OBS state=READY ticks=120 pending=1 peak=5 dropped=0
+            dispatched=64 herr=0 throttled=0 rejected=0 accepted=65
+            unhandled=0 bp=0 th_active=0
+ROBOTOS_UART rx=5 ok=5 full=0 invalid=0 other=0 handled=5 last=0x78 type=USER+3
+ROBOTOS_APP  state=IDLE transitions=3 button=0 uart=5 ignored=1
+             last_src=UART last_byte=0x78
+ROBOTOS_FAULT active=0 cfsr=0x00000000 hfsr=0x00000000 context=none
+ROBOTOS_PROD attempted=60 ok=60 throttled=0 dropped=0 invalid=0 other=0 type=USER+1
+```
+
+### H.2 Selected RTT lines (per-command response trace)
+
+```text
+00:13.505  Phase 9C app transition: IDLE->ARMED   src=UART byte=0x61
+00:13.505  Phase 9E UART response sent cmd=0x61 len=16 state=ARMED
+00:14.005  Phase 9C app transition: ARMED->ACTIVE src=UART byte=0x73
+00:14.006  Phase 9E UART response sent cmd=0x73 len=17 state=ACTIVE
+00:14.506  Phase 9C app query:                    state=ACTIVE transitions=2
+00:14.511  Phase 9E UART response sent cmd=0x3f len=60 state=ACTIVE
+00:15.512  Phase 9C app transition: ACTIVE->IDLE  src=UART byte=0x72
+00:15.513  Phase 9E UART response sent cmd=0x72 len=15 state=IDLE
+00:16.016  Phase 9E UART response sent cmd=0x78 len=34 state=IDLE
+```
+
+(For `0x78`, no app transition fires -- `ignored` increments instead and
+the response is the `ERR ignored byte=0x78 state=IDLE` line. Three real
+transitions in total: a/s/r. The query `?` does not transition.)
 
 ---
 
@@ -218,22 +307,32 @@ hardware run completes.
 
 ## J. Recommendation after hardware run
 
-Once the operator completes the hardware checklist in section F:
+The hardware run observed `peak=5 > Phase 9E peak=2` AND `dropped == 0` AND
+ordering preserved AND `RECV_COUNT == BURST_COUNT` AND CFSR/HFSR/active all
+clean. This is the **first** clause of the Phase 9G recommendation matrix
+(see commit `e9a1d62` opening text): "safe to proceed to a Phase 10B
+candidate selection from `COMMAND_SET_DRAFT.md` section B (or to remain on
+hold). No scheduler reopening is justified."
 
-- **If predictions in section D match observed behavior:** Phase 9G can be
-  closed; safe to proceed to a Phase 10B candidate selection from
-  `COMMAND_SET_DRAFT.md` section B (or to remain on hold). No scheduler
-  reopening is justified.
-- **If `peak > 2` but still `< queue capacity` and `dropped == 0`:** record
-  as informative evidence; Scheduler 7A / 7B-1 stay DEFER. Phase 10B is
-  safe to consider.
-- **If `dropped > 0`:** Phase 9G remains open as a finding for the
-  scheduler decision gate (Phase 7B-1 reopening candidate). Phase 10B
-  should be held until the scheduler question is addressed.
-- **If response ordering or count is wrong:** Phase 9G surfaces a UART
-  finding for the UART decision gate. Phase 10B (especially Phase 10B-`L`
-  / -`T` with physical effects) must be held until the UART path is
-  reviewed; Phase 10B-`v` may still be safe.
+Concrete recommendation:
+
+- **Scheduler 7A / 7B-1:** remains DEFER. `peak=5` is well below queue
+  capacity (16), with concurrent Phase 6M producer events successfully
+  interleaved. No workload-driven justification for budget mutation.
+- **Phase 8A (F407):** remains HOLD/DEFER. Phase 9G did not exercise the
+  F407 target.
+- **UART TX path:** unchanged. Response ordering preserved; no patch needed.
+- **Phase 10B-`v` (build query):** **safe to consider.** Smallest surface;
+  no driver dependency; no interaction with the burst behavior characterized
+  here. User decision still required per `COMMAND_SET_DRAFT.md` section 3.
+- **Phase 10B-`L` (LED toggle):** **safe to consider.** First physical-effect
+  command; the queue/dispatch path is now characterized under a 5-event
+  burst with `dropped=0`. User decision still required per
+  `COMMAND_SET_DRAFT.md` section 3 (LED-blink semantics reconciliation).
+- **Phase 10B-`d` / `T`:** unchanged risk profile; user decision still
+  required.
+- **Continued hold:** equally defensible. Phase 9G does not pressure any
+  Phase 10B opening; it only removes a blocking unknown.
 
 Phase 9G does not authorize any of the above by itself.
 

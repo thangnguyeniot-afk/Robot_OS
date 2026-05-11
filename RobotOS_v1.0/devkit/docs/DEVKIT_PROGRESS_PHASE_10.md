@@ -55,7 +55,7 @@ anchors.
 | Phase | Title | Status | Jump |
 |-------|-------|--------|------|
 | 10A | Product Command Set Planning (docs-only) | CLOSED_DOCS_ONLY | [→](#phase-10a) |
-| 9G ‡ | Bounded UART Burst Characterization (tooling + docs; hardware pending) | OPEN_HARDWARE_VALIDATION_PENDING | [→](#phase-9g-late) |
+| 9G ‡ | Bounded UART Burst Characterization (hardware evidence captured) | CLOSED_WITH_HARDWARE_EVIDENCE | [→](#phase-9g-late) |
 | 10Z | RESERVED — future checkpoint / closeout slot | NOT_STARTED | [→](#phase-10z) |
 
 `‡` = **non-linear insert.** Phase 9G is a Phase-9-series late evidence
@@ -312,17 +312,21 @@ Phase 10A does not authorize any of these by itself.
 <a id="phase-9g-late"></a>
 ## Phase 9G — Bounded UART Burst Characterization (late-9-series, non-linear insert)
 
-**Status:** `OPEN_HARDWARE_VALIDATION_PENDING`
-**Type:** Host-side tooling + docs. No firmware, core, platform, test,
-CMake, Zephyr, board, or runtime-script (other than the new sibling
-harness) change.
+**Status:** `CLOSED_WITH_HARDWARE_EVIDENCE`
+**Type:** Host-side tooling + docs + hardware evidence. No firmware,
+core, platform, test, CMake, Zephyr, board, or runtime-script (other than
+the new sibling harness) change.
 **Date opened:** 2026-05-11
+**Date closed:** 2026-05-11 (same-day hardware run)
 **Branch:** master
 **Authority for placement here (not in `DEVKIT_PROGRESS.md`):** user
 preference to leave the historical master untouched; §4 rule 6 (non-linear
 edits explicit) — flagged with `‡` in the Phase Index and the
 `phase-9g-late` anchor id.
 **Companion closeout:** [`PHASE_9G_CLOSE.md`](PHASE_9G_CLOSE.md).
+**Evidence logs:**
+[`../logs/phase_9G_uart_burst_host_2026-05-11.txt`](../logs/phase_9G_uart_burst_host_2026-05-11.txt),
+[`../logs/phase_9G_uart_burst_rtt_2026-05-11.txt`](../logs/phase_9G_uart_burst_rtt_2026-05-11.txt).
 
 ### 9G.1 Purpose
 
@@ -353,20 +357,41 @@ authorize Phase 10B implementation.
   - Pure ASCII (encoding-safe for PowerShell `ParseFile`/`PSParser` on
     Windows code-page hosts).
 - **New docs:** [`PHASE_9G_CLOSE.md`](PHASE_9G_CLOSE.md) closeout document
-  (currently `OPEN_HARDWARE_VALIDATION_PENDING`).
+  (now `CLOSED_WITH_HARDWARE_EVIDENCE` after the 2026-05-11 hardware run).
 - **Existing scripts:** untouched (`capture_devkit_rtt.ps1`,
   `run_phase9d_demo.ps1`, `run_phase9e_uart_response_demo.ps1`,
   `capture_phase6h_runtime.ps1`).
 - **No firmware change.** Phase 9G uses the existing Phase 9E firmware
   (`587dab7`).
 
-### 9G.3 Hardware validation status
+### 9G.3 Hardware validation results
 
-Hardware evidence is **not** captured at this commit because no
-STM32F411E-DISCO is available to the authoring environment. The harness
-is parse-validated; the closeout document explicitly marks the phase as
-`OPEN_HARDWARE_VALIDATION_PENDING` with an operator checklist to flip to
-`CLOSED`. See [`PHASE_9G_CLOSE.md`](PHASE_9G_CLOSE.md) section F.
+Hardware run executed 2026-05-11 17:58 local on STM32F411E-DISCO
+(ST-LINK V2J47S0 + Silicon Labs CP210x USB-UART on COM5) using the
+existing Phase 9E firmware build (commit `587dab7`, ELF at
+`build/zephyr/zephyr.elf`, board `stm32f411e_disco`). Flash via
+`west flash`, runtime-start observation via Phase 6O
+`capture_devkit_rtt.ps1` sidecar `reset run` discipline. Manual RESET was
+not required this session.
+
+**Headline result:** PASS. All harness required patterns matched;
+CFSR/HFSR `0x00000000` throughout (13 occurrences); 5/5 host responses
+in order; 22929-byte RTT log over 60.7 s.
+
+| Metric | Phase 9E baseline | Phase 9G observation |
+|---|---|---|
+| Host burst width (wallclock) | -- (one byte per ~600 ms) | 185 ms for 5 bytes |
+| Host RECV count | 5 | 5 (in order) |
+| ROBOTOS_UART rx / ok / handled | 5 / 5 / 5 | 5 / 5 / 5 |
+| ROBOTOS_APP transitions / uart / ignored | 3 / 5 / 1 | 3 / 5 / 1 |
+| ROBOTOS_OBS peak | 2 | **5** (queue safely held the bounded burst) |
+| ROBOTOS_OBS dropped / herr / unhandled / rejected / throttled | all 0 | all 0 |
+| accepted - dispatched = pending | invariant holds | 65 - 64 = 1 ✓ |
+| CFSR / HFSR | 0x00000000 (13×) | 0x00000000 (13×) |
+| Phase 6M producer (attempted/ok at ticks=120) | 60 / 60 | 60 / 60 |
+
+See [`PHASE_9G_CLOSE.md`](PHASE_9G_CLOSE.md) sections D, E, F, H for the
+full evidence record and finding classification.
 
 ### 9G.4 What this entry does not do
 
@@ -390,11 +415,13 @@ is parse-validated; the closeout document explicitly marks the phase as
 
 ### 9G.5 Next gate
 
-The hardware run described in `PHASE_9G_CLOSE.md` section F must happen
-before Phase 9G can be flipped to `CLOSED`. Until then, the phase is held
-at `OPEN_HARDWARE_VALIDATION_PENDING` and the Phase 10A "next gate" wording
-(user must choose a Section B row, a supporting phase, or a continued
-hold) remains in force.
+Phase 9G is closed. The Phase 10A "next gate" wording remains in force:
+user must explicitly select one of (a) a `USER_DECISION_REQUIRED` row
+from `COMMAND_SET_DRAFT.md` section 3 with its open notes answered,
+(b) a different direction-independent supporting phase (e.g. Phase 9F
+demo polish), or (c) a continued hold. Phase 9G's findings do not by
+themselves authorize any Phase 10B opening; they remove a blocking
+unknown but do not constitute approval.
 
 ---
 

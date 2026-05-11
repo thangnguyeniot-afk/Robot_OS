@@ -1,0 +1,21 @@
+﻿# Phase 9G bounded UART burst characterization transcript
+# Date: 2026-05-11 17:58:30  Port: COM5  Baud: 115200
+# Sequence: a s ? r x   (count = 5)
+# BurstSpacingMs: 30   total burst width ~ 120 ms
+# ReadWindowMs: 5000   ReadTimeoutMs: 6000
+
+SEND_BURST t=12ms idx=1 byte='a' (0x61)
+SEND_BURST t=56ms idx=2 byte='s' (0x73)
+SEND_BURST t=102ms idx=3 byte='?' (0x3f)
+SEND_BURST t=149ms idx=4 byte='r' (0x72)
+SEND_BURST t=180ms idx=5 byte='x' (0x78)
+BURST_COMPLETE_MS=185
+
+RECV t=22ms idx=1 line='OK state=ARMED'
+RECV t=423ms idx=2 line='OK state=ACTIVE'
+RECV t=930ms idx=3 line='STATE state=ACTIVE transitions=2 button=0 uart=3 ignored=0'
+RECV t=1932ms idx=4 line='OK state=IDLE'
+RECV t=2434ms idx=5 line='ERR ignored byte=0x78 state=IDLE'
+READ_WINDOW_MS=5018
+RECV_COUNT=5
+BURST_COUNT=5

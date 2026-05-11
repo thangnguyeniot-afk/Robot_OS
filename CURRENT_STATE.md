@@ -9,6 +9,22 @@
 
 ## Last Closed Phase
 
+### Phase 9G — Bounded UART Burst Characterization (hardware evidence)
+
+- **Date:** 2026-05-11
+- **Type:** Evidence/tooling + hardware run. Host-side script only (no firmware, core, platform, test, CMake, Zephyr, board change).
+- **Close status:** `CLOSED_WITH_HARDWARE_EVIDENCE`
+- **Open commit:** `e9a1d62` (`tools: add Phase 9G UART burst characterization harness`)
+- **Close commit:** this commit (`docs: close Phase 9G UART burst characterization with hardware evidence`)
+- **Closeout doc:** `RobotOS_v1.0/devkit/docs/PHASE_9G_CLOSE.md`
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/DEVKIT_PROGRESS_PHASE_10.md` `<a id="phase-9g-late"></a>` (non-linear `‡` insert per §4 rule 6 — late-9-series post-split)
+- **Evidence:** `RobotOS_v1.0/devkit/logs/phase_9G_uart_burst_rtt_2026-05-11.txt` (22929 B, 60.7 s) + `RobotOS_v1.0/devkit/logs/phase_9G_uart_burst_host_2026-05-11.txt` (host transcript)
+- **Verdict:** PASS. 5-byte burst (`a s ? r x` at 30 ms spacing, ~185 ms total) sent on COM5 to Phase 9E firmware; 5/5 responses arrived in send order; ROBOTOS_OBS `peak=5` (vs Phase 9E `peak=2`), `dropped=0`, `herr=0`, `unhandled=0`; ROBOTOS_UART `rx=ok=handled=5 full=0`; ROBOTOS_APP `transitions=3 uart=5 ignored=1`; Phase 6M producer healthy (`attempted=ok=60` at ticks=120); CFSR/HFSR `0x00000000` (13×); `accepted - dispatched = pending` invariant holds (65 − 64 = 1).
+- **Runtime baseline:** Unchanged — still Phase 9E (`587dab7`). Phase 9G characterized the existing runtime; it added no firmware, no scheduler change, no UART TX scope change.
+- **Next gate:** Phase 10A's gate remains in force — user must explicitly select one of (a) a `USER_DECISION_REQUIRED` row from `COMMAND_SET_DRAFT.md` §3, (b) Phase 9F demo polish, or (c) a continued hold. Phase 9G removes the highest-priority outstanding unknown ("high-rate UART input not stress-tested" from `PHASE_9EZ_CHECKPOINT.md §E`) but does not by itself authorize any Phase 10B opening.
+
+---
+
 ### Phase 10A — Product Command Set Planning (docs-only)
 
 - **Date:** 2026-05-11
