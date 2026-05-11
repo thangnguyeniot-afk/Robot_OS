@@ -167,6 +167,19 @@ void devkit_app_state_on_uart_byte(uint8_t byte, uint32_t handler_count)
 		LOG_INF("Phase 10B-L LED command: state=%s",
 			state_name(s_state));
 		break;
+	case 'd':
+		/* Phase 10B-d: explicit disarm. ARMED -> IDLE with transition.
+		 * IDLE: recognized no-op (not ignored -- distinct from 'r').
+		 * ACTIVE: recognized no-op (USER_DECISION_REQUIRED_ACTIVE_DISARM).
+		 * 'd' does not replace or alter 'r'. */
+		if (s_state == DEVKIT_APP_STATE_ARMED) {
+			transition(DEVKIT_APP_STATE_IDLE, DEVKIT_APP_SRC_UART,
+				   handler_count, byte);
+		} else {
+			LOG_INF("Phase 10B-d disarm no-op: state=%s",
+				state_name(s_state));
+		}
+		break;
 	default:
 		s_ignored_count++;
 		break;

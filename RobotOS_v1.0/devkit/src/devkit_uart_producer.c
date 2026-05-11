@@ -240,6 +240,20 @@ static void devkit_uart_emit_tx_response(uint8_t byte,
 		break;
 	}
 
+	case 'd':
+		/* Phase 10B-d: explicit disarm. If state changed, ARMED->IDLE
+		 * transition occurred; otherwise recognized no-op from IDLE or
+		 * ACTIVE (ACTIVE disarm is USER_DECISION_REQUIRED). Bounded
+		 * fixed-buffer response; no parser, no registry, no framing. */
+		if (changed) {
+			n = snprintf(buf, sizeof(buf), "OK disarm state=IDLE\r\n");
+		} else {
+			n = snprintf(buf, sizeof(buf),
+				     "OK disarm no-op state=%s\r\n",
+				     devkit_app_state_state_name(after->state));
+		}
+		break;
+
 	default:
 		n = snprintf(buf, sizeof(buf), "ERR ignored byte=0x%02x state=%s\r\n",
 			     (unsigned)byte,

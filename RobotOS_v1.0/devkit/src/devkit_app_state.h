@@ -19,6 +19,8 @@
  *   uart 'a'/'A' -> ARMED   (from any state)
  *   uart 's'/'S' -> ACTIVE  (from any state)
  *   uart 'r'/'R' -> IDLE    (from any state)
+ *   uart 'd'/'D' -> IDLE    (from ARMED only; recognized no-op from IDLE;
+ *                             ACTIVE disarm is USER_DECISION_REQUIRED)
  *   uart '?'     -> report current state only, no transition
  *   any other    -> ignored (incremented in ignored counter)
  *
@@ -85,6 +87,7 @@ void devkit_app_state_on_button(uint32_t seq);
  *   'a' / 'A' -> ARMED
  *   's' / 'S' -> ACTIVE
  *   'r' / 'R' -> IDLE
+ *   'd' / 'D' -> IDLE (from ARMED); no-op from IDLE; ACTIVE USER_DECISION_REQUIRED
  *   '?'       -> report current state (no transition)
  *   any other -> ignored (counter incremented; no transition)
  *
