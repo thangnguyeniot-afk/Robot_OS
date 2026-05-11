@@ -9,13 +9,27 @@
 
 ## Last Closed Phase
 
-### Phase 9E-Z — Command Loop Checkpoint / Direction Guard
+### Phase 10A — Product Command Set Planning (docs-only)
+
+- **Date:** 2026-05-11
+- **Type:** Docs-only planning. No source, runtime, test, CMake, Zephyr, board, or script change.
+- **Close status:** `CLOSED_DOCS_ONLY`
+- **Closeout doc:** `RobotOS_v1.0/devkit/docs/PHASE_10A_CLOSE.md`
+- **Companion doc:** `RobotOS_v1.0/devkit/docs/COMMAND_SET_DRAFT.md`
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/DEVKIT_PROGRESS_PHASE_10.md` §5 (`<a id="phase-10a"></a>`)
+- **Purpose:** Capture product command vocabulary and workload intent in writing before any Phase 10B-class implementation is authorized.
+- **Runtime baseline:** Unchanged — still ends at **Phase 9E-Z** (audit) / **Phase 9E** (implementation, commit `587dab7`). Phase 10A does not introduce or modify any runtime behavior.
+- **Next gate:** User must explicitly select one of (a) a `USER_DECISION_REQUIRED` row from `COMMAND_SET_DRAFT.md` §3 with its open notes answered, (b) a direction-independent supporting phase (Phase 9F demo polish or Phase 9G UART burst characterization), or (c) a continued hold. **No Phase 10B implementation is authorized.**
+
+---
+
+### Phase 9E-Z — Command Loop Checkpoint / Direction Guard (last runtime checkpoint)
 
 - **Date:** 2026-05-09
 - **Type:** Audit-only. No source, runtime, test, or Kconfig change.
 - **Close status:** `CLOSED`
 - **Full checkpoint:** `RobotOS_v1.0/devkit/docs/PHASE_9EZ_CHECKPOINT.md`
-- **Verdict:** ON_TRACK. Phase 9A–9E stream proven complete. Scheduler DEFER confirmed. UART TX scope frozen (no shell/parser/protocol). Awaiting user product-direction decision.
+- **Verdict:** ON_TRACK. Phase 9A–9E stream proven complete. Scheduler DEFER confirmed. UART TX scope frozen (no shell/parser/protocol). Awaiting user product-direction decision (now captured in Phase 10A planning artifacts above).
 
 ---
 
