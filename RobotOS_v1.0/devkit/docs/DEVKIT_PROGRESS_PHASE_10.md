@@ -57,7 +57,7 @@ anchors.
 | 10A | Product Command Set Planning (docs-only) | CLOSED_DOCS_ONLY | [→](#phase-10a) |
 | 9G ‡ | Bounded UART Burst Characterization (hardware evidence captured) | CLOSED_WITH_HARDWARE_EVIDENCE | [→](#phase-9g-late) |
 | 10B-v | Build/Version Query Command `v` | CLOSED_WITH_HARDWARE_EVIDENCE | [→](#phase-10b-v) |
-| 10B-L | LED Physical-Effect Command `L` | CLOSED_WITH_HARDWARE_EVIDENCE (PHYSICAL_OBSERVATION_AMBIGUOUS) | [→](#phase-10b-l) |
+| 10B-L | LED Physical-Effect Command `L` | CLOSED_WITH_HARDWARE_EVIDENCE + OPERATOR_VISUAL_CONFIRMED | [→](#phase-10b-l) |
 | 10Z | RESERVED — future checkpoint / closeout slot | NOT_STARTED | [→](#phase-10z) |
 
 `‡` = **non-linear insert.** Phase 9G is a Phase-9-series late evidence
@@ -509,8 +509,8 @@ before another phase opens.
 ## Phase 10B-L — LED Physical-Effect Command `L`
 
 **Status:** `CLOSED_WITH_HARDWARE_EVIDENCE` (electrical/RTT) +
-`PHYSICAL_OBSERVATION_AMBIGUOUS` (visual LED not human-witnessed in this
-autonomous run).
+`OPERATOR_VISUAL_CONFIRMED` (visual LED witnessed by operator in a
+follow-up re-run; see `PHASE_10B_L_CLOSE.md` section P).
 **Type:** Second Phase 10B-class implementation; **first physical-effect
 command**. Single-byte command added to the proven Phase 9E/10B-v UART
 RX/TX path; devkit-local source changes only. Reuses the existing
@@ -522,7 +522,11 @@ board, or `prj.conf` change.
 **Companion closeout:** [`PHASE_10B_L_CLOSE.md`](PHASE_10B_L_CLOSE.md).
 **Evidence logs:**
 [`../logs/phase_10B_L_host_2026-05-11.txt`](../logs/phase_10B_L_host_2026-05-11.txt),
-[`../logs/phase_10B_L_rtt_2026-05-11.txt`](../logs/phase_10B_L_rtt_2026-05-11.txt).
+[`../logs/phase_10B_L_rtt_2026-05-11.txt`](../logs/phase_10B_L_rtt_2026-05-11.txt)
+(autonomous run, electrical/RTT);
+[`../logs/phase_10B_L_visual_host_2026-05-11.txt`](../logs/phase_10B_L_visual_host_2026-05-11.txt),
+[`../logs/phase_10B_L_visual_rtt_2026-05-11.txt`](../logs/phase_10B_L_visual_rtt_2026-05-11.txt)
+(operator-witnessed re-run; visual LED confirmed).
 
 ### 10B-L.1 Command
 
@@ -556,7 +560,7 @@ Three files changed, all devkit-local:
 | RTT counters | `ROBOTOS_UART rx=4 ok=4 full=0 handled=4 last=0x3f`; `ROBOTOS_APP transitions=0 button=0 uart=4 ignored=0`; `ROBOTOS_OBS peak=2 dropped=0 dispatched=63 accepted=64`; `ROBOTOS_PROD attempted=60 ok=60`. |
 | Invariants | `accepted(64) - dispatched(63) = pending(1)` ✓; `PROD(60) + UART(4) = accepted(64)` ✓; `transitions=0` (no a/s/r) ✓; `L` did not transition and did not increment `ignored`. |
 | Heartbeat preservation | 139 `tick count=` lines across the 60.4 s window; no `LED toggle failed` errors; cadence uninterrupted. |
-| Physical LED observation | **PHYSICAL_OBSERVATION_AMBIGUOUS** — autonomous run, no human watched the LED. RTT confirms the toggle calls fired (`Phase 10B-L LED command` ×2 + `cmd=0x4c len=26 state=IDLE` ×2; no toggle-failure log). Visible effect (single phase-shift in heartbeat) is predicted but not human-verified. |
+| Physical LED observation | Autonomous run: `PHYSICAL_OBSERVATION_AMBIGUOUS` (no human watched). **Follow-up operator-witnessed re-run 2026-05-11 ~18:57 local: `OPERATOR_VISUAL_CONFIRMED`** — operator saw the visible phase-shift in the 500 ms heartbeat blink correlated with both `L` commands; see `PHASE_10B_L_CLOSE.md` section P. The autonomous-run ambiguity gap was real at the time and is preserved historically; this follow-up evidence closes it. |
 
 ### 10B-L.4 What this entry does not do
 
@@ -581,10 +585,12 @@ Three files changed, all devkit-local:
 ### 10B-L.5 Next gate
 
 Phase 10B-L demonstrates the smallest safe physical-effect product
-command. Further candidates (`d`, `T`) remain `USER_DECISION_REQUIRED`;
-user must approve a specific row before another phase opens. An
-operator-witnessed re-run is recommended if visible LED feedback is a
-product requirement.
+command. The follow-up operator-witnessed re-run on 2026-05-11 closed
+the visual-evidence gap (`OPERATOR_VISUAL_CONFIRMED`). Further
+candidates (`d`, `T`) remain `USER_DECISION_REQUIRED`; user must
+approve a specific row before another phase opens. No LED-semantics
+design phase is warranted; no LED ownership conflict was observed
+between the heartbeat blink and the `L` toggle.
 
 ---
 

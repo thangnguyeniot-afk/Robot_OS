@@ -7,8 +7,8 @@ RX/TX path; devkit-local source changes only. Reuses the existing
 new LED service, no state machine, no scheduler change, no core/platform
 change.
 **Status:** `CLOSED_WITH_HARDWARE_EVIDENCE` (electrical/RTT evidence)
-            + `PHYSICAL_OBSERVATION_AMBIGUOUS` (visual LED check)
-**Date opened/closed:** 2026-05-11 (same-day hardware run)
+            + `OPERATOR_VISUAL_CONFIRMED` (visual LED check; see section P)
+**Date opened/closed:** 2026-05-11 (same-day hardware run + operator-witnessed visual re-run)
 **Branch:** master
 **Prior runtime baseline:** Phase 10B-v (`d8346db`).
 **Companion docs:**
@@ -399,3 +399,129 @@ Not recommended:
 - Live state snapshot: [`../../../CURRENT_STATE.md`](../../../CURRENT_STATE.md)
 - Telemetry reference: [`TELEMETRY_REFERENCE.md`](TELEMETRY_REFERENCE.md)
 - Runtime tools: [`../../tools/runtime/README.md`](../../tools/runtime/README.md)
+
+---
+
+## P. Operator-Witnessed Visual Re-run (follow-up evidence)
+
+**Visual classification:** `OPERATOR_VISUAL_CONFIRMED`
+**Run type:** Evidence-only operator-witnessed re-run. No firmware,
+source, runtime, test, CMake, Zephyr, board, or script change. Used
+the existing Phase 10B-L harness unchanged.
+**Date:** 2026-05-11 (~18:57 local)
+**Operator label:** operator-witnessed local run
+**Board:** STM32F411E-DISCO (rev D); ST-LINK V2J47S0; CP210x USB-UART
+on COM5; same wiring as the autonomous run.
+**Firmware:** Unchanged from commit `f1db2fa` (Phase 10B-L
+implementation). The board was already flashed with the Phase 10B-L
+firmware from the autonomous run earlier the same day; no re-flash
+performed this session.
+
+### P.1 Commands run
+
+`.\RobotOS_v1.0\tools\runtime\run_phase10b_l_led_command_demo.ps1 -ComPort COM5
+-OutputRttLog .../phase_10B_L_visual_rtt_2026-05-11.txt
+-OutputTranscript .../phase_10B_L_visual_host_2026-05-11.txt`
+
+Default sequence (`L v L ?`) at 600 ms inter-byte spacing. 60 s RTT
+capture window via the Phase 6O `capture_devkit_rtt.ps1` harness
+(sidecar `init; reset run; rtt setup 0x20000a5c 64 "SEGGER RTT"; rtt
+start; rtt server start 9090 0`). **Manual RESET was not required.**
+
+### P.2 What the operator saw
+
+The operator was physically present in front of the board and
+specifically watched the user LED during the burst window. Verdict
+(captured at runtime via interactive prompt):
+
+> **Confirmed -- saw effect on both Ls.** Visible phase-shift in the
+> 500 ms heartbeat blink correlated with both `L` commands.
+
+The two `L` commands fired ~1.2 s apart, ~15 s after harness launch
+(boot-settle delay). Heartbeat continued normally across the burst
+window.
+
+### P.3 Evidence artifacts
+
+- Host transcript:
+  [`../logs/phase_10B_L_visual_host_2026-05-11.txt`](../logs/phase_10B_L_visual_host_2026-05-11.txt)
+- RTT log:
+  [`../logs/phase_10B_L_visual_rtt_2026-05-11.txt`](../logs/phase_10B_L_visual_rtt_2026-05-11.txt)
+  (22744 B, 60.4 s)
+
+### P.4 Host transcript (visual re-run)
+
+```
+SEND 'L' (0x4c) -> RECV: OK led=toggle state=IDLE
+SEND 'v' (0x76) -> RECV: INFO phase=10b-v app=devkit board=stm32f411e_disco tick_ms=500 uart=minimal
+SEND 'L' (0x4c) -> RECV: OK led=toggle state=IDLE
+SEND '?' (0x3f) -> RECV: STATE state=IDLE transitions=0 button=0 uart=4 ignored=0
+```
+
+Byte-identical to the autonomous Phase 10B-L run (same firmware
+image; deterministic command path). Both `L` responses identical;
+`v` response unchanged from Phase 10B-v baseline; `?` reports
+`transitions=0 ignored=0 uart=4`.
+
+### P.5 RTT counter summary (visual re-run, ticks=120)
+
+```text
+ROBOTOS_OBS   state=READY ticks=120 pending=1 peak=2 dropped=0
+              dispatched=63 herr=0 throttled=0 rejected=0 accepted=64
+              unhandled=0 bp=0 th_active=0
+ROBOTOS_UART  rx=4 ok=4 full=0 invalid=0 other=0 handled=4 last=0x3f
+ROBOTOS_APP   state=IDLE transitions=0 button=0 uart=4 ignored=0
+              last_src=UART last_byte=0x3f
+ROBOTOS_FAULT active=0 cfsr=0x00000000 hfsr=0x00000000
+ROBOTOS_PROD  attempted=60 ok=60 throttled=0 dropped=0
+```
+
+Invariants:
+
+- `accepted(64) - dispatched(63) = pending(1)` ✓
+- `PROD ok(60) + UART ok(4) = accepted(64)` ✓
+- `transitions=0` (no a/s/r), `ignored=0` (`L` not ignored)
+- CFSR/HFSR `0x00000000` for all 13 `ROBOTOS_FAULT` emissions
+- 2× `Phase 10B-L LED command: state=IDLE`, 2× `cmd=0x4c len=26`,
+  1× `cmd=0x76 len=77` (the `v` between the `L`s)
+- 139 `tick count=` lines (heartbeat continued)
+
+### P.6 Visual status flip
+
+The original autonomous-run note (`PHYSICAL_OBSERVATION_AMBIGUOUS` in
+section F) is **preserved as historical context**. The status header
+at the top of this document has been updated to
+`OPERATOR_VISUAL_CONFIRMED` per this follow-up evidence. Section F's
+"Physical observation by operator" row should now be read in
+conjunction with this section P, which provides the operator-witnessed
+confirmation. The autonomous run gap was real at the time; this
+follow-up closes it.
+
+### P.7 What this re-run does not change
+
+- No firmware change (zero source/runtime diff).
+- No new LED API, no LED state machine, no scheduler change.
+- No core, platform, test, CMake, Zephyr, board, or `prj.conf` change.
+- `?` response format unchanged (still no LED field).
+- `v`, `a`, `s`, `r`, `x` behavior unchanged.
+- Phase 10B-d and Phase 10B-T remain `USER_DECISION_REQUIRED` / not
+  implemented.
+- Scheduler 7A/7B remains DEFER. Phase 8A / F407 remains HOLD/DEFER.
+  UART TX remains minimal response only (12 scope-guard constraints
+  intact).
+- POST_FLASH_AUTOSTART discipline preserved (root cause OPEN;
+  mitigated-by-workflow from Phase 6O onward via
+  `capture_devkit_rtt.ps1` sidecar `reset run`; manual RESET retained
+  as fallback; plain `west flash` alone is not runtime-start
+  evidence).
+
+### P.8 No LED ownership conflict observed
+
+The heartbeat blink continued uninterrupted across the burst window
+(139 `tick count=` lines in the RTT log; no `LED toggle failed`
+errors). The `L` toggles produced visible phase shifts but did not
+disturb the heartbeat cadence. **No LED-semantics design phase is
+warranted.** A redesign would only be justified if the product spec
+later requires a visually distinct command flash separable from the
+heartbeat -- the current "phase shift in heartbeat" is the
+operator-confirmed behavior.
