@@ -52,16 +52,25 @@ as the underlying contracts evolve.
 
 ## 04_SCRATCH_OR_PROVENANCE — non-canonical scratch
 
-**Not canonical.** These files exist for traceability or scratch work
-during prior sessions. **Do not cite them as source-of-truth.** Files
-here are not promoted to canonical without an explicit phase that
-promotes them.
+**Not canonical.** Files in this directory exist for traceability or
+scratch work during prior sessions. **Do not cite them as
+source-of-truth.** Files here are not promoted to canonical without an
+explicit phase that promotes them.
 
-- `04_SCRATCH_OR_PROVENANCE/DEVKIT_PROGRESS_TEMP.md` -- working scratch from an earlier reorganization pass; superseded by `01_PROGRESS/DEVKIT_PROGRESS.md` + `01_PROGRESS/DEVKIT_PROGRESS_PHASE_10.md`.
-- `04_SCRATCH_OR_PROVENANCE/DEVKIT_PROGRESS_before.txt` -- provenance snapshot of `DEVKIT_PROGRESS.md` from before the seed-split; preserved so the split can be audited but not maintained.
+See [`../04_SCRATCH_OR_PROVENANCE/README.md`](../04_SCRATCH_OR_PROVENANCE/README.md)
+for the directory policy (this is the only tracked file in the
+directory).
 
-These files are **untracked** in git and remain so. They are physically
-present on disk but are not part of the repository history.
+Examples of files that have lived here historically (may or may not be
+present locally; **these files are untracked in git and will not
+appear on a fresh clone**):
+
+- `DEVKIT_PROGRESS_TEMP.md` -- working scratch from an earlier reorganization pass; superseded by [`../01_PROGRESS/DEVKIT_PROGRESS.md`](../01_PROGRESS/DEVKIT_PROGRESS.md) + [`../01_PROGRESS/DEVKIT_PROGRESS_PHASE_10.md`](../01_PROGRESS/DEVKIT_PROGRESS_PHASE_10.md).
+- `DEVKIT_PROGRESS_before.txt` -- provenance snapshot of `DEVKIT_PROGRESS.md` from before the seed-split; preserved locally so the split can be audited but not maintained.
+
+The scratch files themselves are **untracked** in git by design. They
+are physically present on disk only on the machines that produced
+them; a fresh clone will see only the policy README in this directory.
 
 ---
 

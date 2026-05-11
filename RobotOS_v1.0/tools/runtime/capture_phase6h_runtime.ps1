@@ -442,7 +442,7 @@ if ($allPassed) {
     Write-Status ''
     Write-Status 'Commit instructions (run manually after reviewing log):'
     Write-Status "  git add RobotOS_v1.0/devkit/logs/phase_6H_rtt_$LogDate.txt"
-    Write-Status '  git add RobotOS_v1.0/DEVKIT_PROGRESS.md   (after updating Phase 6H status)'
+    Write-Status '  git add RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS.md   (after updating Phase 6H status)'
     Write-Status '  git commit -m "tests: Phase 6H runtime confirmed -- ISR timer stress-lite"'
     Write-Status ''
     Write-Status 'DO NOT stage: rtt_buf.bin, *.elf, *.hex, build/, .west/, zephyr/, modules/'

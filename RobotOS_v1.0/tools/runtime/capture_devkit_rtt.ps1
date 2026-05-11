@@ -568,7 +568,7 @@ if ($allPassed) {
     Write-Info "Next steps:"
     Write-Info "  git add $OutputLog"
     Write-Info "  Update RobotOS_v1.0/devkit/logs/INDEX.md with new log entry"
-    Write-Info "  Update RobotOS_v1.0/devkit/docs/DEVKIT_PROGRESS.md Phase 6O"
+    Write-Info "  Update RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS.md Phase 6O"
     exit 0
 } else {
     Write-Fail "FAIL -- one or more required patterns missing or CFSR/HFSR non-zero"

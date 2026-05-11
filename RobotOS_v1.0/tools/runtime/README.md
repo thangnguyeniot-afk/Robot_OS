@@ -289,7 +289,7 @@ After PASS:
 **Stage only these files:**
 ```
 git add RobotOS_v1.0/devkit/logs/phase_6H_rtt_YYYY-MM-DD.txt
-git add RobotOS_v1.0/DEVKIT_PROGRESS.md
+git add RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS.md
 ```
 
 **Never stage:**
