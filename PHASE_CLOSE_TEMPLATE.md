@@ -123,9 +123,18 @@ HFSR:    [0x00000000 / not checked]
 
 ## 8. Docs Updated
 
+Progress files are grouped by 10-phase window starting at Phase 11. Update
+the correct progress stream for the closing phase number:
+
+- Phase 1 through Phase 9E / 9E-Z -> `01_PROGRESS/DEVKIT_PROGRESS.md` (historical master; **frozen**, do not append).
+- Phase 10 -> `01_PROGRESS/DEVKIT_PROGRESS_PHASE_10.md`.
+- Phase 11 through Phase 20 -> `01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md`.
+- Phase 21+ -> create / use the next-window file (e.g. `DEVKIT_PROGRESS_PHASE_21_30.md`) when the window opens.
+
 | Doc | Updated? | What changed |
 |-----|----------|-------------|
-| `01_PROGRESS/DEVKIT_PROGRESS.md` | Yes / No | [phase section added/updated] |
+| `01_PROGRESS/<active progress file>` | Yes / No | [phase section added/updated in the correct 10-phase-window file] |
+| `02_PHASE_CLOSEOUTS/PHASE_<id>_CLOSE.md` or `PHASE_<id>_CHECKPOINT.md` | Yes / No | [closeout doc created (if phase has evidence / decision / freeze implication)] |
 | `core/README.md` | Yes / No | [phase section added] |
 | `platform/README.md` | Yes / No | [phase section added] |
 | `CURRENT_STATE.md` | Yes / No / See section 12 | [last closed phase updated] |

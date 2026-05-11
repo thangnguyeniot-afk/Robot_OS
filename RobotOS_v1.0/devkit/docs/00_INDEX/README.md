@@ -12,15 +12,30 @@ Live state lives at the repo root in
 
 ## 01_PROGRESS — running phase logs
 
-Authoritative phase history. Per the split rules in
-`01_PROGRESS/DEVKIT_PROGRESS_PHASE_10.md` §4, Phase 1 through Phase 9E
-/ 9E-Z history stays in `DEVKIT_PROGRESS.md`; every Phase 10+ entry
-lands in `DEVKIT_PROGRESS_PHASE_10.md`. **`DEVKIT_PROGRESS.md` is the
-historical master and is not rewritten or reordered when later phases
-land.**
+Authoritative phase history. Progress files are **grouped by 10-phase
+windows** starting at Phase 11, not one file per phase. Phase 1–10
+keep their historical naming. Each progress file is a narrative index
+(status + short summary + anchors); full-form evidence lives in the
+matching closeout docs under `02_PHASE_CLOSEOUTS/`.
 
-- [`DEVKIT_PROGRESS.md`](../01_PROGRESS/DEVKIT_PROGRESS.md) -- historical master, Phase 1 through Phase 9E / 9E-Z.
-- [`DEVKIT_PROGRESS_PHASE_10.md`](../01_PROGRESS/DEVKIT_PROGRESS_PHASE_10.md) -- running log for Phase 10+ and late/supporting entries.
+See [`../01_PROGRESS/README.md`](../01_PROGRESS/README.md) for the
+directory policy (phase-window convention, distinction between
+progress streams and closeout docs, editing rules).
+
+| Phase range | File | Status |
+|---|---|---|
+| Phase 1 through Phase 9E / 9E-Z | [`DEVKIT_PROGRESS.md`](../01_PROGRESS/DEVKIT_PROGRESS.md) | Historical master — **not rewritten** when later phases land. |
+| Phase 10 (10A, 10B-*, 10C, ...) | [`DEVKIT_PROGRESS_PHASE_10.md`](../01_PROGRESS/DEVKIT_PROGRESS_PHASE_10.md) | Running log; Phase 10C is latest closed entry. |
+| Phase 11 through Phase 20 | [`DEVKIT_PROGRESS_PHASE_11_20.md`](../01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md) | `RESERVED / NOT_STARTED` (scaffold; Phase 11 not opened). |
+| Phase 21+ | future `DEVKIT_PROGRESS_PHASE_21_30.md`, etc. | Create when the window opens. |
+
+**Per-phase closeout / checkpoint docs remain a separate artifact
+class** under `../02_PHASE_CLOSEOUTS/`. A phase with hardware
+evidence, implementation closeout, checkpoint, direction guard,
+architecture / design decision, important validation record, or
+release / freeze implication may still publish its own
+`PHASE_*_CLOSE.md` / `PHASE_*_CHECKPOINT.md` regardless of which
+progress-window file holds its narrative entry.
 
 ## 02_PHASE_CLOSEOUTS — phase evidence and checkpoint docs
 

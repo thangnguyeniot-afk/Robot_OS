@@ -14,9 +14,14 @@
 These directories contain the live implementation that runs on hardware.
 See [`CURRENT_STATE.md`](../CURRENT_STATE.md) for the latest validated state and
 [`devkit/docs/01_PROGRESS/DEVKIT_PROGRESS.md`](devkit/docs/01_PROGRESS/DEVKIT_PROGRESS.md) for full
-phase history up to Phase 9E / 9E-Z, and
+phase history up to Phase 9E / 9E-Z,
 [`devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_10.md`](devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_10.md)
-for Phase 10+.
+for Phase 10, and
+[`devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md`](devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md)
+for the Phase 11–20 window (currently `RESERVED / NOT_STARTED`). Progress
+files are grouped by 10-phase windows starting at Phase 11; see
+[`devkit/docs/01_PROGRESS/README.md`](devkit/docs/01_PROGRESS/README.md) for
+the directory policy.
 
 **Historical reference tree** (`src/`, `include/`, `boards/`):
 The 4-layer adapter/framework/application architecture described below was the
