@@ -9,6 +9,77 @@
 
 ## Last Closed Phase
 
+### Phase 12D-pre — Legacy Framework Scaffold Disposition (docs-only)
+
+- **Date:** 2026-05-12
+- **Type:** Docs-only architecture-boundary phase. No source, runtime, test, CMake, Zephyr, board, `prj.conf`, DTS overlay, evidence log, `framework/` directory, or `.h`/`.c` Framework file change. No file deleted, moved, or renamed.
+- **Close status:** `CLOSED_DOCS_ONLY`
+- **Decision result:** `LEGACY_SCAFFOLD_MARKED_FROZEN_DOCS_ONLY`
+- **Published baseline at open:** `origin/master = c3a9384`
+- **Closeout doc:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12D_PRE_LEGACY_FRAMEWORK_SCAFFOLD_DISPOSITION.md`
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md` `<a id="phase-12d-pre"></a>`
+- **New legacy notices placed in repo tree:** `RobotOS_v1.0/src/README_LEGACY_SCAFFOLD.md`, `RobotOS_v1.0/src/framework/DEPRECATED.md`, `RobotOS_v1.0/include/robotos/DEPRECATED.md`. Notices are classification documents only; zero source file under `src/` or `include/` is modified, deleted, moved, or renamed.
+
+#### Architecture classification (canonical statement)
+
+- **Architecture A — active / evidence-backed / canonical for Phase 12+:**
+  - Top-level dirs: `RobotOS_v1.0/core/`, `RobotOS_v1.0/platform/`, `RobotOS_v1.0/devkit/`.
+  - Build entry: `RobotOS_v1.0/devkit/CMakeLists.txt` (Zephyr devkit hardware build).
+  - Types: `robotos_core_status_t`, `robotos_event_t`, `robotos_event_type_t`, `robotos_platform_*`.
+  - Hardware-validated through Phase 11E on STM32F411E-DISCO rev D.
+  - All Phase 12A/12B/12C Framework planning is built on this stack.
+- **Architecture B — frozen legacy scaffold / non-authoritative:**
+  - Top-level dirs: `RobotOS_v1.0/src/`, `RobotOS_v1.0/include/robotos/`, root `RobotOS_v1.0/CMakeLists.txt`.
+  - Source baseline: `43de448` (2025-03-05); **zero source evolution** since baseline.
+  - Contents: `src/framework/` (Robot Framework Layer scaffold: stepper, servo, dcmotor, encoder, endstop, sensor, pid, filter, limiter, robot_sm + drivers), `src/adapter/` (zephyr + host HAL backends), `src/app/` (G-code parser, motion planner, kinematics, app_sm), `include/robotos/` (15 `ro_*.h` HAL + 10 framework headers), `include/app/` (app headers).
+  - Types: `ro_status_t`, `ro_queue_t`, `ro_thread_t`, `ro_gpio_*`, `ro_pwm_*`, `ro_*` HAL surface.
+  - **Zero Phase 1–11 hardware evidence references any file under this tree.**
+  - **Not compiled by the active devkit hardware build.**
+  - **Type-incompatible with Architecture A.**
+
+#### Confirmed disposition
+
+- Architecture A is **canonical** for Phase 12+ work.
+- Architecture B is **legacy / frozen / non-authoritative** unless reopened by a future explicit reconciliation phase (not authorized at Phase 12D-pre).
+- `src/framework/` is **not** the active path for Phase 12+ Robot Framework implementation.
+- `include/robotos/` is **not** the active namespace for Phase 12+ Framework FSM.
+- Root `RobotOS_v1.0/CMakeLists.txt` belongs to the legacy build path; **not modified**, classified.
+- **Future active Framework path: `RobotOS_v1.0/framework/`** — new top-level sibling to `core/`, `platform/`, `devkit/`. **Not created by Phase 12D-pre.** Created (if at all) by Phase 12D on explicit user authorization.
+
+#### Phase 12D status
+
+- **Phase 12D = NOT_STARTED.**
+- Architectural boundary now explicit; Phase 12D unblocked at the boundary level.
+- Phase 12D still requires **explicit user authorization** to open.
+- Phase 12D scope (when/if opened): docs + single header (`framework/README.md` + `framework/robotos_fw_fsm.h`) + Phase 12D closeout + spec update (§4 DRAFT → LOCKED-AT-12D) + progress entry + CURRENT_STATE + INDEX. No `.c` body, no CMake change, no devkit integration, no hardware run, no Scheduler change, no F407, no Application/product work, no Architecture B modification.
+
+#### What is preserved unchanged at Phase 12D-pre
+
+- Validated command set: **`a / s / r / ? / x / v / L / d / T`** (9 commands; hardware-evidence-backed).
+- `devkit_app_state`: devkit-local; not promoted (scope-guard #11 re-affirmed).
+- `T`: Adapter probe evidence (Phase 11E `CLOSED_WITH_HARDWARE_EVIDENCE`); not promoted to Framework sensor API.
+- All 12 UART TX scope-guard constraints from `PHASE_9EZ_CHECKPOINT.md §H` intact.
+- `core/`, `platform/`, `devkit/src/`, `tests/`, board DTS, board defconfig, Zephyr workspace, `DEVKIT_PROGRESS.md` historical master, and all evidence logs zero-diff.
+- All source under `src/`, `include/` — zero-diff (only new notice docs added alongside).
+- `RobotOS_v1.0/CMakeLists.txt` (root, legacy) — zero-diff.
+- `RobotOS_v1.0/devkit/CMakeLists.txt` (active) — zero-diff.
+
+#### Remaining decisions (all preserved unchanged at Phase 12D-pre)
+
+1. ACTIVE disarm widening — `USER_DECISION_REQUIRED_ACTIVE_DISARM`
+2. Scheduler 7A/7B — `DEFER`
+3. F407 / custom board — `HOLD/DEFER`
+4. POST_FLASH_AUTOSTART root cause — `OPEN` / `MITIGATED_BY_WORKFLOW`
+5. Application / product layer — `NOT_STARTED`
+6. Robot Framework implementation — `NOT_STARTED`; Phase 12D pending explicit user authorization
+7. Architecture A ↔ Architecture B reconciliation — `NOT_STARTED`; out of scope for Phase 12D-pre; would require a separate authorized phase
+
+#### Next gate
+
+**Hold.** No phase opens automatically. Phase 12D (Framework FSM Header Stub at `RobotOS_v1.0/framework/`) may open only on **explicit user authorization**.
+
+---
+
 ### Phase 12C — Framework FSM Event Bridge + Status Model Confirmation (docs-only)
 
 - **Date:** 2026-05-12

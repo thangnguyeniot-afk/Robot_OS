@@ -114,6 +114,7 @@ table contains only the reserved placeholders.
 | 12A | Robot Framework API Surface Planning (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12a) |
 | 12B | Robot Framework FSM API Draft (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12b) |
 | 12C | Framework FSM Event Bridge + Status Model Confirmation (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12c) |
+| 12D-pre | Legacy Framework Scaffold Disposition (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12d-pre) |
 | 20Z | RESERVED -- future checkpoint / closeout slot | NOT_STARTED | [->](#phase-20z) |
 
 When future phases are added:
@@ -1036,6 +1037,119 @@ and user direction on the exact Framework layer path. Non-goals: no `.c`
 body, no `devkit_app_state` replacement, no UART command integration, no
 hardware run, no scheduler change, no product behavior. **Hold** is also
 fully acceptable.
+
+---
+
+<a id="phase-12d-pre"></a>
+## Phase 12D-pre -- Legacy Framework Scaffold Disposition
+
+**Status:** `CLOSED_DOCS_ONLY`
+**Type:** Docs-only architecture-boundary phase. **No source, runtime, test,
+CMake, Zephyr, board, host-tool, script, `prj.conf`, DTS overlay, evidence
+log change. No source file deleted, moved, or renamed. No new Framework
+path created.**
+**Date opened/closed:** 2026-05-12 (same-day docs-only close)
+**Published baseline at open:** `origin/master = c3a9384`
+**Closeout doc:**
+[`../02_PHASE_CLOSEOUTS/PHASE_12D_PRE_LEGACY_FRAMEWORK_SCAFFOLD_DISPOSITION.md`](../02_PHASE_CLOSEOUTS/PHASE_12D_PRE_LEGACY_FRAMEWORK_SCAFFOLD_DISPOSITION.md).
+**New legacy notices placed in repo tree:**
+[`../../../src/README_LEGACY_SCAFFOLD.md`](../../../src/README_LEGACY_SCAFFOLD.md),
+[`../../../src/framework/DEPRECATED.md`](../../../src/framework/DEPRECATED.md),
+[`../../../include/robotos/DEPRECATED.md`](../../../include/robotos/DEPRECATED.md).
+**Companion docs:**
+[`../02_PHASE_CLOSEOUTS/PHASE_12C_FSM_EVENT_BRIDGE_STATUS_MODEL.md`](../02_PHASE_CLOSEOUTS/PHASE_12C_FSM_EVENT_BRIDGE_STATUS_MODEL.md),
+[`../02_PHASE_CLOSEOUTS/PHASE_12B_FRAMEWORK_FSM_API_DRAFT.md`](../02_PHASE_CLOSEOUTS/PHASE_12B_FRAMEWORK_FSM_API_DRAFT.md),
+[`../02_PHASE_CLOSEOUTS/PHASE_12A_FRAMEWORK_API_SURFACE_PLANNING.md`](../02_PHASE_CLOSEOUTS/PHASE_12A_FRAMEWORK_API_SURFACE_PLANNING.md).
+
+### 12D-pre.1 Purpose
+
+Phase 12D-pre classifies the pre-existing `RobotOS_v1.0/src/` and
+`RobotOS_v1.0/include/robotos/` scaffold (committed at the original
+`43de448` baseline, 2025-03-05) as **frozen / non-authoritative legacy
+scaffold**, so that Phase 12D may proceed on `RobotOS_v1.0/framework/`
+without silent architectural drift between the two coexisting stacks in
+the repo.
+
+Phase 12D-pre exists because the Framework Layer Path Decision Audit after
+Phase 12C found two architecturally distinct stacks rooted at the same
+baseline:
+
+- **Architecture A** (`core/`+`platform/`+`devkit/`) — active,
+  evidence-backed, Phase 1–12 canonical.
+- **Architecture B** (`src/`+`include/robotos/`+root `CMakeLists.txt`) —
+  frozen since baseline, type-incompatible with A, zero hardware evidence,
+  zero compile overlap.
+
+Phase 12D-pre records the classification, places notices, and blocks
+Phase 12D from opening `RobotOS_v1.0/framework/` until the boundary is
+explicit.
+
+### 12D-pre.2 Decision result
+
+**`LEGACY_SCAFFOLD_MARKED_FROZEN_DOCS_ONLY`**
+
+| Statement | Status |
+|---|---|
+| Architecture A is canonical for active RobotOS Phase 12+ work | Confirmed |
+| Architecture B is legacy / frozen / non-authoritative | Confirmed |
+| `src/framework/` is not the active path for Phase 12+ Robot Framework | Confirmed |
+| `include/robotos/` is not the active namespace for Phase 12+ Framework FSM | Confirmed |
+| Root `RobotOS_v1.0/CMakeLists.txt` belongs to the legacy build path | Confirmed (file unmodified) |
+| Future active Framework path = `RobotOS_v1.0/framework/` | Recorded |
+| Phase 12D may create `RobotOS_v1.0/framework/` only on explicit user authorization after Phase 12D-pre is pushed | Recorded |
+
+### 12D-pre.3 Notices placed in legacy tree
+
+| Path | Content |
+|---|---|
+| `RobotOS_v1.0/src/README_LEGACY_SCAFFOLD.md` | Whole `src/` tree is legacy/frozen scaffold; not the active stack; rules for not extending |
+| `RobotOS_v1.0/src/framework/DEPRECATED.md` | This directory is the frozen legacy Robot Framework scaffold; type-incompatible with Phase 12+ design; do not add new work here |
+| `RobotOS_v1.0/include/robotos/DEPRECATED.md` | This namespace bundles legacy HAL and Framework headers; do not add `robotos_fw_*.h` here |
+
+### 12D-pre.4 What is not changed
+
+- Zero source file under `src/`, `include/`, `core/`, `platform/`,
+  `devkit/src/` modified.
+- Zero file deleted, moved, or renamed.
+- Zero CMakeLists.txt modified.
+- Zero `prj.conf`, board DTS, overlay, host tool, runtime script, or
+  evidence log modified.
+- Zero new `.h` or `.c` Framework file created.
+- `RobotOS_v1.0/framework/` directory **not created**.
+- All 12 UART TX scope-guard constraints from `PHASE_9EZ_CHECKPOINT.md §H`
+  preserved.
+- `devkit_app_state` unchanged (scope-guard #11 re-affirmed).
+- `T` remains Adapter probe evidence; not promoted.
+- Command set `a/s/r/?/x/v/L/d/T` unchanged.
+- Phase 12A/12B/12C closeouts not rewritten.
+
+### 12D-pre.5 Remaining decisions
+
+All preserved unchanged:
+
+1. ACTIVE disarm widening — **`USER_DECISION_REQUIRED_ACTIVE_DISARM`**
+2. Scheduler 7A/7B — **`DEFER`**
+3. F407 / custom board — **`HOLD/DEFER`**
+4. POST_FLASH_AUTOSTART — **`OPEN`** / `MITIGATED_BY_WORKFLOW`
+5. Application / product layer — **`NOT_STARTED`**
+6. Robot Framework implementation — **`NOT_STARTED`**; Phase 12D pending explicit user authorization
+
+### 12D-pre.6 Verdict
+
+`CLOSED_DOCS_ONLY`. Legacy scaffold classified; notices placed; no source
+change; no file deletion; no path creation. Phase 12D unblocked at the
+architectural-boundary level; still requires explicit user authorization
+to open.
+
+### 12D-pre.7 Next gate
+
+**Phase 12D — Framework FSM Header Stub.** Path: `RobotOS_v1.0/framework/`.
+Scope: docs + single header (`framework/README.md` + `framework/robotos_fw_fsm.h`)
+plus Phase 12D closeout, spec update (§4 DRAFT → LOCKED-AT-12D), progress
+entry, CURRENT_STATE, INDEX. No `.c` body, no CMake change, no devkit
+integration, no hardware run, no Scheduler change, no F407, no Application/
+product work, no Architecture B modification. **Requires explicit user
+authorization.** Hold is fully acceptable.
 
 ---
 
