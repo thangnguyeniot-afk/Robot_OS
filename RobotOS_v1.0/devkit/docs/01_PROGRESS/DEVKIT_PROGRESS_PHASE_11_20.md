@@ -105,7 +105,7 @@ table contains only the reserved placeholders.
 
 | Phase | Title | Status | Jump |
 |-------|-------|--------|------|
-| 11 | RESERVED -- not opened | NOT_STARTED | [->](#phase-11) |
+| 11A | Adapter Boundary & Sensor Surface Decision (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-11a) |
 | 20Z | RESERVED -- future checkpoint / closeout slot | NOT_STARTED | [->](#phase-20z) |
 
 When future phases are added:
@@ -121,32 +121,110 @@ When future phases are added:
 
 ## 5. Phase Sections
 
-<a id="phase-11"></a>
-## Phase 11 -- RESERVED / NOT STARTED
+<a id="phase-11a"></a>
+## Phase 11A -- Adapter Boundary & Sensor Surface Decision
 
-**Status:** `NOT_STARTED`
+**Status:** `CLOSED_DOCS_ONLY`
+**Type:** Docs-only architecture gate. No source, runtime, test,
+CMake, Zephyr, board, `prj.conf`, DTS overlay, host-tool, or script
+change.
+**Date opened/closed:** 2026-05-12
+**Published baseline at open:** `origin/master = 7ce8cb7`
+**Closeout doc:**
+[`../02_PHASE_CLOSEOUTS/PHASE_11A_ADAPTER_BOUNDARY_SENSOR_SURFACE.md`](../02_PHASE_CLOSEOUTS/PHASE_11A_ADAPTER_BOUNDARY_SENSOR_SURFACE.md).
+**Companion docs:**
+[`../03_SPECS/COMMAND_SET_DRAFT.md`](../03_SPECS/COMMAND_SET_DRAFT.md),
+[`../02_PHASE_CLOSEOUTS/PHASE_10C_COMMAND_SET_CHECKPOINT.md`](../02_PHASE_CLOSEOUTS/PHASE_10C_COMMAND_SET_CHECKPOINT.md),
+[`../02_PHASE_CLOSEOUTS/PHASE_9EZ_CHECKPOINT.md`](../02_PHASE_CLOSEOUTS/PHASE_9EZ_CHECKPOINT.md).
 
-Placeholder only. Phase 11 has not been opened by the user. **Do not
-add implementation claims, evidence, or behavioral specification
-here until Phase 11 is formally authorized.** Opening Phase 11
-requires:
+### 11A.1 Purpose
 
-- Explicit user authorization for the specific Phase 11 scope (a
-  named, scoped task -- not a vague continuation).
-- A clear gate against the still-open Phase 10C decisions:
-  - `T` (sensor read) prerequisites: sensor part, driver / `prj.conf`
-    change, response format, error variant, fixed-buffer compliance.
-  - ACTIVE disarm widening (`USER_DECISION_REQUIRED_ACTIVE_DISARM`).
-  - Scheduler 7A/7B remains `DEFER` unless new workload evidence
-    appears.
-  - F407 / custom board remains `HOLD/DEFER` unless explicit user
-    decision.
-- Scope-guard restatement carried forward from
-  [`../02_PHASE_CLOSEOUTS/PHASE_9EZ_CHECKPOINT.md`](../02_PHASE_CLOSEOUTS/PHASE_9EZ_CHECKPOINT.md)
-  section H (12 UART TX scope-guard constraints) before any
-  Phase 11 source change is authorized.
+Phase 11A is the first Phase 11–20 architecture gate. It produces a
+docs-only decision with three deliverables: (1) an Adapter API
+surface inventory at concept level, (2) a sensor-surface
+classification for `T`, and (3) a placement of the next gates in
+the Phase 11–20 sequence. It does **not** implement `T`, does **not**
+start ACTIVE disarm widening, and does **not** authorize any
+hardware purchase.
 
-This scaffold neither selects nor opens any of those decisions.
+### 11A.2 Adapter API surface inventory (concept-level)
+
+Eleven Adapter primitive classes are proven on hardware (time,
+thread-context boundary, critical section, ISR-safe event posting,
+queue/dispatch/budget, GPIO input as event source, GPIO output,
+UART RX, UART TX, RTT trace/telemetry/fault, timer-generated
+events). The single largest uncharacterized primitive class is
+**driver-dependent read** (and its sub-classes: I²C, SPI, ADC).
+Pool/slab allocator is flagged as an open architectural question
+(event queue is fixed-capacity ring; whether "pool" in the diagram
+is already realized through that ring or is a separate primitive is
+deferred to a later docs phase). Portability backend is claimed but
+undemonstrated (only Zephyr/STM32F4 exercised). See the closeout doc
+§D for the full per-primitive table.
+
+### 11A.3 Sensor surface classification decision
+
+**Decision: `SENSOR_SURFACE_DECIDED_ADAPTER_PROBE`.**
+
+This classifies `T` as a future bounded Adapter probe candidate
+**only**. It is **not** implementation approval, **not** a hardware
+purchase approval, and **not** a Framework / Application promotion.
+The probe (if later authorized) must return Adapter-level raw values
+or direct driver output; unit / calibration / sensor-identity in any
+rich-typed sense is explicitly **Framework-class** and not approved
+by Phase 11A.
+
+Rationale (full table in closeout doc §F): the driver-dependent read
+surface is the largest open Adapter gap; sensor-as-Framework is
+premature without other Framework primitives chosen;
+sensor-as-Application is premature without product chosen;
+sensor-as-hold defers the largest open gap indefinitely.
+
+### 11A.4 `T` status
+
+`T` remains **not implemented**. Its `COMMAND_SET_DRAFT.md` Section B
+row is updated with the Phase 11A cross-reference. The status tag is
+preserved as `USER_DECISION_REQUIRED` (refined with a Phase 11A
+cross-reference to make clear that the classification has been made
+but the implementation decision has not).
+
+### 11A.5 Phase 11B is the next gate (no purchase before 11B)
+
+Phase 11B (Device / Driver Feasibility Gate) is the next gate. **No
+hardware purchase is authorized by Phase 11A.** Phase 11B will
+verify existing STM32F411E-DISCO resources first, in priority order:
+(a) STM32 internal die temperature via ADC; (b) on-board MEMS
+peripherals if Zephyr DT / driver support is confirmed for the
+user's specific board revision; (c) external I²C sensor module only
+if (a) and (b) are not viable. F407 / portability remains
+`HOLD/DEFER`; Phase 15A (or equivalent future gate) is the earliest
+revisit.
+
+### 11A.6 ACTIVE disarm widening remains separate
+
+ACTIVE disarm widening (`USER_DECISION_REQUIRED_ACTIVE_DISARM`) is
+**not part of Phase 11A**. Current `d` from ACTIVE = recognized
+no-op is preserved. The widening is a separate small vocabulary
+housekeeping gate that can be opened on explicit user request only;
+it is **not** scheduled ahead of Phase 11A or Phase 11B.
+
+### 11A.7 Scope guards intact
+
+All 12 UART TX scope-guard constraints from
+[`../02_PHASE_CLOSEOUTS/PHASE_9EZ_CHECKPOINT.md`](../02_PHASE_CLOSEOUTS/PHASE_9EZ_CHECKPOINT.md)
+§H are preserved. `core/`, `platform/`, `devkit/src/`,
+`prj.conf`, `CMakeLists.txt`, `boards/`, `zephyr/`, `tests/`,
+runtime scripts, host tools, and evidence logs are all zero-diff at
+this phase. Scheduler 7A/7B remains DEFER. F407 remains HOLD/DEFER.
+UART TX remains minimal response only. POST_FLASH_AUTOSTART
+discipline unchanged.
+
+### 11A.8 Next gate
+
+Phase 11B -- Device / Driver Feasibility Gate (docs-only / audit).
+Reserved; not opened by this doc. Phase 11C (Sensor Probe Spec) and
+Phase 11D-E (probe implementation + evidence closeout) are
+conditional on 11B and reserved.
 
 ---
 

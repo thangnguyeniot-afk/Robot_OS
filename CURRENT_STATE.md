@@ -9,6 +9,25 @@
 
 ## Last Closed Phase
 
+### Phase 11A — Adapter Boundary & Sensor Surface Decision (docs-only)
+
+- **Date:** 2026-05-12
+- **Type:** Docs-only architecture gate / boundary decision. No source, runtime, test, CMake, Zephyr, board, `prj.conf`, DTS overlay, host-tool, or script change. First Phase 11–20 architecture gate.
+- **Close status:** `CLOSED_DOCS_ONLY`
+- **Published baseline at open:** `origin/master = 7ce8cb7`
+- **Closeout doc:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_11A_ADAPTER_BOUNDARY_SENSOR_SURFACE.md`
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md` `<a id="phase-11a"></a>`
+- **Companion docs:** `RobotOS_v1.0/devkit/docs/03_SPECS/COMMAND_SET_DRAFT.md` (Section B intro and `T` row updated with Phase 11A cross-reference; status preamble updated to Phase 11A checkpoint; no command semantics changed).
+- **Adapter API surface inventory at checkpoint (concept-level):** Eleven primitive classes proven on hardware — time, thread-context boundary, critical section, ISR-safe event posting, queue/dispatch/budget, GPIO input as event source, GPIO output, UART RX, UART TX, RTT trace/telemetry/fault, timer-generated events. **Largest uncharacterized primitive class: driver-dependent read** (and its sub-classes I²C, SPI, ADC). Pool/slab is flagged as an open architectural question; portability backend is claimed but undemonstrated (only Zephyr/STM32F4 exercised).
+- **Sensor surface classification decision:** **`SENSOR_SURFACE_DECIDED_ADAPTER_PROBE`** — `T` is classified as a future bounded Adapter probe candidate only. **NOT implementation approval, NOT hardware purchase approval, NOT Framework/Application promotion.** The probe (if later authorized) must return Adapter-level raw values; calibration / units / sensor identity in any rich-typed sense is explicitly Framework-class and not approved by Phase 11A.
+- **`T` status:** **Not implemented.** Remains `USER_DECISION_REQUIRED` in `COMMAND_SET_DRAFT.md` Section B with Phase 11A cross-reference. Phase 11B (Device / Driver Feasibility) is the next gate; no hardware purchase authorized by Phase 11A.
+- **ACTIVE disarm widening:** **`USER_DECISION_REQUIRED_ACTIVE_DISARM` preserved.** Current `d` from ACTIVE = recognized no-op preserved. NOT part of Phase 11A; remains a separate small vocabulary housekeeping gate that may be opened only on explicit user request, decoupled from the Phase 11A–11E sensor track.
+- **Scope guards:** All 12 UART TX scope-guard constraints from `PHASE_9EZ_CHECKPOINT.md §H` intact. `core/`, `platform/`, `devkit/src/`, `prj.conf`, `CMakeLists.txt`, `boards/`, `zephyr/`, `tests/`, runtime scripts, host tools, evidence logs all zero-diff. Scheduler 7A/7B remains DEFER. F407 / custom board remains HOLD/DEFER. UART TX remains minimal response only. POST_FLASH_AUTOSTART discipline unchanged (root cause OPEN; mitigated-by-workflow via `capture_devkit_rtt.ps1` sidecar `reset run`; manual RESET fallback; plain `west flash` not runtime-start evidence).
+- **Verdict:** Docs-only close. No firmware change, no test change, no scope expansion, no semantics change, no purchase authorization.
+- **Next gate:** **Phase 11B — Device / Driver Feasibility Gate (docs-only / audit).** Verify existing STM32F411E-DISCO resources first, in priority order: (a) STM32 internal die temp / ADC; (b) on-board MEMS peripherals if Zephyr DT/driver support is confirmed; (c) external I²C sensor module only if (a) and (b) are not viable. No hardware purchased in 11B. If 11B confirms a feasible part, Phase 11C (Probe Spec, docs-only) follows; Phase 11D (Implementation) and Phase 11E (Evidence Closeout) are conditional. F407 / portability remains HOLD/DEFER until Phase 15A or equivalent future portability gate.
+
+---
+
 ### Phase 10C — Command-Set Checkpoint (docs-only)
 
 - **Date:** 2026-05-11
