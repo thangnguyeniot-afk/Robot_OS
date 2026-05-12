@@ -9,6 +9,95 @@
 
 ## Last Closed Phase
 
+### Phase 12E-pre — Framework FSM Consumer / Test Plan (docs-only)
+
+- **Date:** 2026-05-12
+- **Type:** Docs-only planning gate. **No source, runtime, test, CMake, Zephyr, board, `prj.conf`, DTS overlay, evidence log, Framework header, Framework `.c` file, devkit integration, or command-set change.** No file under `framework/`, `tests/host/`, `core/`, `platform/`, `devkit/src/`, `src/`, `include/robotos/` modified.
+- **Close status:** `CLOSED_DOCS_ONLY`
+- **Decision result:** `PHASE_12E_RECOMMEND_HOST_UNIT_TEST_CONSUMER`
+- **Published baseline at open:** `origin/master = 87e0626`
+- **Closeout doc:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12E_PRE_FSM_CONSUMER_TEST_PLAN.md`
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md` `<a id="phase-12e-pre"></a>`
+
+#### Phase 12E recommendation
+
+**`PHASE_12E_RECOMMEND_HOST_UNIT_TEST_CONSUMER`.** Phase 12E, when authorized, should:
+
+- Implement `RobotOS_v1.0/framework/robotos_fw_fsm.c` against the Phase 12D-LOCKED header surface.
+- Add a single new host test target inside the existing `RobotOS_v1.0/tests/host/CMakeLists.txt` (additive only — one `add_executable` + one `add_test`).
+- Add `RobotOS_v1.0/tests/host/test_robotos_fw_fsm.c` exercising 21 runtime-asserted contract cases + 4 review cases mapping to Phase 12B/12C decisions.
+- Validate on WSL Ubuntu or Linux (the existing host CMake documents Windows MinGW64 as unreliable — same finding as Phase 12D `SYNTAX_CHECK_NOT_RUN_TOOLCHAIN_OUTPUT_SUPPRESSED`).
+- Commit a tracked test log via the existing `save_test_log.cmake` convention at `RobotOS_v1.0/tests/host/logs/phase_12E_host_<date>.log`.
+- **Not** integrate with devkit. **Not** modify `devkit_app_state`. **Not** add or remove UART commands. **Not** modify Architecture B. **Not** create `framework/CMakeLists.txt` or `framework/src/`. **Not** modify `devkit/CMakeLists.txt` or root `RobotOS_v1.0/CMakeLists.txt`.
+
+#### Candidate consumer/test paths evaluated
+
+| Option | Verdict | Reason |
+|---|---|---|
+| 1. Host unit-test consumer | **RECOMMENDED** | Reuses Architecture-A host test infra proven through Phase 4-6; additive only; resolves Phase 12D syntax-check unknown; no devkit drift |
+| 2. Compile-only skeleton | REJECTED | No behavioral validation; Option 1 absorbs its benefit for free |
+| 3. Devkit integration consumer | REJECTED | Scope-guard #11 collision on `devkit_app_state`; command-semantics drift risk; too much for one phase |
+| 4. Application bridge prototype | REJECTED | Application/product layer is `NOT_STARTED`; no product chosen; three layers in one phase |
+| 5. Hold | FALLBACK ACCEPTABLE | Leaves Phase 12D syntax-check unresolved; acceptable only if user defers further |
+
+#### Test infrastructure finding
+
+**`TEST_INFRA_AUDIT_NOT_NEEDED — EXISTING_HOST_TESTS_SUFFICE`.**
+
+- `RobotOS_v1.0/tests/host/CMakeLists.txt` (426 lines, tracked, standalone — no Zephyr / west / legacy `src/` dependency) is the canonical Architecture-A host test build.
+- ~20 tracked Phase 4-6 contract test targets demonstrate the convention works (core, event queue, dispatcher, ingestion, tick policy, handler policy, platform critical/fault, scheduler admission, queue pressure, handler routing stress, handler lifecycle).
+- Tracked logs through Phase 6H (`phase_4K_host_*.log` ... `phase_6H_host_*.log`) prove the log-capture convention.
+- Tracked platform host stubs (`robotos_platform_critical_host_stub.{c,h}`, `robotos_platform_fault_host_stub.{c,h}`, `robotos_platform_log_host_stub.c`, `robotos_platform_time_host_stub.c`) reusable for FSM test.
+- No Phase 12E-test-pre infrastructure phase needed.
+
+`RobotOS_v1.0/tests/` root (`test_app_sm.c`, `test_gcode_parser.c`, `test_kinematics_cartesian.c`, `test_motion_planner.c`, `tests/CMakeLists.txt`) is Architecture B and frozen by extension of Phase 12D-pre. Phase 12E must not modify it.
+
+#### Phase 12E exit criteria (recorded for future use; not active until Phase 12E opens)
+
+- `framework/robotos_fw_fsm.c` exists; compiles cleanly via the host CMake on WSL/Linux.
+- `tests/host/test_robotos_fw_fsm.c` covers 21 runtime cases.
+- `ctest --output-on-failure` reports PASS for `test_robotos_fw_fsm`.
+- Test log committed at `tests/host/logs/phase_12E_host_<date>.log`.
+- Review evidence (grep) for the 4 review cases recorded in the Phase 12E closeout.
+- All Phase 12E-pre gates preserved unchanged.
+
+#### Phase 12E status
+
+- **Phase 12E = `NOT_STARTED`.** Recommended path is recorded. Opening Phase 12E requires explicit user authorization.
+
+#### What is preserved unchanged at Phase 12E-pre
+
+- Validated command set: **`a / s / r / ? / x / v / L / d / T`** (unchanged).
+- `devkit_app_state`: devkit-local; not promoted, not replaced (scope-guard #11 re-affirmed).
+- `T`: Adapter probe evidence (Phase 11E); not promoted.
+- All 12 UART TX scope-guard constraints from `PHASE_9EZ_CHECKPOINT.md §H` intact.
+- All `.c` files everywhere in the repo — zero-diff.
+- `RobotOS_v1.0/framework/robotos_fw_fsm.h` — zero-diff.
+- `RobotOS_v1.0/framework/README.md` — zero-diff.
+- All `CMakeLists.txt` (root, `devkit/`, `tests/`, `tests/host/`) — zero-diff.
+- All tracked test files under `tests/` — zero-diff.
+- `core/`, `platform/`, `devkit/src/`, board DTS/overlays, Zephyr workspace — zero-diff.
+- `src/`, `include/robotos/`, `include/app/` — zero-diff.
+- Architecture B legacy notices — zero-diff.
+- All evidence logs — zero-diff.
+- All prior closeout docs — not rewritten.
+
+#### Remaining decisions (all preserved unchanged at Phase 12E-pre)
+
+1. ACTIVE disarm widening — `USER_DECISION_REQUIRED_ACTIVE_DISARM`
+2. Scheduler 7A/7B — `DEFER`
+3. F407 / custom board — `HOLD/DEFER`
+4. POST_FLASH_AUTOSTART root cause — `OPEN` / `MITIGATED_BY_WORKFLOW`
+5. Application / product layer — `NOT_STARTED`
+6. Robot Framework implementation — `NOT_STARTED`; Phase 12E recommended path = host unit test; opening requires explicit user authorization
+7. Architecture A ↔ Architecture B reconciliation — `NOT_STARTED`; out of scope
+
+#### Next gate
+
+**Hold.** Phase 12E (Framework FSM host-test implementation) may open only on **explicit user authorization** AND with the recommended scope from §E/§J of the Phase 12E-pre closeout doc.
+
+---
+
 ### Phase 12D — Framework FSM Header Stub (header-only + docs)
 
 - **Date:** 2026-05-12

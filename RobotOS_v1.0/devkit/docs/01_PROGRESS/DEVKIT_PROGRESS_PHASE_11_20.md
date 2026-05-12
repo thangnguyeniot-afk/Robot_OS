@@ -116,6 +116,7 @@ table contains only the reserved placeholders.
 | 12C | Framework FSM Event Bridge + Status Model Confirmation (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12c) |
 | 12D-pre | Legacy Framework Scaffold Disposition (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12d-pre) |
 | 12D | Framework FSM Header Stub (header-only + docs) | CLOSED_HEADER_STUB_ONLY | [->](#phase-12d) |
+| 12E-pre | Framework FSM Consumer / Test Plan (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12e-pre) |
 | 20Z | RESERVED -- future checkpoint / closeout slot | NOT_STARTED | [->](#phase-20z) |
 
 When future phases are added:
@@ -1295,6 +1296,155 @@ The scratch file was removed.
 integration target) or unit-test plan identified in advance. Without
 both, implementation has no integration path and would drift into dead
 code. Hold is the recommended posture.
+
+---
+
+<a id="phase-12e-pre"></a>
+## Phase 12E-pre -- Framework FSM Consumer / Test Plan
+
+**Status:** `CLOSED_DOCS_ONLY`
+**Type:** Docs-only planning gate. **No source, runtime, test, CMake,
+Zephyr, board, `prj.conf`, DTS overlay, evidence log, Framework header,
+Framework `.c` file, devkit integration, or command-set change.** No
+file under `framework/`, `tests/host/`, `core/`, `platform/`,
+`devkit/src/`, `src/`, `include/robotos/` modified.
+**Date opened/closed:** 2026-05-12 (same-day docs-only close)
+**Published baseline at open:** `origin/master = 87e0626`
+**Closeout doc:**
+[`../02_PHASE_CLOSEOUTS/PHASE_12E_PRE_FSM_CONSUMER_TEST_PLAN.md`](../02_PHASE_CLOSEOUTS/PHASE_12E_PRE_FSM_CONSUMER_TEST_PLAN.md).
+**Companion docs:**
+[`../02_PHASE_CLOSEOUTS/PHASE_12D_FSM_HEADER_STUB.md`](../02_PHASE_CLOSEOUTS/PHASE_12D_FSM_HEADER_STUB.md),
+[`../02_PHASE_CLOSEOUTS/PHASE_12C_FSM_EVENT_BRIDGE_STATUS_MODEL.md`](../02_PHASE_CLOSEOUTS/PHASE_12C_FSM_EVENT_BRIDGE_STATUS_MODEL.md),
+[`../02_PHASE_CLOSEOUTS/PHASE_12B_FRAMEWORK_FSM_API_DRAFT.md`](../02_PHASE_CLOSEOUTS/PHASE_12B_FRAMEWORK_FSM_API_DRAFT.md).
+
+### 12E-pre.1 Purpose
+
+Phase 12E-pre selects the validation and consumer path for the first
+Framework implementation phase (Phase 12E). Phase 12D closed at the
+header surface (`CLOSED_HEADER_STUB_ONLY`) with the syntax check
+recorded as `SYNTAX_CHECK_NOT_RUN_TOOLCHAIN_OUTPUT_SUPPRESSED` because
+the local MSYS2 MinGW64 toolchain produced exit=1 with 0-byte
+diagnostics on every invocation. Phase 12E-pre answers the question
+"what consumer/test path lets Phase 12E close with real evidence and
+without scope drift?" before any `.c` file is created.
+
+### 12E-pre.2 Decision result
+
+**`PHASE_12E_RECOMMEND_HOST_UNIT_TEST_CONSUMER`** (`CLOSED_DOCS_ONLY`).
+
+Phase 12E, when authorized, should implement
+`RobotOS_v1.0/framework/robotos_fw_fsm.c` and validate it through a
+**single new host test target** added to the existing
+`RobotOS_v1.0/tests/host/CMakeLists.txt`. Validation runs on WSL Ubuntu
+or Linux (the existing host CMake explicitly documents that Windows
+MinGW64 is unreliable — same finding as Phase 12D). Test log captured
+via the tracked `save_test_log.cmake` convention.
+
+### 12E-pre.3 Candidate consumer/test paths evaluated
+
+Five options were evaluated against safety, feasibility, and evidence
+value:
+
+1. **Host unit-test consumer (RECOMMENDED).** Reuses Architecture-A
+   `tests/host/` infra proven through Phase 4-6 with ~20 tracked
+   contract tests and tracked test logs. Additive only (one
+   `add_executable`/`add_test` block). No devkit integration. No
+   command-set risk. Validates every Phase 12B/12C decision.
+2. **Compile-only skeleton (REJECTED).** No behavioral validation; sets
+   the wrong precedent; Option 1 includes this option's benefit for
+   free.
+3. **Devkit integration consumer (REJECTED).** High scope-guard #11
+   risk on `devkit_app_state`; command-semantics drift risk; hardware
+   evidence + implementation + integration in one phase is too much.
+4. **Application bridge prototype (REJECTED).** Application/product
+   layer is `NOT_STARTED`; no product chosen; scope explosion.
+5. **Hold (FALLBACK ACCEPTABLE).** Leaves Phase 12D `SYNTAX_CHECK_NOT_RUN`
+   unresolved; acceptable only if user defers further; not the
+   strongest option.
+
+Full evaluation table in
+[`../02_PHASE_CLOSEOUTS/PHASE_12E_PRE_FSM_CONSUMER_TEST_PLAN.md`](../02_PHASE_CLOSEOUTS/PHASE_12E_PRE_FSM_CONSUMER_TEST_PLAN.md)
+§C.
+
+### 12E-pre.4 Test infrastructure finding
+
+**`TEST_INFRA_AUDIT_NOT_NEEDED -- EXISTING_HOST_TESTS_SUFFICE`.**
+
+`RobotOS_v1.0/tests/host/` is the canonical Architecture-A host test
+build:
+
+- 426-line standalone `tests/host/CMakeLists.txt` (tracked).
+- ~20 tracked contract test targets covering core, event queue,
+  dispatcher, ingestion, tick policy, handler policy, platform critical,
+  platform fault, scheduler admission, queue pressure, handler routing
+  stress, handler lifecycle.
+- Tracked platform host stubs (critical, fault, log, time).
+- Tracked test logs through Phase 6H demonstrate the convention works.
+- `save_test_log.cmake` tracked log-capture target.
+
+Phase 12E patch surface is purely additive to this existing file. No
+Phase 12E-test-pre infrastructure-creation phase is needed.
+
+The four legacy host tests under `RobotOS_v1.0/tests/` root
+(`test_app_sm.c`, `test_gcode_parser.c`, `test_kinematics_cartesian.c`,
+`test_motion_planner.c`) and `RobotOS_v1.0/tests/CMakeLists.txt`
+consume `include/robotos/` and `src/app/`; they belong to Architecture
+B and are classified frozen by extension of Phase 12D-pre. Phase 12E
+must not modify them.
+
+### 12E-pre.5 Behavior coverage required before Phase 12E can close
+
+25 contract items grouped into 21 runtime-asserted cases (init, dispatch
+matched, first-match FIFO, guard reject, no match, action non-OK no
+rollback, exit/state/action/entry order, reset, get_state, is_in_state,
+get_snapshot, transition_count, event_count, last_event_id, payload
+not cached, guard sees pre-transition state, action/entry see
+post-transition state, exit sees pre-transition state, re-init policy)
+and 4 review-driven cases (no heap, no UART, no
+`robotos_core_register_event_handler` call, public-symbol surface
+matches LOCKED-AT-12D). Full mapping to Phase 12B/12C decisions in
+[`../02_PHASE_CLOSEOUTS/PHASE_12E_PRE_FSM_CONSUMER_TEST_PLAN.md`](../02_PHASE_CLOSEOUTS/PHASE_12E_PRE_FSM_CONSUMER_TEST_PLAN.md)
+§F.
+
+### 12E-pre.6 What is not changed
+
+- All `.c` files in the repo -- zero-diff.
+- `RobotOS_v1.0/framework/robotos_fw_fsm.h` -- zero-diff.
+- `RobotOS_v1.0/framework/README.md` -- zero-diff.
+- All `CMakeLists.txt` -- zero-diff.
+- All tracked test files under `RobotOS_v1.0/tests/` -- zero-diff.
+- `core/`, `platform/`, `devkit/src/`, `devkit/boards/`,
+  `devkit/zephyr/`, `prj.conf`, DTS overlays -- zero-diff.
+- `src/`, `include/robotos/`, `include/app/` -- zero-diff.
+- Architecture B legacy notices -- zero-diff.
+- All evidence logs -- zero-diff.
+- All prior closeout docs -- not rewritten.
+- `devkit_app_state` -- unchanged (scope-guard #11 re-affirmed).
+- Validated command set `a / s / r / ? / x / v / L / d / T` -- unchanged.
+- All 12 UART TX scope-guard constraints from
+  [`../02_PHASE_CLOSEOUTS/PHASE_9EZ_CHECKPOINT.md`](../02_PHASE_CLOSEOUTS/PHASE_9EZ_CHECKPOINT.md)
+  §H -- preserved.
+
+### 12E-pre.7 Remaining decisions (preserved)
+
+1. ACTIVE disarm widening -- `USER_DECISION_REQUIRED_ACTIVE_DISARM`.
+2. Scheduler 7A/7B -- `DEFER`.
+3. F407 / custom board -- `HOLD/DEFER`.
+4. POST_FLASH_AUTOSTART root cause -- `OPEN` / `MITIGATED_BY_WORKFLOW`.
+5. Application / product layer -- `NOT_STARTED`.
+6. Robot Framework implementation -- `NOT_STARTED`; Phase 12E recommended
+   path = host unit test; opening Phase 12E requires explicit user
+   authorization.
+7. Architecture A ↔ Architecture B reconciliation -- `NOT_STARTED`;
+   out of scope.
+
+### 12E-pre.8 Next gate
+
+**Hold.** Phase 12E (Framework FSM host-test implementation) may open
+only on **explicit user authorization**. The recommended scope, file
+list, test cases, and exit criteria are recorded in
+[`../02_PHASE_CLOSEOUTS/PHASE_12E_PRE_FSM_CONSUMER_TEST_PLAN.md`](../02_PHASE_CLOSEOUTS/PHASE_12E_PRE_FSM_CONSUMER_TEST_PLAN.md)
+§E and §J. Phase 12E **remains `NOT_STARTED`**.
 
 ---
 
