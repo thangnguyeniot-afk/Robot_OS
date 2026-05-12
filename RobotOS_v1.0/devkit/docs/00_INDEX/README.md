@@ -26,7 +26,7 @@ progress streams and closeout docs, editing rules).
 |---|---|---|
 | Phase 1 through Phase 9E / 9E-Z | [`DEVKIT_PROGRESS.md`](../01_PROGRESS/DEVKIT_PROGRESS.md) | Historical master — **not rewritten** when later phases land. |
 | Phase 10 (10A, 10B-*, 10C, ...) | [`DEVKIT_PROGRESS_PHASE_10.md`](../01_PROGRESS/DEVKIT_PROGRESS_PHASE_10.md) | Running log; Phase 10C is latest closed entry. |
-| Phase 11 through Phase 20 | [`DEVKIT_PROGRESS_PHASE_11_20.md`](../01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md) | Running log; Phase 12D-pre is latest closed entry (`CLOSED_DOCS_ONLY` legacy Framework scaffold disposition); Phase 11A/11B/11C/11D/11E/11Z/12A/12B/12C/12D-pre closed; Phase 11A-11E sensor track complete; Phase 12A/12B/12C Framework planning complete; Phase 12D-pre architectural boundary explicit; Phase 12D header stub pending explicit user authorization. |
+| Phase 11 through Phase 20 | [`DEVKIT_PROGRESS_PHASE_11_20.md`](../01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md) | Running log; Phase 12D is latest closed entry (`CLOSED_HEADER_STUB_ONLY` Framework FSM header stub at `RobotOS_v1.0/framework/`); Phase 11A/11B/11C/11D/11E/11Z/12A/12B/12C/12D-pre/12D closed; Phase 11A-11E sensor track complete; Phase 12A/12B/12C Framework planning complete; Phase 12D-pre boundary explicit; Phase 12D header stub in place; Phase 12E implementation pending explicit user authorization + concrete consumer. |
 | Phase 21+ | future `DEVKIT_PROGRESS_PHASE_21_30.md`, etc. | Create when the window opens. |
 
 **Per-phase closeout / checkpoint docs remain a separate artifact
@@ -62,6 +62,7 @@ rewritten after a phase closes.**
 - [`PHASE_12B_FRAMEWORK_FSM_API_DRAFT.md`](../02_PHASE_CLOSEOUTS/PHASE_12B_FRAMEWORK_FSM_API_DRAFT.md) -- Robot Framework FSM API draft (`CLOSED_DOCS_ONLY`; `PHASE_12B_FSM_API_DRAFTED_DOCS_ONLY`; flat table-driven FSM model; draft `robotos_fw_fsm_*` API surface; event bridge and status model decisions open for Phase 12C).
 - [`PHASE_12C_FSM_EVENT_BRIDGE_STATUS_MODEL.md`](../02_PHASE_CLOSEOUTS/PHASE_12C_FSM_EVENT_BRIDGE_STATUS_MODEL.md) -- Framework FSM event bridge + status model confirmation (`CLOSED_DOCS_ONLY`; `PHASE_12C_EVENT_BRIDGE_STATUS_CONFIRMED_DOCS_ONLY`; all four Phase 12B open decisions confirmed; evaluation order corrected; Phase 12D pending explicit user authorization).
 - [`PHASE_12D_PRE_LEGACY_FRAMEWORK_SCAFFOLD_DISPOSITION.md`](../02_PHASE_CLOSEOUTS/PHASE_12D_PRE_LEGACY_FRAMEWORK_SCAFFOLD_DISPOSITION.md) -- Legacy Framework scaffold disposition (`CLOSED_DOCS_ONLY`; `LEGACY_SCAFFOLD_MARKED_FROZEN_DOCS_ONLY`; classifies `RobotOS_v1.0/src/` + `include/robotos/` as legacy/frozen/non-authoritative; future active Framework path = `RobotOS_v1.0/framework/`; Phase 12D unblocked at the boundary level but still requires explicit user authorization).
+- [`PHASE_12D_FSM_HEADER_STUB.md`](../02_PHASE_CLOSEOUTS/PHASE_12D_FSM_HEADER_STUB.md) -- Framework FSM header stub (`CLOSED_HEADER_STUB_ONLY`; `PHASE_12D_FSM_HEADER_STUB_CREATED`; creates active Framework path `RobotOS_v1.0/framework/` with `README.md` + `robotos_fw_fsm.h`; declarations only — no `.c` body, no CMake, no devkit integration; §4 of `FRAMEWORK_FSM_API_DRAFT.md` now `LOCKED-AT-12D`; Phase 12E implementation pending explicit user authorization + concrete consumer/test).
 
 Future `PHASE_*_CLOSE.md` and `PHASE_*_CHECKPOINT.md` docs belong here.
 
@@ -74,7 +75,7 @@ as the underlying contracts evolve.
 - [`COMMAND_SET_DRAFT.md`](../03_SPECS/COMMAND_SET_DRAFT.md) -- product command vocabulary table (Sections A / B / C).
 - [`TELEMETRY_REFERENCE.md`](../03_SPECS/TELEMETRY_REFERENCE.md) -- ROBOTOS_OBS / FAULT / PROD / BTN / UART / APP telemetry line definitions.
 - [`WORKLOAD_DEMO_9D.md`](../03_SPECS/WORKLOAD_DEMO_9D.md) -- Phase 9D workload-demo runbook (hardware setup, sequence, expected counters).
-- [`FRAMEWORK_FSM_API_DRAFT.md`](../03_SPECS/FRAMEWORK_FSM_API_DRAFT.md) -- Robot Framework flat FSM API spec draft (`DRAFT / NON-FINAL`; Phase 12B origin; evolves through Phase 12C+; no implementation exists yet).
+- [`FRAMEWORK_FSM_API_DRAFT.md`](../03_SPECS/FRAMEWORK_FSM_API_DRAFT.md) -- Robot Framework flat FSM API spec (`DRAFT / EXPERIMENTAL — LOCKED-AT-12D HEADER STUB`; Phase 12B origin; §4 names locked at Phase 12D; authoritative header lives at `RobotOS_v1.0/framework/robotos_fw_fsm.h`; no `.c` implementation yet — Phase 12E pending).
 
 ## 04_SCRATCH_OR_PROVENANCE — non-canonical scratch
 

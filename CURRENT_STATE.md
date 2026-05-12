@@ -9,6 +9,86 @@
 
 ## Last Closed Phase
 
+### Phase 12D — Framework FSM Header Stub (header-only + docs)
+
+- **Date:** 2026-05-12
+- **Type:** Header stub + docs. **No `.c` body, no CMake change, no devkit integration, no Zephyr config change, no hardware run, no source modification outside the two new framework files, no command-semantic change.** Two new files at `RobotOS_v1.0/framework/`: layer README + single public header.
+- **Close status:** `CLOSED_HEADER_STUB_ONLY`
+- **Decision result:** `PHASE_12D_FSM_HEADER_STUB_CREATED`
+- **Published baseline at open:** `origin/master = 2385b0f`
+- **Closeout doc:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12D_FSM_HEADER_STUB.md`
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md` `<a id="phase-12d"></a>`
+- **New files (only):** `RobotOS_v1.0/framework/README.md`, `RobotOS_v1.0/framework/robotos_fw_fsm.h`.
+- **Long-lived spec updated:** `RobotOS_v1.0/devkit/docs/03_SPECS/FRAMEWORK_FSM_API_DRAFT.md` (§1 decision-state table; §4 names move from DRAFT to `LOCKED-AT-12D`; §10 next-revision conditions updated). ABI remains **NOT** stable.
+
+#### Active Framework path created
+
+- **Path:** `RobotOS_v1.0/framework/` (Architecture A; sibling of `core/`, `platform/`, `devkit/`).
+- **Contents (Phase 12D):**
+  - `README.md` — Framework layer identity, boundary statement, distinction from frozen Architecture B, scope of Phase 12D.
+  - `robotos_fw_fsm.h` — Phase 12D header stub; DRAFT / EXPERIMENTAL; declarations only.
+- **What is NOT present:** no `.c` file, no `framework/CMakeLists.txt`, no `framework/src/`, no `framework/include/`, no app/ subdirectory, no devkit consumer of the header, no link from `devkit/CMakeLists.txt`, no `ROBOTOS_FW` RTT stream.
+
+#### Header surface summary (LOCKED-AT-12D)
+
+`robotos_fw_fsm.h` declares (declarations only — no bodies):
+
+- Types: `robotos_fw_state_id_t` (`uint32_t`), `robotos_fw_event_id_t` (`uint32_t`, separate namespace from `robotos_event_type_t`), `robotos_fw_status_t` (alias of `robotos_core_status_t`).
+- Constant: `ROBOTOS_FW_STATE_UNINIT` = `((robotos_fw_state_id_t)0u)`.
+- Callbacks: `robotos_fw_guard_fn_t` (returns `bool`), `robotos_fw_action_fn_t`, `robotos_fw_entry_exit_fn_t`.
+- Structs: `robotos_fw_transition_t`, `robotos_fw_state_def_t`, `robotos_fw_fsm_config_t`, `robotos_fw_fsm_snapshot_t`, `robotos_fw_fsm_t`.
+- Functions: `robotos_fw_fsm_init`, `robotos_fw_fsm_dispatch`, `robotos_fw_fsm_get_state`, `robotos_fw_fsm_reset`, `robotos_fw_fsm_is_in_state`, `robotos_fw_fsm_get_snapshot`.
+- Includes (only): `<stdbool.h>`, `<stdint.h>`, `"robotos_core.h"`. No Zephyr, no devkit, no legacy `ro_*`, no app headers.
+
+#### Phase 12C decisions encoded in header
+
+- `APPLICATION_OWNED_EVENT_BRIDGE_CONFIRMED` — FSM never calls `robotos_core_register_event_handler`.
+- `REUSE_ROBOTOS_CORE_STATUS_T_FOR_PHASE_12D_CONFIRMED` — `robotos_fw_status_t` is an alias.
+- `PAYLOAD_BORROWED_FOR_DISPATCH_ONLY_CONFIRMED` — `event_payload` is `const void *`, borrowed.
+- `ACTION_NON_OK_NO_ROLLBACK_CONFIRMED` — state committed before action; entry runs regardless.
+- `GUARD_RETURNS_BOOL_ONLY_CONFIRMED` — guard returns `bool` only.
+- Evaluation order: **exit → state update → action → entry**.
+
+#### Syntax / validation
+
+`SYNTAX_CHECK_NOT_RUN_TOOLCHAIN_OUTPUT_SUPPRESSED`. Attempt with MSYS2 gcc 15.1.0 (`gcc -fsyntax-only -std=c99 -Wall -Wextra`) returned exit code 1 with 0-byte stdout/stderr on every invocation, including a deliberately broken control source. Diagnostics are unrecoverable in this sandbox; the check is not informative. Header was reviewed by hand. A future implementation phase MUST run a toolchain-backed compile (CMake + Ninja under the Architecture A devkit build) before claiming validity.
+
+#### Implementation status
+
+- Robot Framework implementation = **`HEADER_STUB_ONLY` / no `.c` body**.
+- Phase 12E = `NOT_STARTED`. Requires explicit user authorization AND a concrete consumer (devkit integration target) or unit-test plan identified in advance.
+- Application / product layer = `NOT_STARTED`.
+
+#### What is preserved unchanged at Phase 12D
+
+- Validated command set: **`a / s / r / ? / x / v / L / d / T`** (9 commands; hardware-evidence-backed).
+- `devkit_app_state`: devkit-local; not promoted, not replaced, not copied (scope-guard #11 re-affirmed).
+- `T`: Adapter probe evidence (Phase 11E `CLOSED_WITH_HARDWARE_EVIDENCE`); not promoted.
+- All 12 UART TX scope-guard constraints from `PHASE_9EZ_CHECKPOINT.md §H` intact.
+- All `.c` files everywhere in the repo — zero-diff.
+- All `CMakeLists.txt` (root legacy and `devkit/`) — zero-diff.
+- `core/`, `platform/`, `devkit/src/`, `tests/`, board DTS/overlays, Zephyr workspace — zero-diff.
+- `src/`, `include/robotos/`, `include/app/` — zero-diff after Phase 12D-pre.
+- Architecture B legacy notices (`src/README_LEGACY_SCAFFOLD.md`, `src/framework/DEPRECATED.md`, `include/robotos/DEPRECATED.md`) — zero-diff.
+- All evidence logs — zero-diff.
+- All prior closeout docs — not rewritten.
+
+#### Remaining decisions (all preserved unchanged at Phase 12D)
+
+1. ACTIVE disarm widening — `USER_DECISION_REQUIRED_ACTIVE_DISARM`
+2. Scheduler 7A/7B — `DEFER`
+3. F407 / custom board — `HOLD/DEFER`
+4. POST_FLASH_AUTOSTART root cause — `OPEN` / `MITIGATED_BY_WORKFLOW`
+5. Application / product layer — `NOT_STARTED`
+6. Robot Framework implementation — `HEADER_STUB_ONLY`; Phase 12E pending explicit user authorization + concrete consumer/test
+7. Architecture A ↔ Architecture B reconciliation — `NOT_STARTED`; out of scope
+
+#### Next gate
+
+**Hold.** Phase 12E (Framework FSM implementation) may open only on **explicit user authorization** AND with a concrete consumer or unit-test plan identified in advance. Hold is the recommended posture.
+
+---
+
 ### Phase 12D-pre — Legacy Framework Scaffold Disposition (docs-only)
 
 - **Date:** 2026-05-12

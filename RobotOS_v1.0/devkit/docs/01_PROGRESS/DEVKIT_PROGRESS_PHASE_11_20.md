@@ -115,6 +115,7 @@ table contains only the reserved placeholders.
 | 12B | Robot Framework FSM API Draft (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12b) |
 | 12C | Framework FSM Event Bridge + Status Model Confirmation (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12c) |
 | 12D-pre | Legacy Framework Scaffold Disposition (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12d-pre) |
+| 12D | Framework FSM Header Stub (header-only + docs) | CLOSED_HEADER_STUB_ONLY | [->](#phase-12d) |
 | 20Z | RESERVED -- future checkpoint / closeout slot | NOT_STARTED | [->](#phase-20z) |
 
 When future phases are added:
@@ -1150,6 +1151,150 @@ entry, CURRENT_STATE, INDEX. No `.c` body, no CMake change, no devkit
 integration, no hardware run, no Scheduler change, no F407, no Application/
 product work, no Architecture B modification. **Requires explicit user
 authorization.** Hold is fully acceptable.
+
+---
+
+<a id="phase-12d"></a>
+## Phase 12D -- Framework FSM Header Stub
+
+**Status:** `CLOSED_HEADER_STUB_ONLY`
+**Type:** Header stub + docs. **No `.c` body, no CMake change, no devkit
+integration, no Zephyr config change, no hardware run.** Two new files
+under `RobotOS_v1.0/framework/`: layer README + single public header
+(`robotos_fw_fsm.h`). No file under `core/`, `platform/`, `devkit/src/`,
+`src/`, `include/robotos/`, `tests/`, `boards/`, or any evidence log
+modified.
+**Date opened/closed:** 2026-05-12 (same-day header-stub close)
+**Published baseline at open:** `origin/master = 2385b0f`
+**Closeout doc:**
+[`../02_PHASE_CLOSEOUTS/PHASE_12D_FSM_HEADER_STUB.md`](../02_PHASE_CLOSEOUTS/PHASE_12D_FSM_HEADER_STUB.md).
+**New active Framework path:**
+[`../../../framework/`](../../../framework/) with
+[`../../../framework/README.md`](../../../framework/README.md) and
+[`../../../framework/robotos_fw_fsm.h`](../../../framework/robotos_fw_fsm.h).
+**Long-lived spec updated:**
+[`../03_SPECS/FRAMEWORK_FSM_API_DRAFT.md`](../03_SPECS/FRAMEWORK_FSM_API_DRAFT.md)
+(§1 decision-state table extended; §4 API surface marked
+`LOCKED-AT-12D`; §10 next-revision conditions updated).
+**Companion docs:**
+[`../02_PHASE_CLOSEOUTS/PHASE_12D_PRE_LEGACY_FRAMEWORK_SCAFFOLD_DISPOSITION.md`](../02_PHASE_CLOSEOUTS/PHASE_12D_PRE_LEGACY_FRAMEWORK_SCAFFOLD_DISPOSITION.md),
+[`../02_PHASE_CLOSEOUTS/PHASE_12C_FSM_EVENT_BRIDGE_STATUS_MODEL.md`](../02_PHASE_CLOSEOUTS/PHASE_12C_FSM_EVENT_BRIDGE_STATUS_MODEL.md),
+[`../02_PHASE_CLOSEOUTS/PHASE_12B_FRAMEWORK_FSM_API_DRAFT.md`](../02_PHASE_CLOSEOUTS/PHASE_12B_FRAMEWORK_FSM_API_DRAFT.md),
+[`../02_PHASE_CLOSEOUTS/PHASE_12A_FRAMEWORK_API_SURFACE_PLANNING.md`](../02_PHASE_CLOSEOUTS/PHASE_12A_FRAMEWORK_API_SURFACE_PLANNING.md).
+
+### 12D.1 Purpose
+
+Phase 12D creates the **first active Robot Framework artifact** under
+the canonical path `RobotOS_v1.0/framework/` recorded by Phase 12D-pre.
+The artifact is a single public header `robotos_fw_fsm.h` declaring the
+flat FSM API surface confirmed by Phase 12B/12C, plus a Framework-layer
+`README.md`. The phase stops at the header surface. No `.c` body. No
+CMake integration. No devkit consumer. No hardware run.
+
+### 12D.2 Decision result
+
+**`PHASE_12D_FSM_HEADER_STUB_CREATED`** (`CLOSED_HEADER_STUB_ONLY`).
+
+`RobotOS_v1.0/framework/` exists as an Architecture A sibling to
+`core/`, `platform/`, `devkit/`. The Phase 12B/12C-confirmed FSM API is
+**LOCKED-AT-12D** at the source-of-truth header
+`RobotOS_v1.0/framework/robotos_fw_fsm.h`. Function bodies are absent
+**by design**; linking against the header without a future
+Phase 12E (or later) implementation fails at link time, as intended.
+
+### 12D.3 Header surface (LOCKED-AT-12D)
+
+The header `robotos_fw_fsm.h` is C99-compatible and includes only
+`<stdbool.h>`, `<stdint.h>`, and `"robotos_core.h"`. It declares:
+
+- Identifier types: `robotos_fw_state_id_t`, `robotos_fw_event_id_t`.
+- Reserved sentinel: `ROBOTOS_FW_STATE_UNINIT`.
+- Status alias: `robotos_fw_status_t` (alias of `robotos_core_status_t`).
+- Callback types: `robotos_fw_guard_fn_t` (returns `bool`),
+  `robotos_fw_action_fn_t`, `robotos_fw_entry_exit_fn_t`.
+- Static config structs: `robotos_fw_transition_t`,
+  `robotos_fw_state_def_t`, `robotos_fw_fsm_config_t`.
+- Instance struct: `robotos_fw_fsm_t` (caller-owned; static allocation
+  expected).
+- Snapshot struct: `robotos_fw_fsm_snapshot_t`.
+- Six function declarations: `robotos_fw_fsm_init`,
+  `robotos_fw_fsm_dispatch`, `robotos_fw_fsm_get_state`,
+  `robotos_fw_fsm_reset`, `robotos_fw_fsm_is_in_state`,
+  `robotos_fw_fsm_get_snapshot`.
+
+All Phase 12C decisions are encoded in the header's file-level comment
+and per-function doc comments: application-owned event bridge, separate
+Framework event ID namespace, `robotos_core_status_t` reuse, payload
+borrowed for dispatch only, action non-OK no rollback, guard returns
+`bool` only, evaluation order **exit → state update → action → entry**,
+no heap, thread-context dispatch with ISR-safe state queries, no UART
+TX from FSM, no hardware driver ownership, no core event-handler
+registration.
+
+### 12D.4 Architecture A boundary preserved
+
+Phase 12D does not touch Architecture B (`src/`, `include/robotos/`,
+root `RobotOS_v1.0/CMakeLists.txt`). The three Phase 12D-pre legacy
+notices (`src/README_LEGACY_SCAFFOLD.md`, `src/framework/DEPRECATED.md`,
+`include/robotos/DEPRECATED.md`) are zero-diff. The new header includes
+no `ro_*` legacy symbol and no header from `include/robotos/`. The new
+Framework path `RobotOS_v1.0/framework/` is a sibling of `core/`,
+`platform/`, `devkit/` — never under `src/`.
+
+### 12D.5 Syntax / validation result
+
+`SYNTAX_CHECK_NOT_RUN_TOOLCHAIN_OUTPUT_SUPPRESSED`. A scratch
+translation unit including the header was prepared at a disposable
+temporary path and an attempt was made with
+`gcc -fsyntax-only -std=c99 -Wall -Wextra` against the MSYS2 gcc 15.1.0
+toolchain present on PATH. gcc returned exit code 1 on every invocation
+(including a deliberately broken control source) with 0-byte stdout and
+0-byte stderr regardless of Bash, PowerShell, or `cmd.exe` redirection.
+Diagnostics are unrecoverable in this sandbox; the check is not
+informative and is reported as `NOT_RUN`. Header was reviewed by hand
+for include-guard balance, C99 conformance, `extern "C"` balance, and
+absence of forbidden includes (no Zephyr, no devkit, no `ro_*`, no app
+headers). A future implementation phase MUST run a toolchain-backed
+compile via the Architecture A CMake build before claiming validity.
+The scratch file was removed.
+
+### 12D.6 What is not changed
+
+- All `.c` files in the repo — zero-diff.
+- All `CMakeLists.txt` (root legacy + `devkit/CMakeLists.txt`) — zero-diff.
+- `core/`, `platform/`, `devkit/src/`, `devkit/boards/`,
+  `devkit/zephyr/`, `prj.conf`, DTS overlays — zero-diff.
+- `src/`, `include/robotos/`, `include/app/` — zero-diff after Phase
+  12D-pre.
+- `tests/`, `tests/host/`, all evidence logs — zero-diff.
+- Host tools and runtime scripts — zero-diff.
+- All prior closeout docs — not rewritten.
+- `devkit_app_state` — unchanged (scope-guard #11 re-affirmed).
+- Validated command set `a / s / r / ? / x / v / L / d / T` — unchanged.
+- All 12 UART TX scope-guard constraints from
+  [`../02_PHASE_CLOSEOUTS/PHASE_9EZ_CHECKPOINT.md`](../02_PHASE_CLOSEOUTS/PHASE_9EZ_CHECKPOINT.md)
+  §H — preserved.
+
+### 12D.7 Remaining decisions (preserved)
+
+1. ACTIVE disarm widening — `USER_DECISION_REQUIRED_ACTIVE_DISARM`.
+2. Scheduler 7A/7B — `DEFER`.
+3. F407 / custom board — `HOLD/DEFER`.
+4. POST_FLASH_AUTOSTART root cause — `OPEN` / `MITIGATED_BY_WORKFLOW`.
+5. Application / product layer — `NOT_STARTED`.
+6. Robot Framework implementation — `NOT_STARTED`; Phase 12E pending
+   explicit user authorization AND identification of a concrete
+   consumer or unit test.
+7. Architecture A ↔ Architecture B reconciliation — `NOT_STARTED`; out
+   of scope.
+
+### 12D.8 Next gate
+
+**Hold.** Phase 12E (Framework FSM implementation) may open only on
+**explicit user authorization** AND with a concrete consumer (devkit
+integration target) or unit-test plan identified in advance. Without
+both, implementation has no integration path and would drift into dead
+code. Hold is the recommended posture.
 
 ---
 
