@@ -26,7 +26,7 @@ progress streams and closeout docs, editing rules).
 |---|---|---|
 | Phase 1 through Phase 9E / 9E-Z | [`DEVKIT_PROGRESS.md`](../01_PROGRESS/DEVKIT_PROGRESS.md) | Historical master — **not rewritten** when later phases land. |
 | Phase 10 (10A, 10B-*, 10C, ...) | [`DEVKIT_PROGRESS_PHASE_10.md`](../01_PROGRESS/DEVKIT_PROGRESS_PHASE_10.md) | Running log; Phase 10C is latest closed entry. |
-| Phase 11 through Phase 20 | [`DEVKIT_PROGRESS_PHASE_11_20.md`](../01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md) | Running log; Phase 11Z is latest closed entry (`CLOSED_DOCS_ONLY` command-set checkpoint); Phase 11A/11B/11C/11D/11E/11Z closed; Phase 11A-11E sensor track complete and shelved at Phase 11Z. |
+| Phase 11 through Phase 20 | [`DEVKIT_PROGRESS_PHASE_11_20.md`](../01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md) | Running log; Phase 12A is latest closed entry (`CLOSED_DOCS_ONLY` Framework API surface planning); Phase 11A/11B/11C/11D/11E/11Z/12A closed; Phase 11A-11E sensor track complete; Phase 12A Framework planning boundary established. |
 | Phase 21+ | future `DEVKIT_PROGRESS_PHASE_21_30.md`, etc. | Create when the window opens. |
 
 **Per-phase closeout / checkpoint docs remain a separate artifact
@@ -58,6 +58,7 @@ rewritten after a phase closes.**
 - [`PHASE_11D_ACCEL_PROBE_IMPLEMENTATION.md`](../02_PHASE_CLOSEOUTS/PHASE_11D_ACCEL_PROBE_IMPLEMENTATION.md) -- On-board MEMS accelerometer probe implementation (firmware; build-validated).
 - [`PHASE_11E_ACCEL_PROBE_EVIDENCE.md`](../02_PHASE_CLOSEOUTS/PHASE_11E_ACCEL_PROBE_EVIDENCE.md) -- On-board MEMS accelerometer probe evidence closeout (`CLOSED_WITH_HARDWARE_EVIDENCE`; `OPERATOR_PHYSICAL_SANITY_CONFIRMED`).
 - [`PHASE_11Z_COMMAND_SET_CHECKPOINT.md`](../02_PHASE_CLOSEOUTS/PHASE_11Z_COMMAND_SET_CHECKPOINT.md) -- Post-Phase-11E command-set checkpoint (`CLOSED_DOCS_ONLY`; validated 9-command set `a/s/r/?/x/v/L/d/T`; Phase 11A–11E sensor-probe track shelved as complete).
+- [`PHASE_12A_FRAMEWORK_API_SURFACE_PLANNING.md`](../02_PHASE_CLOSEOUTS/PHASE_12A_FRAMEWORK_API_SURFACE_PLANNING.md) -- Robot Framework API surface planning gate (`CLOSED_DOCS_ONLY`; layer boundary established; 9 candidate domains evaluated; FSM abstraction recommended as first Framework slice).
 
 Future `PHASE_*_CLOSE.md` and `PHASE_*_CHECKPOINT.md` docs belong here.
 

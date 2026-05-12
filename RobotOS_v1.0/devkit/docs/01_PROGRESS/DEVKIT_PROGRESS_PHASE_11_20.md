@@ -111,6 +111,7 @@ table contains only the reserved placeholders.
 | 11D | On-board MEMS Accelerometer Probe Implementation (firmware) | IMPLEMENTATION_CLOSED_HARDWARE_EVIDENCE_PENDING | [->](#phase-11d) |
 | 11E | On-board MEMS Accelerometer Probe Evidence Closeout | CLOSED_WITH_HARDWARE_EVIDENCE | [->](#phase-11e) |
 | 11Z | Command-Set Checkpoint (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-11z) |
+| 12A | Robot Framework API Surface Planning (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12a) |
 | 20Z | RESERVED -- future checkpoint / closeout slot | NOT_STARTED | [->](#phase-20z) |
 
 When future phases are added:
@@ -730,6 +731,118 @@ docs-only or implementation, each requiring explicit user
 authorization): Phase 12A-class Framework API surface planning,
 ACTIVE disarm widening, Adapter SPI/ADC probe, POST_FLASH_AUTOSTART
 investigation. Phase 11Z authorizes none.
+
+---
+
+<a id="phase-12a"></a>
+## Phase 12A -- Robot Framework API Surface Planning
+
+**Status:** `CLOSED_DOCS_ONLY`
+**Type:** Docs-only architecture gate / Framework API surface planning. **No
+source, runtime, test, CMake, Zephyr, board, host-tool, script, `prj.conf`,
+DTS overlay, evidence log, or `framework/` directory change.**
+**Date opened/closed:** 2026-05-12 (same-day docs-only close)
+**Published baseline at open:** `origin/master = c239466`
+**Closeout doc:**
+[`../02_PHASE_CLOSEOUTS/PHASE_12A_FRAMEWORK_API_SURFACE_PLANNING.md`](../02_PHASE_CLOSEOUTS/PHASE_12A_FRAMEWORK_API_SURFACE_PLANNING.md).
+**Companion docs:**
+[`../02_PHASE_CLOSEOUTS/PHASE_11Z_COMMAND_SET_CHECKPOINT.md`](../02_PHASE_CLOSEOUTS/PHASE_11Z_COMMAND_SET_CHECKPOINT.md),
+[`../02_PHASE_CLOSEOUTS/PHASE_11A_ADAPTER_BOUNDARY_SENSOR_SURFACE.md`](../02_PHASE_CLOSEOUTS/PHASE_11A_ADAPTER_BOUNDARY_SENSOR_SURFACE.md),
+[`../03_SPECS/COMMAND_SET_DRAFT.md`](../03_SPECS/COMMAND_SET_DRAFT.md).
+
+### 12A.1 Purpose
+
+Phase 12A is the first Robot Framework planning gate. It is the bridge from
+Phase 1–11 Adapter/devkit evidence to Framework contract planning. It is
+analogous to Phase 11A (Adapter boundary decision before the sensor-probe
+track) but at the Framework layer boundary.
+
+Phase 12A exists to:
+
+- State the layer boundary between the Adapter/runtime substrate (built) and
+  the Robot Framework layer (not yet built).
+- Inventory Adapter evidence available to Framework — what the Framework may
+  rely on without re-proving.
+- Evaluate candidate Framework API domains.
+- Select a recommended first Framework slice for Phase 12B.
+- Record remaining open gates so the next phase opens with written context.
+
+Phase 12A is **not** an implementation phase. It does **not** implement any
+Framework API, create a `framework/` directory, change any devkit command,
+promote `devkit_app_state`, touch `core/` or `platform/`, or authorize any
+follow-on phase automatically.
+
+### 12A.2 Layer boundary restated
+
+| Layer | Status |
+|---|---|
+| Kernel / HW | Zephyr 3.6.0 + STM32F411E-DISCO; used as foundation |
+| Robot Adapter / runtime substrate | `core/` + `platform/` + devkit hardware glue; **substantially built** |
+| devkit / validation harness | `devkit/src/`; UART vocabulary `a/s/r/?/x/v/L/d/T`; **substantially built** |
+| Robot Framework | **Not built** — no `framework/` dir, no Framework header, no API |
+| Application / product | **Not built** — no product vocabulary, no use case |
+
+Key carry-forward assertions from Phase 11A §C and Phase 11Z §F:
+
+- `devkit_app_state` is **not** Robot Framework (scope-guard #11; not lifted).
+- `a/s/r/?/x/v/L/d/T` are devkit probe commands, not product commands.
+- `T` is an Adapter probe evidence command, not a Framework sensor API.
+- Framework must consume Adapter primitives through explicit contracts, not by
+  copying devkit patterns blindly.
+
+### 12A.3 Adapter evidence available to Framework
+
+All 11 Adapter primitive classes (time/tick, thread-context boundary, critical
+section, ISR-safe event post, queue/dispatch/budget, GPIO input, GPIO output,
+UART RX/TX, RTT telemetry, timer events, driver-dependent sensor read) are
+proven. The driver-dependent read sub-class (I2C / `struct sensor_value`)
+was the last open class, closed by Phase 11D/11E.
+
+Adapter limitations visible to Framework design: fixed dispatch budget
+(`MAX_EVENTS_PER_TICK=1`); no explicit `robotos_adapter.h` aggregate header;
+pool/slab open question; only one sensor type characterized; portability
+backend undemonstrated (only Zephyr/STM32F4).
+
+### 12A.4 Candidate Framework API domains evaluated
+
+Nine candidate domains evaluated in the closeout doc §E. Summary:
+
+| Domain | Recommendation |
+|---|---|
+| State-machine abstraction | **Recommended first slice** (§F) |
+| Timer / service abstraction | Second priority |
+| Sensor abstraction | Third priority (one data point; defer full form) |
+| Fault / safety abstraction | Second-tier companion to FSM |
+| Framework observability hooks | Third-tier; design alongside FSM + timer |
+| Actuator (stepper/servo/DC) | Deferred — no actuator hardware characterized |
+| Endstop / limit-switch | Deferred — pair with actuator |
+| PID / control-loop | Deferred — needs sensor + actuator + timer first |
+| Motion primitive / trajectory | Deferred — product-dependent; pool/slab open |
+
+### 12A.5 Recommended first Framework slice
+
+**Framework State-Machine Abstraction (flat FSM only).** Rationale: most
+Adapter evidence reuse (`devkit_app_state` as design reference); no new
+hardware; no Scheduler change needed; no product vocabulary risk. See
+closeout §F for full rationale and §G for non-final illustrative API names
+(`robotos_fw_state_machine_*`).
+
+### 12A.6 Remaining decisions
+
+All preserved unchanged:
+
+1. ACTIVE disarm widening — **`USER_DECISION_REQUIRED_ACTIVE_DISARM`**
+2. Scheduler 7A/7B — **`DEFER`**
+3. F407 / custom board — **`HOLD/DEFER`**
+4. POST_FLASH_AUTOSTART root cause — **`OPEN`** / `MITIGATED_BY_WORKFLOW`
+5. Application / product layer — **`NOT_STARTED`**
+
+### 12A.7 Verdict
+
+`CLOSED_DOCS_ONLY`. No firmware change, no test change, no scope expansion,
+no semantics change, no purchase authorization. Framework planning boundary
+established. Recommended next gate: Phase 12B — Robot Framework FSM API Draft
+(docs-only; explicit user authorization required).
 
 ---
 

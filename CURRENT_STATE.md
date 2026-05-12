@@ -9,6 +9,34 @@
 
 ## Last Closed Phase
 
+### Phase 12A — Robot Framework API Surface Planning (docs-only)
+
+- **Date:** 2026-05-12
+- **Type:** Docs-only architecture gate / Framework API surface planning. No source, runtime, test, CMake, Zephyr, board, `prj.conf`, DTS overlay, evidence log, or `framework/` directory change.
+- **Close status:** `CLOSED_DOCS_ONLY`
+- **Published baseline at open:** `origin/master = c239466`
+- **Closeout doc:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12A_FRAMEWORK_API_SURFACE_PLANNING.md`
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md` `<a id="phase-12a"></a>`
+- **Robot Framework status:** **Not built.** No `framework/` directory, no Framework header, no Framework API. Phase 12A defines the planning boundary only.
+- **Application / product layer:** **Not built.** No product vocabulary, no use-case selection.
+- **Layer boundary confirmed:** `devkit_app_state` is NOT Robot Framework (scope-guard #11 re-affirmed). `a/s/r/?/x/v/L/d/T` are devkit probe commands, not product commands. `T` is an Adapter probe evidence command, not a Framework sensor API.
+- **Adapter evidence inventory (all 11 classes proven):** time/tick, thread-context boundary, critical section, ISR-safe event post, queue/dispatch/budget, GPIO input, GPIO output, UART RX/TX, RTT telemetry, timer events, driver-dependent sensor read (I2C/`struct sensor_value`; Phase 11D/11E).
+- **Candidate Framework domains evaluated (9):** state-machine abstraction, timer/service abstraction, sensor abstraction, fault/safety abstraction, Framework observability hooks, actuator (stepper/servo/DC), endstop/limit-switch, PID/control-loop, motion primitive/trajectory.
+- **Recommended first Framework slice:** Framework State-Machine Abstraction (flat FSM only). Rationale: most Adapter evidence reuse; no new hardware; no Scheduler change needed; no product vocabulary risk; `devkit_app_state.c` is a validated design reference (not promoted).
+- **Validated command set (unchanged):** `a / s / r / ? / x / v / L / d / T` (9 commands; all hardware-evidence-backed).
+- **Last runtime implementation phase:** Phase 11D (`2040bfb`; `feat: add Phase 11D accelerometer probe command`).
+- **Last hardware evidence phase:** Phase 11E (`10710b3`; `CLOSED_WITH_HARDWARE_EVIDENCE`; `OPERATOR_PHYSICAL_SANITY_CONFIRMED`).
+- **Remaining decisions (all preserved unchanged at Phase 12A):**
+  1. ACTIVE disarm widening — `USER_DECISION_REQUIRED_ACTIVE_DISARM`
+  2. Scheduler 7A/7B — `DEFER`
+  3. F407 / custom board — `HOLD/DEFER`
+  4. POST_FLASH_AUTOSTART root cause — `OPEN` / `MITIGATED_BY_WORKFLOW`
+  5. Application / product layer — `NOT_STARTED`
+- **All scope guards preserved:** Zero source/config/script changes in Phase 12A. All 12 UART TX scope-guard constraints from `PHASE_9EZ_CHECKPOINT.md §H` intact. `core/`, `platform/`, `devkit/src/`, `tests/`, board DTS, board defconfig, Zephyr workspace tracked files, `DEVKIT_PROGRESS.md` historical master, and all evidence logs zero-diff. Phase 11D `devkit/prj.conf` delta (`CONFIG_I2C=y` + `CONFIG_SENSOR=y`) unchanged.
+- **Next gate:** Phase 12B — Robot Framework FSM API Draft (docs-only). Entry requires explicit user authorization. Non-goals: no Framework implementation, no `framework/` dir, no source change, no `devkit_app_state` promotion.
+
+---
+
 ### Phase 11Z — Command-Set Checkpoint (docs-only)
 
 - **Date:** 2026-05-12
