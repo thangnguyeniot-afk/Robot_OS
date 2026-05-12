@@ -107,6 +107,7 @@ table contains only the reserved placeholders.
 |-------|-------|--------|------|
 | 11A | Adapter Boundary & Sensor Surface Decision (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-11a) |
 | 11B | Device / Driver Feasibility Gate (docs-only / audit) | CLOSED_DOCS_ONLY | [->](#phase-11b) |
+| 11C | On-board MEMS Accelerometer Probe Spec (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-11c) |
 | 20Z | RESERVED -- future checkpoint / closeout slot | NOT_STARTED | [->](#phase-20z) |
 
 When future phases are added:
@@ -299,6 +300,100 @@ format (raw `val1`/`val2`, no floating point, ≤96 bytes), error response,
 host harness sequence, expected RTT counters, and `prj.conf` additions
 (`CONFIG_SENSOR=y`). No Phase 11D code before Phase 11C is closed.
 See closeout doc §H for the full Phase 11C spec requirements list.
+
+---
+
+<a id="phase-11c"></a>
+## Phase 11C -- On-board MEMS Accelerometer Probe Spec
+
+**Status:** `CLOSED_DOCS_ONLY`
+**Type:** Docs-only spec freeze. No source, runtime, test, CMake, Zephyr,
+board, `prj.conf`, DTS overlay, host-tool, or script change.
+**Date opened/closed:** 2026-05-12
+**Published baseline at open:** `origin/master = 2aa0435`
+**Closeout doc:**
+[`../02_PHASE_CLOSEOUTS/PHASE_11C_ACCEL_PROBE_SPEC.md`](../02_PHASE_CLOSEOUTS/PHASE_11C_ACCEL_PROBE_SPEC.md).
+**Companion docs:**
+[`../03_SPECS/COMMAND_SET_DRAFT.md`](../03_SPECS/COMMAND_SET_DRAFT.md),
+[`../02_PHASE_CLOSEOUTS/PHASE_11B_DEVICE_DRIVER_FEASIBILITY.md`](../02_PHASE_CLOSEOUTS/PHASE_11B_DEVICE_DRIVER_FEASIBILITY.md),
+[`../02_PHASE_CLOSEOUTS/PHASE_11A_ADAPTER_BOUNDARY_SENSOR_SURFACE.md`](../02_PHASE_CLOSEOUTS/PHASE_11A_ADAPTER_BOUNDARY_SENSOR_SURFACE.md).
+
+### 11C.1 Purpose
+
+Phase 11C freezes the on-board MEMS accelerometer probe specification
+before any Phase 11D code exists. It operationalizes Phase 11B's
+`FEASIBILITY_CONFIRMED_ONBOARD_MEMS` finding plus the operator's
+board-revision confirmation (revision D, `CONFIRMED_A_OR_D`) into a
+fixed Phase 11D contract.
+
+### 11C.2 Target device freeze
+
+- **Board target:** `stm32f411e_disco` (no `@<rev>` suffix; revision
+  D is Zephyr default per `revision.cmake`).
+- **Board revision:** D.
+- **DT alias:** `accel0` → `lsm303agr_accel`.
+- **Driver:** `lis2dh` (self-contained, no `hal_st`).
+- **Bus / address:** I2C1 / 0x19 (SCL = PB6, SDA = PB9, 400 kHz).
+- **Channel:** `SENSOR_CHAN_ACCEL_XYZ` (raw `struct sensor_value`).
+- **Trigger mode:** polling / `CONFIG_LIS2DH_TRIGGER_NONE` (driver
+  default). Interrupt GPIOs PE4/PE5 reserved by DT but not used.
+- **Overlay:** none expected.
+- **Wiring:** none.
+- **Hardware purchase:** none.
+
+### 11C.3 Frozen UART responses (fit existing 96-byte stack buffer)
+
+- **Success:** `ACC x=<v1>.<v2_6d> y=<v1>.<v2_6d> z=<v1>.<v2_6d>\r\n`
+  (worst case 68 bytes; typical ~44 bytes).
+- **Error:** `ERR accel read=<errno>\r\n` (worst case 28 bytes;
+  errno is the **numeric** signed-decimal return value from the
+  failing Zephyr API; no symbolic mapping).
+- See [`PHASE_11C_ACCEL_PROBE_SPEC.md`](../02_PHASE_CLOSEOUTS/PHASE_11C_ACCEL_PROBE_SPEC.md)
+  §E / §F for the full freeze rules and byte-budget proof.
+
+### 11C.4 Frozen host harness sequence
+
+Canonical sequence: `T T ?` (three host commands; three responses;
+verifies command path, sensor read repeatability, and app-state
+invariants via the trailing `?`). See
+[`PHASE_11C_ACCEL_PROBE_SPEC.md`](../02_PHASE_CLOSEOUTS/PHASE_11C_ACCEL_PROBE_SPEC.md)
+§H.
+
+### 11C.5 Future Phase 11D config implication
+
+- **Must add:** `CONFIG_I2C=y` and `CONFIG_SENSOR=y`.
+- **Optional (verify against pristine `.config`):**
+  `CONFIG_LIS2DH_TRIGGER_NONE=y` only if not already the default.
+- **Must NOT add:** `CONFIG_SPI`, `CONFIG_ADC`,
+  `CONFIG_CBPRINTF_FP_SUPPORT`, `CONFIG_LIS2DH_*` range/ODR/HP
+  overrides.
+
+### 11C.6 Scope guards intact
+
+All 12 UART TX scope-guard constraints from
+[`../02_PHASE_CLOSEOUTS/PHASE_9EZ_CHECKPOINT.md`](../02_PHASE_CLOSEOUTS/PHASE_9EZ_CHECKPOINT.md)
+§H preserved. `core/`, `platform/`, `devkit/src/`, `prj.conf`,
+`CMakeLists.txt`, `boards/`, `zephyr/`, `tests/`, runtime scripts,
+host tools, evidence logs all zero-diff at this phase. Scheduler 7A/7B
+remains DEFER. F407 remains HOLD/DEFER. UART TX remains minimal
+response only. POST_FLASH_AUTOSTART discipline unchanged. ACTIVE
+disarm widening remains `USER_DECISION_REQUIRED_ACTIVE_DISARM` and
+decoupled from the Phase 11A-E sensor track.
+
+### 11C.7 `T` status
+
+`T` remains **not implemented**. Its `COMMAND_SET_DRAFT.md` Section B
+row is updated with the Phase 11C cross-reference and the frozen
+response/error shapes. Status tag preserved as
+`USER_DECISION_REQUIRED` pending **explicit Phase 11D authorization
+by the user**.
+
+### 11C.8 Next gate
+
+Phase 11D -- Sensor Probe Implementation (firmware). Reserved; not
+opened by this doc. Phase 11D opening requires explicit user
+authorization for code / `prj.conf` changes. Phase 11E (evidence
+closeout) follows Phase 11D and is also conditional.
 
 ---
 

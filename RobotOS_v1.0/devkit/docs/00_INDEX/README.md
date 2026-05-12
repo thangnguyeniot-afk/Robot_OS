@@ -26,7 +26,7 @@ progress streams and closeout docs, editing rules).
 |---|---|---|
 | Phase 1 through Phase 9E / 9E-Z | [`DEVKIT_PROGRESS.md`](../01_PROGRESS/DEVKIT_PROGRESS.md) | Historical master — **not rewritten** when later phases land. |
 | Phase 10 (10A, 10B-*, 10C, ...) | [`DEVKIT_PROGRESS_PHASE_10.md`](../01_PROGRESS/DEVKIT_PROGRESS_PHASE_10.md) | Running log; Phase 10C is latest closed entry. |
-| Phase 11 through Phase 20 | [`DEVKIT_PROGRESS_PHASE_11_20.md`](../01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md) | `RESERVED / NOT_STARTED` (scaffold; Phase 11 not opened). |
+| Phase 11 through Phase 20 | [`DEVKIT_PROGRESS_PHASE_11_20.md`](../01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md) | Running log; Phase 11C is latest closed entry (docs-only spec); Phase 11A/11B/11C closed; Phase 11D not started. |
 | Phase 21+ | future `DEVKIT_PROGRESS_PHASE_21_30.md`, etc. | Create when the window opens. |
 
 **Per-phase closeout / checkpoint docs remain a separate artifact
@@ -52,6 +52,9 @@ rewritten after a phase closes.**
 - [`PHASE_10B_L_CLOSE.md`](../02_PHASE_CLOSEOUTS/PHASE_10B_L_CLOSE.md) -- `L` LED physical-effect command (+ operator-visual confirmation).
 - [`PHASE_10B_D_CLOSE.md`](../02_PHASE_CLOSEOUTS/PHASE_10B_D_CLOSE.md) -- `d` explicit disarm command.
 - [`PHASE_10C_COMMAND_SET_CHECKPOINT.md`](../02_PHASE_CLOSEOUTS/PHASE_10C_COMMAND_SET_CHECKPOINT.md) -- post-10B-d command-set checkpoint (docs-only).
+- [`PHASE_11A_ADAPTER_BOUNDARY_SENSOR_SURFACE.md`](../02_PHASE_CLOSEOUTS/PHASE_11A_ADAPTER_BOUNDARY_SENSOR_SURFACE.md) -- Adapter API surface inventory + sensor surface classification (docs-only).
+- [`PHASE_11B_DEVICE_DRIVER_FEASIBILITY.md`](../02_PHASE_CLOSEOUTS/PHASE_11B_DEVICE_DRIVER_FEASIBILITY.md) -- Device / driver feasibility gate (docs-only audit; `FEASIBILITY_CONFIRMED_ONBOARD_MEMS`).
+- [`PHASE_11C_ACCEL_PROBE_SPEC.md`](../02_PHASE_CLOSEOUTS/PHASE_11C_ACCEL_PROBE_SPEC.md) -- On-board MEMS accelerometer probe spec (docs-only; `PHASE_11C_SPEC_FROZEN_ACCEL_LIS2DH_REV_D`).
 
 Future `PHASE_*_CLOSE.md` and `PHASE_*_CHECKPOINT.md` docs belong here.
 

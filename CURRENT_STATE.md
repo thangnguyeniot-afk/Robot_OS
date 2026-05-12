@@ -9,6 +9,29 @@
 
 ## Last Closed Phase
 
+### Phase 11C — On-board MEMS Accelerometer Probe Spec (docs-only)
+
+- **Date:** 2026-05-12
+- **Type:** Docs-only specification freeze. No source, runtime, test, CMake, Zephyr, board, `prj.conf`, DTS overlay, host-tool, or script change. Freezes the on-board MEMS accelerometer probe spec for future Phase 11D implementation. Operationalizes Phase 11B's `FEASIBILITY_CONFIRMED_ONBOARD_MEMS` plus the operator-confirmed board revision (D).
+- **Close status:** `CLOSED_DOCS_ONLY`
+- **Published baseline at open:** `origin/master = 2aa0435`
+- **Closeout doc:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_11C_ACCEL_PROBE_SPEC.md`
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md` `<a id="phase-11c"></a>`
+- **Companion docs:** `COMMAND_SET_DRAFT.md` Section B intro and `T` row updated with Phase 11C cross-reference and frozen response/error shapes; status preamble updated to Phase 11C checkpoint; no command semantics changed (T not promoted).
+- **Decision result:** **`PHASE_11C_SPEC_FROZEN_ACCEL_LIS2DH_REV_D`**
+- **Target device freeze:** Board target `stm32f411e_disco` (no `@<rev>`; revision D Zephyr default); board revision **D** (operator-confirmed, `CONFIRMED_A_OR_D`); DT alias `accel0` → `lsm303agr_accel`; driver `lis2dh` (self-contained, no `hal_st`); bus/address I2C1 @ 0x19 (SCL=PB6, SDA=PB9, 400 kHz); channel `SENSOR_CHAN_ACCEL_XYZ` (raw `struct sensor_value`); trigger mode polling / `CONFIG_LIS2DH_TRIGGER_NONE` (driver default); interrupt GPIOs PE4/PE5 reserved but not used; overlay none; wiring none; hardware purchase none.
+- **Frozen success response:** `ACC x=<v1>.<v2_6d> y=<v1>.<v2_6d> z=<v1>.<v2_6d>\r\n` (worst case 68 B, typical ~44 B; fits 96-byte stack buffer with 28 B headroom). Raw `sensor_value.val1` signed decimal, `val2` 6-digit absolute fractional (sign carried by `val1`); no floating point.
+- **Frozen error response:** `ERR accel read=<errno>\r\n` (worst case 28 B). Errno is numeric signed-decimal return value from failing Zephyr API; no symbolic mapping.
+- **Frozen canonical host harness sequence:** `T T ?` (three commands; two ACC responses + one STATE response; verifies command path, sensor read repeatability, and app-state invariants).
+- **Expected counter behavior for `T T ?` from IDLE:** `ROBOTOS_UART rx=ok=handled` +3; `ROBOTOS_APP uart` +3; `transitions`, `ignored`, `button` unchanged; `dropped=0`; `herr=0`; CFSR/HFSR=0; `accepted - dispatched = pending = 1` invariant holds. `peak` not overclaimed; Phase 11E must record actual.
+- **Future Phase 11D config implication (frozen):** **MUST add** `CONFIG_I2C=y` + `CONFIG_SENSOR=y`. Optionally `CONFIG_LIS2DH_TRIGGER_NONE=y` only if pristine `.config` does not already set it. **MUST NOT add** `CONFIG_SPI`, `CONFIG_ADC`, `CONFIG_CBPRINTF_FP_SUPPORT`, `CONFIG_LIS2DH_*` range/ODR/HP overrides. **MUST NOT** create DTS overlay.
+- **`T` status:** **Not implemented.** Remains `USER_DECISION_REQUIRED` in `COMMAND_SET_DRAFT.md` Section B with Phase 11C cross-reference. Phase 11D (Implementation) and Phase 11E (Evidence Closeout) remain `NOT_STARTED` and require **explicit user authorization** to open.
+- **All scope guards preserved:** `core/`, `platform/`, `devkit/src/`, `prj.conf`, `CMakeLists.txt`, `boards/`, `zephyr/`, `tests/`, runtime scripts, host tools, and evidence logs all zero-diff. All 12 UART TX scope-guard constraints from `PHASE_9EZ_CHECKPOINT.md §H` intact. Scheduler 7A/7B remains DEFER. F407 remains HOLD/DEFER. UART TX remains minimal response only. POST_FLASH_AUTOSTART discipline unchanged. ACTIVE disarm widening `USER_DECISION_REQUIRED_ACTIVE_DISARM` preserved and decoupled from Phase 11A-E sensor track.
+- **Verdict:** Docs-only close. No firmware change, no test change, no `prj.conf` change, no overlay, no hardware purchase, no scope expansion, no semantics change. Spec frozen for downstream consumption.
+- **Next gate:** **Phase 11D — Sensor Probe Implementation (firmware).** Reserved; not opened by Phase 11C. Phase 11D opening requires **explicit user authorization** for source / `prj.conf` changes. Phase 11E (Evidence Closeout) follows Phase 11D and is also conditional. See `PHASE_11C_ACCEL_PROBE_SPEC.md` §J for the implementation boundary (devkit-local files only; no `core/`, no `platform/`, no overlay).
+
+---
+
 ### Phase 11B — Device / Driver Feasibility Gate (docs-only / audit)
 
 - **Date:** 2026-05-12
