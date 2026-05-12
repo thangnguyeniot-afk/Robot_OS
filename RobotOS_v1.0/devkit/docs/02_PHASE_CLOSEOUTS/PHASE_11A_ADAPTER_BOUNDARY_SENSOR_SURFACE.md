@@ -67,7 +67,7 @@ Zephyr config, or evidence logs.
 | POST_FLASH_AUTOSTART | root cause `OPEN`; `MITIGATED_BY_WORKFLOW` from Phase 6O onward via `capture_devkit_rtt.ps1` sidecar `reset run`; manual RESET fallback retained; plain `west flash` not runtime-start evidence | `PHASE_10C_COMMAND_SET_CHECKPOINT.md` §8 |
 | `MAX_EVENTS_PER_TICK` | `1` (in `core/robotos_core.c`) | source inspection |
 | Event queue capacity | `16` | source inspection |
-| `CONFIG_SENSOR` / `CONFIG_I2C` / `CONFIG_SPI` / `CONFIG_ADC` in `devkit/prj.conf` | **none enabled** (verified by grep) | `devkit/prj.conf` |
+| `CONFIG_SENSOR` / `CONFIG_I2C` / `CONFIG_SPI` / `CONFIG_ADC` in `devkit/prj.conf` | `CONFIG_I2C=y` and `CONFIG_SPI=y` **pre-exist from Phase 4 bringup** (`43de448`); `CONFIG_SENSOR` and `CONFIG_ADC` **not present** (verified by grep) | `devkit/prj.conf` |
 | `devkit/boards/` directory | **does not exist** | filesystem |
 | `devkit/*.overlay` files | **none present** | filesystem |
 | F407 source / config | **none present** (grep returned 0 matches) | source inspection |
@@ -148,7 +148,7 @@ implementation file is authored by Phase 11A.**
 | UART / serial byte stream TX | **Proven** | `uart_poll_out` from thread-context handler | Phase 9E / 10B-{v,L,d} |
 | RTT trace / telemetry / fault observation | **Proven** | ROBOTOS_OBS / ROBOTOS_FAULT / ROBOTOS_PROD periodic triplets via RTT; CFSR/HFSR sampling | Phase 6K / 6L / 6M / 6Z and every later phase |
 | Timer-generated events | **Proven** | `devkit_timer_producer.c` (k_timer → ISR → event) | Phase 6G / 6H / 6I |
-| **Driver-dependent read surface** | **Not characterized** | none -- no `CONFIG_SENSOR/I2C/SPI/ADC` enabled; no DT overlay; no probe | **Largest open Adapter gap.** This is the surface `T` would probe if classified as Adapter probe. |
+| **Driver-dependent read surface** | **Not characterized** | no `CONFIG_SENSOR`/`CONFIG_ADC`; `CONFIG_I2C`/`CONFIG_SPI` pre-exist (Phase 4 bringup, not sensor-wired); no sensor DT overlay; no probe | **Largest open Adapter gap.** This is the surface `T` would probe if classified as Adapter probe. |
 | **I²C bus-backed IO** | **Not characterized** | none | Subset of driver-dependent read. |
 | **SPI bus-backed IO** | **Not characterized** | none | Subset of driver-dependent read. |
 | **ADC sampled IO** | **Not characterized** | none | Internal die temp / `Vrefint` path would use ADC. |
@@ -371,8 +371,10 @@ with this phase's output.
 
 - **No `T` implementation.** No source change.
 - **No ACTIVE disarm widening.** Current ACTIVE behavior preserved.
-- **No sensor driver enablement.** `CONFIG_SENSOR`, `CONFIG_I2C`,
-  `CONFIG_SPI`, `CONFIG_ADC` all remain disabled.
+- **No sensor driver enablement.** `CONFIG_SENSOR` and `CONFIG_ADC`
+  remain absent. `CONFIG_I2C` and `CONFIG_SPI` are pre-existing
+  (`y` since Phase 4 bringup); Phase 11A does not modify them and
+  does not wire any sensor driver or DT node against them.
 - **No DTS overlay creation.** `devkit/boards/` directory and
   `*.overlay` files remain absent.
 - **No hardware purchase.** Purchase decision belongs to Phase 11B
@@ -474,8 +476,9 @@ this doc):
 
 - Does not implement `T`.
 - Does not approve any hardware purchase.
-- Does not authorize `CONFIG_SENSOR` / `CONFIG_I2C` / `CONFIG_SPI` /
-  `CONFIG_ADC` enablement.
+- Does not authorize `CONFIG_SENSOR` or `CONFIG_ADC` enablement.
+  (`CONFIG_I2C` and `CONFIG_SPI` are pre-existing from Phase 4
+  bringup; Phase 11A does not modify them.)
 - Does not author a DTS overlay.
 - Does not start ACTIVE disarm widening; current ACTIVE no-op
   preserved.
