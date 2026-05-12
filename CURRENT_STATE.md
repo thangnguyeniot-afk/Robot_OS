@@ -9,6 +9,26 @@
 
 ## Last Closed Phase
 
+### Phase 11B — Device / Driver Feasibility Gate (docs-only / audit)
+
+- **Date:** 2026-05-12
+- **Type:** Docs-only feasibility audit / purchase gate. No source, runtime, test, CMake, Zephyr, board, `prj.conf`, DTS overlay, host-tool, or script change. Audits local Zephyr workspace to determine the safest feasible target for the future Phase 11C/11D bounded Adapter sensor-read probe.
+- **Close status:** `CLOSED_DOCS_ONLY`
+- **Published baseline at open:** `origin/master = bae2436`
+- **Closeout doc:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_11B_DEVICE_DRIVER_FEASIBILITY.md`
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md` `<a id="phase-11b"></a>`
+- **Companion docs:** `COMMAND_SET_DRAFT.md` Section B intro and `T` row updated with Phase 11B cross-reference; status preamble updated to Phase 11B checkpoint; no command semantics changed.
+- **Feasibility decision:** **`FEASIBILITY_CONFIRMED_ONBOARD_MEMS`** — the on-board LSM303AGR accelerometer (`lsm303agr_accel` node, Zephyr driver `lis2dh`, I2C1 at 0x19, PB6/PB9, 400 kHz) is confirmed as the recommended target. Sensor node already defined with `status = "okay"` in upstream Zephyr board DTS. Driver locally present and self-contained (no `hal_st` dependency; handles both board revision A/D and B via compatible "st,lis2dh"). `CONFIG_I2C=y` already in `prj.conf`. No DTS overlay needed. No hardware purchase needed. Only `prj.conf` addition: `CONFIG_SENSOR=y` (Phase 11D only, not now).
+- **Priority correction:** Phase 11A listed die temperature as priority (a) and on-board MEMS as (b). Phase 11B **corrects this**: on-board MEMS accelerometer is simpler (no `CONFIG_ADC`, no DTS overlay); die temperature requires enabling `adc1`, adding a compatible string to the `die_temp` DTS node, and `CONFIG_ADC=y`. Magnetometer (`lis2mdl`) blocked — `hal_st` module not in workspace.
+- **Purchase decision:** **`NO_PURCHASE_NEEDED_FOR_NEXT_STEP`**. No purchase authorized or recommended.
+- **Board revision note:** User must confirm board revision (A/D vs B) before Phase 11C spec freezes the exact DTS alias target. Both revisions use "st,lis2dh" compatible — `lis2dh` driver handles both.
+- **`T` status:** **Not implemented.** Remains `USER_DECISION_REQUIRED` in `COMMAND_SET_DRAFT.md` Section B with Phase 11B cross-reference. Phase 11C (Probe Spec, docs-only) is the next gate; no implementation before Phase 11C is approved.
+- **All scope guards preserved:** `core/`, `platform/`, `devkit/src/`, `prj.conf`, `CMakeLists.txt`, `boards/`, `zephyr/`, `tests/`, runtime scripts, host tools, and evidence logs all zero-diff. All 12 UART TX scope-guard constraints from `PHASE_9EZ_CHECKPOINT.md §H` intact. Scheduler 7A/7B remains DEFER. F407 remains HOLD/DEFER. UART TX remains minimal response only. POST_FLASH_AUTOSTART discipline unchanged. ACTIVE disarm widening `USER_DECISION_REQUIRED_ACTIVE_DISARM` preserved.
+- **Verdict:** Docs-only close. No firmware change, no test change, no scope expansion, no semantics change, no purchase authorization.
+- **Next gate:** **Phase 11C — Sensor Probe Spec (docs-only).** Must freeze before any Phase 11D code: exact DTS alias target, trigger mode (`LIS2DH_TRIGGER_NONE`), read channel (`SENSOR_CHAN_ACCEL_XYZ`), response format (raw `val1`/`val2`, no floating point, ≤96 bytes), error response, host harness sequence, expected RTT counters, `prj.conf` additions (`CONFIG_SENSOR=y`). See `PHASE_11B_DEVICE_DRIVER_FEASIBILITY.md §H` for full spec requirements.
+
+---
+
 ### Phase 11A — Adapter Boundary & Sensor Surface Decision (docs-only)
 
 - **Date:** 2026-05-12

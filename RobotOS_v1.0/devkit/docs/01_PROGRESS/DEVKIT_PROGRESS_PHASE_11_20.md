@@ -106,6 +106,7 @@ table contains only the reserved placeholders.
 | Phase | Title | Status | Jump |
 |-------|-------|--------|------|
 | 11A | Adapter Boundary & Sensor Surface Decision (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-11a) |
+| 11B | Device / Driver Feasibility Gate (docs-only / audit) | CLOSED_DOCS_ONLY | [->](#phase-11b) |
 | 20Z | RESERVED -- future checkpoint / closeout slot | NOT_STARTED | [->](#phase-20z) |
 
 When future phases are added:
@@ -225,6 +226,77 @@ Phase 11B -- Device / Driver Feasibility Gate (docs-only / audit).
 Reserved; not opened by this doc. Phase 11C (Sensor Probe Spec) and
 Phase 11D-E (probe implementation + evidence closeout) are
 conditional on 11B and reserved.
+
+---
+
+<a id="phase-11b"></a>
+## Phase 11B -- Device / Driver Feasibility Gate
+
+**Status:** `CLOSED_DOCS_ONLY`
+**Type:** Docs-only feasibility audit / purchase gate. No source, runtime,
+test, CMake, Zephyr, board, `prj.conf`, DTS overlay, host-tool, or script
+change.
+**Date opened/closed:** 2026-05-12
+**Published baseline at open:** `origin/master = bae2436`
+**Closeout doc:**
+[`../02_PHASE_CLOSEOUTS/PHASE_11B_DEVICE_DRIVER_FEASIBILITY.md`](../02_PHASE_CLOSEOUTS/PHASE_11B_DEVICE_DRIVER_FEASIBILITY.md).
+
+### 11B.1 Purpose
+
+Phase 11B is the device/driver feasibility and purchase gate. It audits
+the local Zephyr workspace and board files to determine which candidate
+sensor path is safest and most feasible for the future Phase 11C/11D
+bounded Adapter probe. It does not implement `T`, does not change any
+`prj.conf` or overlay, and does not authorize any hardware purchase.
+
+### 11B.2 Candidates audited
+
+Six candidates were evaluated: (1) STM32 internal die temperature / ADC;
+(2) on-board `lsm303agr_accel` (lis2dh driver, I2C1); (3) on-board
+`lsm303agr_magn` (lis2mdl driver); (4) external I2C sensor module;
+(5) external SPI sensor module; (6) F407 / custom board.
+
+### 11B.3 Feasibility decision
+
+**`FEASIBILITY_CONFIRMED_ONBOARD_MEMS`**
+
+The on-board LSM303AGR accelerometer (`lsm303agr_accel` node, Zephyr driver
+`lis2dh`, I2C1 at 0x19) is the recommended target. Key findings:
+
+- The sensor node is already defined with `status = "okay"` in the upstream
+  Zephyr board DTS (`zephyr/boards/arm/stm32f411e_disco/stm32f411e_disco.dts`).
+- The `lis2dh` driver is locally present and self-contained (no `hal_st`
+  dependency; handles both board revision A/D and B via compatible "st,lis2dh").
+- `CONFIG_I2C=y` is already in `devkit/prj.conf`.
+- No DTS overlay is needed.
+- No hardware purchase is needed.
+- The only `prj.conf` addition required in Phase 11D is `CONFIG_SENSOR=y`.
+- Zephyr sample `zephyr/samples/sensor/lis2dh/` confirms this path.
+
+Phase 11A listed die temperature as priority (a) and on-board MEMS as (b).
+Phase 11B **corrects this ordering**: the on-board MEMS accelerometer path
+is simpler and fully characterized locally; die temperature requires
+`CONFIG_ADC=y`, enabling `adc1` in DTS, and adding a compatible string to
+the `die_temp` node.
+
+The `lis2mdl` magnetometer path is blocked by the missing `hal_st` module.
+
+### 11B.4 Purchase recommendation
+
+**`NO_PURCHASE_NEEDED_FOR_NEXT_STEP`**
+
+No hardware purchase is authorized or recommended. External sensor modules
+are deprioritized while on-board resources are sufficient.
+
+### 11B.5 Next gate
+
+Phase 11C -- Sensor Probe Spec (docs-only). Must freeze: exact DTS alias
+target (user to confirm board revision A/D vs B), trigger mode
+(`LIS2DH_TRIGGER_NONE`), read channel (`SENSOR_CHAN_ACCEL_XYZ`), response
+format (raw `val1`/`val2`, no floating point, ≤96 bytes), error response,
+host harness sequence, expected RTT counters, and `prj.conf` additions
+(`CONFIG_SENSOR=y`). No Phase 11D code before Phase 11C is closed.
+See closeout doc §H for the full Phase 11C spec requirements list.
 
 ---
 

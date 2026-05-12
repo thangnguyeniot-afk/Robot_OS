@@ -96,15 +96,20 @@ implemented. Opening a Phase 10B-class implementation for any row requires
 explicit user approval of that specific row, including answering its
 `USER_DECISION_REQUIRED` notes.
 
-Section B at the Phase 11A checkpoint contains:
+Section B at the Phase 11B checkpoint contains:
 
 - **One unimplemented command:** `T` (sensor read, 0x54). Classified
-  at Phase 11A as `SENSOR_SURFACE_DECIDED_ADAPTER_PROBE` — a future
-  bounded Adapter probe candidate, **not** implementation approval
-  and **not** hardware purchase approval. Phase 11B (Device / Driver
-  Feasibility), Phase 11C (Probe Spec), Phase 11D (Implementation),
-  and Phase 11E (Evidence Closeout) form the conditional sequence
-  if the probe is later authorized. See
+  at Phase 11A as `SENSOR_SURFACE_DECIDED_ADAPTER_PROBE`. Phase 11B
+  (`CLOSED_DOCS_ONLY`, 2026-05-12) confirms feasibility via the
+  on-board LSM303AGR accelerometer (`lsm303agr_accel` / `lis2dh`
+  driver / I2C1) with decision `FEASIBILITY_CONFIRMED_ONBOARD_MEMS`.
+  No purchase needed. `CONFIG_SENSOR=y` is the only `prj.conf`
+  addition required (Phase 11D only). Phase 11C (Probe Spec, frozen
+  before any code) is the next gate; Phase 11D (Implementation) and
+  Phase 11E (Evidence Closeout) are conditional. `T` remains
+  `USER_DECISION_REQUIRED` until Phase 11C spec is approved. See
+  [`PHASE_11B_DEVICE_DRIVER_FEASIBILITY.md`](../02_PHASE_CLOSEOUTS/PHASE_11B_DEVICE_DRIVER_FEASIBILITY.md)
+  §J and
   [`PHASE_11A_ADAPTER_BOUNDARY_SENSOR_SURFACE.md`](../02_PHASE_CLOSEOUTS/PHASE_11A_ADAPTER_BOUNDARY_SENSOR_SURFACE.md) §F.
 - **One unresolved semantic decision** on an already-implemented
   command: ACTIVE disarm widening for `d`. Phase 10B-d implemented `d`
@@ -128,7 +133,7 @@ traceability and must not be re-edited as if they were live drafts.
 | ~~`d` (0x64)~~ | **PROMOTED to Section A** — implemented at Phase 10B-d, 2026-05-11 | — | — | `OK disarm state=IDLE\r\n` (ARMED → IDLE) / `OK disarm no-op state=<S>\r\n` (IDLE or ACTIVE) | **DONE** | No | No | See [`PHASE_10B_D_CLOSE.md`](../02_PHASE_CLOSEOUTS/PHASE_10B_D_CLOSE.md). `d` from ARMED transitions to IDLE; `d` from IDLE is a recognized no-op (not ignored — distinct from `r`); `d` from ACTIVE remains `USER_DECISION_REQUIRED_ACTIVE_DISARM` and is treated as a recognized no-op for now. `r` is preserved zero-diff and remains the canonical reset path. |
 | ~~`v` (0x76)~~ | **PROMOTED to Section A** — implemented at Phase 10B-v, 2026-05-11 | — | — | `INFO phase=10b-v app=devkit board=<CONFIG_BOARD> tick_ms=<DEVKIT_TICK_MS> uart=minimal\r\n` | **DONE** | No | No | See [`PHASE_10B_V_CLOSE.md`](../02_PHASE_CLOSEOUTS/PHASE_10B_V_CLOSE.md). Phase tag `10b-v` is the closeout identifier; the response format may be reviewed in a future planning phase but is **frozen** as published baseline. |
 | ~~`L` (0x4c)~~ | **PROMOTED to Section A** — implemented at Phase 10B-L, 2026-05-11 | — | — | `OK led=toggle state=<S>\r\n` | **DONE** | No (existing `devkit_status_led_toggle()` API reused; no new LED function) | No | See [`PHASE_10B_L_CLOSE.md`](../02_PHASE_CLOSEOUTS/PHASE_10B_L_CLOSE.md). Physical effect: single GPIO toggle interleaved with the existing 500 ms heartbeat. LED state is **not** exposed in `?` (existing toggle is stateless). Visual LED observation is `PHYSICAL_OBSERVATION_AMBIGUOUS` pending operator-witnessed re-run. |
-| `T` (0x54) | DRAFT — Sensor read (decision gate / step-up candidate, NOT product semantics) | any | Driver-dependent read; no actuator change | `TEMP <value>\r\n` (or error variant); raw / un-calibrated; format frozen later at Phase 11C if probe is authorized | **Not implemented;** classified at Phase 11A as `SENSOR_SURFACE_DECIDED_ADAPTER_PROBE` (future bounded Adapter probe candidate only). Phase 11B/11C/11D/11E sequence applies if probe is later authorized. | Yes — sensor driver dependency; `prj.conf` flag(s); Zephyr sensor API path. **Not authorized by Phase 11A;** gated behind Phase 11B (Device / Driver Feasibility) and Phase 11C (Probe Spec). | Conditional — fixed-buffer (96 B) compliance must be verified for the chosen format at Phase 11C | **`USER_DECISION_REQUIRED`** with Phase 11A cross-reference: see [`PHASE_11A_ADAPTER_BOUNDARY_SENSOR_SURFACE.md`](../02_PHASE_CLOSEOUTS/PHASE_11A_ADAPTER_BOUNDARY_SENSOR_SURFACE.md) §F. Sensor part choice / Zephyr driver presence / response format / error variant / fixed-buffer cost are Phase 11B+11C decisions, not Phase 11A. `T` is **not** a mistake; it is a sensor-read decision gate awaiting feasibility verification. |
+| `T` (0x54) | DRAFT — Sensor read (decision gate / step-up candidate, NOT product semantics) | any | Driver-dependent read; no actuator change | `ACCEL x=<v1>.<v2> y=<v1>.<v2> z=<v1>.<v2>\r\n` (or error variant); raw integer fixed-point `struct sensor_value`; exact format frozen at Phase 11C | **Not implemented;** classified at Phase 11A as `SENSOR_SURFACE_DECIDED_ADAPTER_PROBE`. Phase 11B (`CLOSED_DOCS_ONLY`) confirms `FEASIBILITY_CONFIRMED_ONBOARD_MEMS`: `lsm303agr_accel` / `lis2dh` driver / I2C1; no purchase. Phase 11C (Probe Spec) is next before any code. | `CONFIG_SENSOR=y` only (Phase 11D); `CONFIG_I2C=y` already present; no overlay; no `CONFIG_ADC`. **Not authorized before Phase 11C spec is approved.** | Conditional — response format and fixed-buffer (96 B) compliance frozen at Phase 11C | **`USER_DECISION_REQUIRED`** pending Phase 11C spec approval. Phase 11B feasibility: [`PHASE_11B_DEVICE_DRIVER_FEASIBILITY.md`](../02_PHASE_CLOSEOUTS/PHASE_11B_DEVICE_DRIVER_FEASIBILITY.md) §J. Phase 11A classification: [`PHASE_11A_ADAPTER_BOUNDARY_SENSOR_SURFACE.md`](../02_PHASE_CLOSEOUTS/PHASE_11A_ADAPTER_BOUNDARY_SENSOR_SURFACE.md) §F. `T` is **not** a mistake; it is a sensor-read decision gate awaiting Phase 11C spec freeze. |
 
 DRAFT rows that were considered and intentionally **omitted** from
 Section B because they do not align cleanly with the existing model:
