@@ -109,6 +109,7 @@ table contains only the reserved placeholders.
 | 11B | Device / Driver Feasibility Gate (docs-only / audit) | CLOSED_DOCS_ONLY | [->](#phase-11b) |
 | 11C | On-board MEMS Accelerometer Probe Spec (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-11c) |
 | 11D | On-board MEMS Accelerometer Probe Implementation (firmware) | IMPLEMENTATION_CLOSED_HARDWARE_EVIDENCE_PENDING | [->](#phase-11d) |
+| 11E | On-board MEMS Accelerometer Probe Evidence Closeout | CLOSED_WITH_HARDWARE_EVIDENCE | [->](#phase-11e) |
 | 20Z | RESERVED -- future checkpoint / closeout slot | NOT_STARTED | [->](#phase-20z) |
 
 When future phases are added:
@@ -515,8 +516,108 @@ POST_FLASH_AUTOSTART discipline unchanged. ACTIVE disarm widening
 ### 11D.9 Next gate
 
 Phase 11E -- Accelerometer Probe Evidence Closeout. Hardware
-evidence-only. Reserved; not opened by this doc. Phase 11E opening
-requires explicit user authorization.
+evidence-only. Opened 2026-05-12. See `<a id="phase-11e"></a>` section
+below.
+
+---
+
+<a id="phase-11e"></a>
+## Phase 11E -- On-board MEMS Accelerometer Probe Evidence Closeout
+
+**Status:** `CLOSED_WITH_HARDWARE_EVIDENCE`
+**Type:** Hardware evidence-only closeout. No source, runtime, test,
+CMake, Zephyr, board, `prj.conf`, DTS overlay, or script change.
+Proves the Phase 11D `T`/`t` accelerometer probe on the
+STM32F411E-DISCO revision D board.
+**Date opened/closed:** 2026-05-12
+**Implementation commit tested:** `2040bfb`
+**Closeout doc:**
+[`../02_PHASE_CLOSEOUTS/PHASE_11E_ACCEL_PROBE_EVIDENCE.md`](../02_PHASE_CLOSEOUTS/PHASE_11E_ACCEL_PROBE_EVIDENCE.md).
+**Companion docs:**
+[`../02_PHASE_CLOSEOUTS/PHASE_11D_ACCEL_PROBE_IMPLEMENTATION.md`](../02_PHASE_CLOSEOUTS/PHASE_11D_ACCEL_PROBE_IMPLEMENTATION.md),
+[`../02_PHASE_CLOSEOUTS/PHASE_11C_ACCEL_PROBE_SPEC.md`](../02_PHASE_CLOSEOUTS/PHASE_11C_ACCEL_PROBE_SPEC.md).
+
+### 11E.1 Purpose
+
+Phase 11E provides hardware-witnessed evidence that the Phase 11D
+`T` command works on real hardware. It follows the Phase 6O
+sidecar `reset run` discipline via
+`capture_devkit_rtt.ps1` and uses the Phase 11D host harness
+`run_phase11d_accel_probe_demo.ps1` with canonical sequence `T T ?`.
+
+### 11E.2 Hardware and build
+
+- **Board:** STM32F411E-DISCO revision D; accel0 = lsm303agr_accel;
+  lis2dh driver; I2C1/0x19; PA2 TX / PA3 RX / COM5 @ 115200 8N1.
+- **Build:** pristine `west build -b stm32f411e_disco` at `2040bfb`.
+  FLASH 41528 B / RAM 12352 B; 161/161 steps. Byte-identical to Phase
+  11D. `.config`: `CONFIG_I2C=y`, `CONFIG_SENSOR=y`, `CONFIG_LIS2DH=y`,
+  `CONFIG_LIS2DH_TRIGGER_NONE=y`; `CONFIG_SPI`, `CONFIG_ADC`,
+  `CONFIG_CBPRINTF_FP_SUPPORT` absent.
+- **Flash:** `west flash`; 49152 bytes written; PASS.
+- **POST_FLASH_AUTOSTART:** sidecar `reset run` via
+  `capture_devkit_rtt.ps1`; RTT control block `_SEGGER_RTT` at
+  `0x20000ad0`; `reset run` issued before streaming.
+
+### 11E.3 Host transcript (captured)
+
+Transcript:
+[`../../../devkit/logs/phase_11E_accel_probe_host_2026-05-12.txt`](../../../devkit/logs/phase_11E_accel_probe_host_2026-05-12.txt)
+(388 bytes).
+
+```text
+SEND 'T' (0x54) -> RECV: ACC x=-0.561300 y=2.619400 z=9.167900
+SEND 'T' (0x54) -> RECV: ACC x=-0.598720 y=2.507140 z=9.167900
+SEND '?' (0x3f) -> RECV: STATE state=IDLE transitions=0 button=0 uart=3 ignored=0
+```
+
+Both `T` responses match the frozen shape; not byte-identical (live
+sensor sampling). `?` response shape unchanged. `PHASE_11C_FORMAT_SIGN_EDGE`
+observed correctly: `x=-0.561300` (val1=0, val2<0 edge case handled).
+
+### 11E.4 RTT counters (final, ticks=120)
+
+RTT log:
+[`../../../devkit/logs/phase_11E_accel_probe_rtt_2026-05-12.txt`](../../../devkit/logs/phase_11E_accel_probe_rtt_2026-05-12.txt)
+(22334 bytes, 61.4 s, Phase 6O harness).
+
+- `ROBOTOS_UART rx=3 ok=3 handled=3 last=0x3f` (+3 from 0 baseline)
+- `ROBOTOS_APP state=IDLE transitions=0 button=0 uart=3 ignored=0`
+  (+3 uart; transitions/ignored/button unchanged)
+- `ROBOTOS_OBS accepted=63 dispatched=62 pending=1 peak=2 dropped=0 herr=0`
+- `ROBOTOS_PROD attempted=60 ok=60`
+- `CFSR=0x00000000 HFSR=0x00000000` (13 occurrences each)
+
+Invariants: `accepted−dispatched=pending` (63−62=1) ✓;
+`PROD ok + UART ok = accepted` (60+3=63) ✓;
+`UART rx=handled=APP uart=3` ✓.
+
+Six required RTT patterns FOUND by Phase 6O harness (including
+`Phase 11D-T accel probe`). Harness exit: **PASS**.
+
+### 11E.5 Physical sanity
+
+**`OPERATOR_PHYSICAL_SANITY_CONFIRMED`** — Z axis reads ~9.17 m/s²
+with board flat on bench (close to 9.81 m/s² gravitational
+acceleration; slight deviation is expected without calibration).
+X = −0.56 m/s², Y = 2.62 m/s² (minor tilt). Values are
+physically plausible. No calibration claimed.
+
+### 11E.6 Scope guards
+
+Zero source/config changes in Phase 11E. All 12 UART TX scope-guard
+constraints from
+[`../02_PHASE_CLOSEOUTS/PHASE_9EZ_CHECKPOINT.md`](../02_PHASE_CLOSEOUTS/PHASE_9EZ_CHECKPOINT.md)
+§H intact. Scheduler 7A/7B remains DEFER. F407 remains HOLD/DEFER.
+UART TX remains minimal response only. POST_FLASH_AUTOSTART discipline
+unchanged. ACTIVE disarm widening `USER_DECISION_REQUIRED_ACTIVE_DISARM`
+preserved and decoupled.
+
+### 11E.7 Verdict
+
+`CLOSED_WITH_HARDWARE_EVIDENCE`. `T` command is hardware-evidence-backed.
+All Phase 11C §I.1/§I.2/§I.4 invariants confirmed. Phase 11A-E sensor
+probe track complete.
 
 ---
 

@@ -1,0 +1,8 @@
+﻿# Phase 11D accelerometer probe command transcript
+# Date: 2026-05-12 18:55:31  Port: COM5  Baud: 115200
+# Sequence: T T ?
+# InterByteDelayMs: 600  ReadTimeoutMs: 1200
+
+SEND 'T' (0x54) -> RECV: ACC x=-0.561300 y=2.619400 z=9.167900
+SEND 'T' (0x54) -> RECV: ACC x=-0.598720 y=2.507140 z=9.167900
+SEND '?' (0x3f) -> RECV: STATE state=IDLE transitions=0 button=0 uart=3 ignored=0

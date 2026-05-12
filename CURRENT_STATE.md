@@ -9,6 +9,33 @@
 
 ## Last Closed Phase
 
+### Phase 11E — On-board MEMS Accelerometer Probe Evidence Closeout (hardware-validated)
+
+- **Date:** 2026-05-12
+- **Type:** Hardware evidence-only closeout. No source, runtime, test, CMake, Zephyr, board, `prj.conf`, DTS overlay, or script change.
+- **Close status:** `CLOSED_WITH_HARDWARE_EVIDENCE`
+- **Implementation commit tested:** `2040bfb` (Phase 11D)
+- **Closeout doc:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_11E_ACCEL_PROBE_EVIDENCE.md`
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md` `<a id="phase-11e"></a>`
+- **Hardware:** STM32F411E-DISCO revision D; LSM303AGR (`lsm303agr_accel`); `lis2dh` driver; I2C1/0x19; COM5 @ 115200 8N1; ST-LINK USB; PA2 TX / PA3 RX.
+- **Build:** Pristine `west build -b stm32f411e_disco` at `2040bfb`; FLASH 41528 B / RAM 12352 B; 161/161 PASS; byte-identical to Phase 11D build. `CONFIG_I2C=y`, `CONFIG_SENSOR=y`, `CONFIG_LIS2DH=y`, `CONFIG_LIS2DH_TRIGGER_NONE=y`; `CONFIG_SPI`/`CONFIG_ADC`/`CONFIG_CBPRINTF_FP` absent.
+- **Flash:** `west flash`; 49152 bytes; PASS. POST_FLASH_AUTOSTART: sidecar `reset run` via `capture_devkit_rtt.ps1`; `_SEGGER_RTT` at `0x20000ad0`.
+- **Host transcript:** Sequence `T T ?`; transcript saved to `RobotOS_v1.0/devkit/logs/phase_11E_accel_probe_host_2026-05-12.txt` (388 B).
+- **Evidence — T responses:**
+  - 1st `T` → `ACC x=-0.561300 y=2.619400 z=9.167900` (len=39 B; matches frozen shape; `PHASE_11C_FORMAT_SIGN_EDGE` observed and correct)
+  - 2nd `T` → `ACC x=-0.598720 y=2.507140 z=9.167900` (len=39 B; matches frozen shape; minor X/Y variation = live sensor)
+  - `?` → `STATE state=IDLE transitions=0 button=0 uart=3 ignored=0` (shape unchanged)
+- **RTT log:** `RobotOS_v1.0/devkit/logs/phase_11E_accel_probe_rtt_2026-05-12.txt` (22334 B; 61.4 s; Phase 6O harness). 6/6 required patterns FOUND; `CFSR=0x00000000` and `HFSR=0x00000000` (13× each).
+- **Final RTT counters (ticks=120):** `ROBOTOS_UART rx=3 ok=3 handled=3 last=0x3f`; `ROBOTOS_APP state=IDLE transitions=0 button=0 uart=3 ignored=0`; `ROBOTOS_OBS accepted=63 dispatched=62 pending=1 peak=2 dropped=0 herr=0`; `ROBOTOS_PROD attempted=60 ok=60`.
+- **Invariants (all PASS):** `accepted−dispatched=pending` (63−62=1) ✓; `PROD ok + UART ok = accepted` (60+3=63) ✓; `UART rx=handled=APP uart=3` ✓; `transitions/ignored delta=0` ✓; `CFSR|HFSR=0` ✓.
+- **Physical sanity:** **`OPERATOR_PHYSICAL_SANITY_CONFIRMED`** — Z ≈ 9.17 m/s² flat-bench (close to 9.81 m/s² gravity; uncalibrated). No calibration claimed.
+- **`T` command status:** **Hardware-evidence-backed.** Promoted to Section A in `COMMAND_SET_DRAFT.md`. Phase 11A–11E sensor probe track complete.
+- **All scope guards preserved:** Zero source/config/script changes in Phase 11E. All 12 UART TX scope-guard constraints from `PHASE_9EZ_CHECKPOINT.md §H` intact. `core/`, `platform/`, `prj.conf`, `CMakeLists.txt`, board DTS, and all evidence logs (except newly added Phase 11E logs) zero-diff. Scheduler 7A/7B remains DEFER. F407 remains HOLD/DEFER. UART TX remains minimal response only. POST_FLASH_AUTOSTART discipline unchanged. ACTIVE disarm widening `USER_DECISION_REQUIRED_ACTIVE_DISARM` preserved and decoupled.
+- **Verdict:** `CLOSED_WITH_HARDWARE_EVIDENCE`. The `T` accelerometer probe command is fully validated end-to-end on real hardware. ACC success path observed; frozen response shape confirmed; counter invariants confirmed; CFSR/HFSR clean; physical sanity confirmed.
+- **Next gate:** User decision. Phase 11A–11E sensor track is complete. Remaining open items: ACTIVE disarm widening (`USER_DECISION_REQUIRED_ACTIVE_DISARM`); Scheduler 7A/7B (`DEFER`); F407/custom-board (`HOLD/DEFER`); POST_FLASH_AUTOSTART root cause (`OPEN`, `MITIGATED_BY_WORKFLOW`).
+
+---
+
 ### Phase 11D — On-board MEMS Accelerometer Probe Implementation (firmware, build-validated)
 
 - **Date:** 2026-05-12
