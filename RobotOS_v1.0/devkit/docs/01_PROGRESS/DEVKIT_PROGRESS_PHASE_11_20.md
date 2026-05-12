@@ -110,6 +110,7 @@ table contains only the reserved placeholders.
 | 11C | On-board MEMS Accelerometer Probe Spec (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-11c) |
 | 11D | On-board MEMS Accelerometer Probe Implementation (firmware) | IMPLEMENTATION_CLOSED_HARDWARE_EVIDENCE_PENDING | [->](#phase-11d) |
 | 11E | On-board MEMS Accelerometer Probe Evidence Closeout | CLOSED_WITH_HARDWARE_EVIDENCE | [->](#phase-11e) |
+| 11Z | Command-Set Checkpoint (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-11z) |
 | 20Z | RESERVED -- future checkpoint / closeout slot | NOT_STARTED | [->](#phase-20z) |
 
 When future phases are added:
@@ -618,6 +619,117 @@ preserved and decoupled.
 `CLOSED_WITH_HARDWARE_EVIDENCE`. `T` command is hardware-evidence-backed.
 All Phase 11C §I.1/§I.2/§I.4 invariants confirmed. Phase 11A-E sensor
 probe track complete.
+
+---
+
+<a id="phase-11z"></a>
+## Phase 11Z -- Command-Set Checkpoint
+
+**Status:** `CLOSED_DOCS_ONLY`
+**Type:** Docs-only checkpoint / design-state consolidation. **No
+source, runtime, test, CMake, Zephyr, board, host-tool, script, or
+`prj.conf` change.** Snapshots the validated command surface after
+the Phase 11A–11E sensor-probe track closed; prevents blind opening
+of the next implementation phase.
+**Date opened/closed:** 2026-05-12 (same-day docs-only close)
+**Published baseline at open:** `origin/master = 10710b3`
+**Closeout doc:**
+[`../02_PHASE_CLOSEOUTS/PHASE_11Z_COMMAND_SET_CHECKPOINT.md`](../02_PHASE_CLOSEOUTS/PHASE_11Z_COMMAND_SET_CHECKPOINT.md).
+**Companion docs:**
+[`../02_PHASE_CLOSEOUTS/PHASE_11E_ACCEL_PROBE_EVIDENCE.md`](../02_PHASE_CLOSEOUTS/PHASE_11E_ACCEL_PROBE_EVIDENCE.md),
+[`../02_PHASE_CLOSEOUTS/PHASE_10C_COMMAND_SET_CHECKPOINT.md`](../02_PHASE_CLOSEOUTS/PHASE_10C_COMMAND_SET_CHECKPOINT.md),
+[`../03_SPECS/COMMAND_SET_DRAFT.md`](../03_SPECS/COMMAND_SET_DRAFT.md).
+
+### 11Z.1 Purpose
+
+Phase 11Z snapshots the validated command surface after Phase 11E
+closed the sensor-probe track with hardware evidence. It is the
+analogue of Phase 10C, taken after the Phase 11A–11E sensor-probe
+addition.
+
+Phase 11Z exists to:
+
+- Record that the Phase 11A–11E sensor-probe track is **complete**.
+- Provide a single-page authoritative inventory of the validated
+  9-command set.
+- Restate the 12 UART TX scope-guard constraints against the
+  post-11E baseline.
+- List the remaining open decisions so the next phase opens with
+  written context.
+
+Phase 11Z is **not** an implementation phase, **not** a behavioral
+specification, **not** an authorization for ACTIVE disarm widening,
+Framework API, Application semantics, Scheduler reopening, F407, or
+any other gate.
+
+### 11Z.2 Validated command set
+
+The validated command set at Phase 11Z is:
+
+```text
+a / s / r / ? / x / v / L / d / T
+```
+
+Nine single-byte commands; all hardware-evidence-backed; all fit the
+single-byte / fixed 96-byte stack buffer / no-parser / no-registry /
+no-framing / thread-context-TX pattern. See
+[`../02_PHASE_CLOSEOUTS/PHASE_11Z_COMMAND_SET_CHECKPOINT.md`](../02_PHASE_CLOSEOUTS/PHASE_11Z_COMMAND_SET_CHECKPOINT.md)
+§C for the full inventory table.
+
+### 11Z.3 Phase 11 sensor-probe track summary
+
+| Gate | Decision / Result | Status |
+|---|---|---|
+| 11A | `SENSOR_SURFACE_DECIDED_ADAPTER_PROBE` | `CLOSED_DOCS_ONLY` |
+| 11B | `FEASIBILITY_CONFIRMED_ONBOARD_MEMS` + `NO_PURCHASE_NEEDED_FOR_NEXT_STEP` | `CLOSED_DOCS_ONLY` |
+| 11C | `PHASE_11C_SPEC_FROZEN_ACCEL_LIS2DH_REV_D` | `CLOSED_DOCS_ONLY` |
+| 11D | Implementation per frozen spec; build PASS | `IMPLEMENTATION_CLOSED_HARDWARE_EVIDENCE_PENDING` |
+| 11E | Two ACC responses observed; counters/invariants PASS; CFSR/HFSR=0; `OPERATOR_PHYSICAL_SANITY_CONFIRMED` (Z ≈ 9.17 m/s² flat-bench) | **`CLOSED_WITH_HARDWARE_EVIDENCE`** |
+
+### 11Z.4 Remaining decisions
+
+All preserved with no change at Phase 11Z:
+
+1. ACTIVE disarm widening — **`USER_DECISION_REQUIRED_ACTIVE_DISARM`**;
+   `d` from ACTIVE remains recognized no-op.
+2. Scheduler 7A/7B — **`DEFER`**; no workload evidence justifies
+   reopening (Phase 11E `peak=2 dropped=0 herr=0`).
+3. F407 / custom board — **`HOLD/DEFER`**; no portability requirement
+   surfaced.
+4. POST_FLASH_AUTOSTART root cause — **`OPEN`**, `MITIGATED_BY_WORKFLOW`
+   via Phase 6O sidecar `reset run`.
+5. Robot Framework API planning — **`NOT_STARTED`**; possible future
+   docs-only phase (analog of Phase 11A).
+6. Application / product layer — **`NOT_STARTED`**; no product
+   direction.
+
+### 11Z.5 Scope guards intact
+
+All 12 UART TX scope-guard constraints from
+[`../02_PHASE_CLOSEOUTS/PHASE_9EZ_CHECKPOINT.md`](../02_PHASE_CLOSEOUTS/PHASE_9EZ_CHECKPOINT.md)
+§H preserved. `core/`, `platform/`, `tests/`,
+`devkit/CMakeLists.txt` top-level, `devkit_runtime.{c,h}`,
+`devkit_status_led.{c,h}`, button/timer producers, observability/
+build-info/fault modules, board DTS, board defconfig, B-revision
+overlay, Zephyr workspace tracked files, `DEVKIT_PROGRESS.md`
+historical master, and all evidence logs zero-diff. The single
+intentional change since Phase 9E baseline is `devkit/prj.conf` adding
+`CONFIG_I2C=y` + `CONFIG_SENSOR=y` (Phase 11D); Phase 11Z does not
+modify this delta.
+
+### 11Z.6 Verdict
+
+`CLOSED_DOCS_ONLY`. Phase 11A–11E sensor-probe track complete and
+shelved as a stable checkpoint. No firmware change, no test change,
+no scope expansion, no semantics change, no purchase authorization.
+
+### 11Z.7 Next gate
+
+**Hold.** No phase opens automatically. Future possible phases (each
+docs-only or implementation, each requiring explicit user
+authorization): Phase 12A-class Framework API surface planning,
+ACTIVE disarm widening, Adapter SPI/ADC probe, POST_FLASH_AUTOSTART
+investigation. Phase 11Z authorizes none.
 
 ---
 

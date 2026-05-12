@@ -1,6 +1,6 @@
 # COMMAND_SET_DRAFT.md — RobotOS Devkit Product Command Vocabulary
 
-**Status at Phase 11E checkpoint (`origin/master = 2040bfb`; Phase 11E evidence closed 2026-05-12):**
+**Status at Phase 11Z checkpoint (`origin/master = 10710b3`; Phase 11Z command-set checkpoint closed 2026-05-12; Phase 11A–11E sensor-probe track complete):**
 
 - **Section A — IMPLEMENTED + hardware-validated:** `a` (0x61), `s`
   (0x73), `r` (0x72), `?` (0x3f), `x` (0x78) (Phase 9E baseline);
@@ -98,13 +98,17 @@ implemented. Opening a Phase 10B-class implementation for any row requires
 explicit user approval of that specific row, including answering its
 `USER_DECISION_REQUIRED` notes.
 
-Section B at the Phase 11E checkpoint contains:
+Section B at the Phase 11Z checkpoint contains:
 
 - **`T` (sensor read, 0x54) — PROMOTED TO SECTION A.** Phase 11E
   (`CLOSED_WITH_HARDWARE_EVIDENCE`, 2026-05-12) closed the Phase
   11A–11E sensor probe track. `T` is hardware-validated on
   STM32F411E-DISCO revision D with `OPERATOR_PHYSICAL_SANITY_CONFIRMED`
-  (Z ≈ 9.17 m/s² flat-bench). See
+  (Z ≈ 9.17 m/s² flat-bench). Phase 11Z command-set checkpoint
+  (`CLOSED_DOCS_ONLY`, 2026-05-12) snapshots the current 9-command
+  validated set and shelves the Phase 11A–11E sensor-probe track as
+  complete. See
+  [`PHASE_11Z_COMMAND_SET_CHECKPOINT.md`](../02_PHASE_CLOSEOUTS/PHASE_11Z_COMMAND_SET_CHECKPOINT.md),
   [`PHASE_11E_ACCEL_PROBE_EVIDENCE.md`](../02_PHASE_CLOSEOUTS/PHASE_11E_ACCEL_PROBE_EVIDENCE.md),
   [`PHASE_11D_ACCEL_PROBE_IMPLEMENTATION.md`](../02_PHASE_CLOSEOUTS/PHASE_11D_ACCEL_PROBE_IMPLEMENTATION.md),
   and [`PHASE_11C_ACCEL_PROBE_SPEC.md`](../02_PHASE_CLOSEOUTS/PHASE_11C_ACCEL_PROBE_SPEC.md)

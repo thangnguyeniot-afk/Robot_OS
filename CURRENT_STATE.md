@@ -9,6 +9,32 @@
 
 ## Last Closed Phase
 
+### Phase 11Z — Command-Set Checkpoint (docs-only)
+
+- **Date:** 2026-05-12
+- **Type:** Docs-only checkpoint / design-state consolidation. No source, runtime, test, CMake, Zephyr, board, host-tool, script, or `prj.conf` change. Snapshots the validated command surface after the Phase 11A–11E sensor-probe track closed; prevents blind opening of the next implementation phase.
+- **Close status:** `CLOSED_DOCS_ONLY`
+- **Published baseline at open:** `origin/master = 10710b3`
+- **Closeout doc:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_11Z_COMMAND_SET_CHECKPOINT.md`
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md` `<a id="phase-11z"></a>`
+- **Companion doc:** `RobotOS_v1.0/devkit/docs/03_SPECS/COMMAND_SET_DRAFT.md` (status preamble updated to Phase 11Z checkpoint; Section B intro updated; no semantic change to any command row).
+- **Validated command set at checkpoint:** **`a / s / r / ? / x / v / L / d / T`** (9 single-byte commands; all hardware-evidence-backed; all fit the single-byte / fixed 96-byte stack buffer / no-parser / no-registry / no-framing / thread-context-TX pattern).
+- **Last runtime implementation phase:** Phase 11D (firmware `2040bfb`).
+- **Last hardware evidence phase:** Phase 11E (`10710b3`; `CLOSED_WITH_HARDWARE_EVIDENCE`).
+- **Phase 11A–11E sensor-probe track:** Complete. `T` accelerometer probe is fully implemented, build-validated, hardware-validated, with `OPERATOR_PHYSICAL_SANITY_CONFIRMED`.
+- **Remaining decisions (all preserved unchanged at Phase 11Z):**
+  1. ACTIVE disarm widening — `USER_DECISION_REQUIRED_ACTIVE_DISARM` (`d` from ACTIVE = recognized no-op).
+  2. Scheduler 7A/7B — `DEFER` (no workload evidence justifies reopening; Phase 11E `peak=2 dropped=0 herr=0`).
+  3. F407 / custom board — `HOLD/DEFER` (no portability requirement surfaced).
+  4. POST_FLASH_AUTOSTART root cause — `OPEN`, `MITIGATED_BY_WORKFLOW` via Phase 6O sidecar `reset run`.
+  5. Robot Framework API planning — `NOT_STARTED`; possible future docs-only phase (analog of Phase 11A).
+  6. Application / product layer — `NOT_STARTED`; requires product direction.
+- **All scope guards preserved:** Zero source/config/script changes in Phase 11Z. All 12 UART TX scope-guard constraints from `PHASE_9EZ_CHECKPOINT.md §H` intact. `core/`, `platform/`, `tests/`, `devkit/CMakeLists.txt` top-level, `devkit_runtime.{c,h}`, `devkit_status_led.{c,h}`, `devkit_button_producer.c`, `devkit_timer_producer.c`, `devkit_observability.c`, `devkit_build_info.c`, `devkit_fault.c`, board DTS, board defconfig, B-revision overlay, Zephyr workspace tracked files, `DEVKIT_PROGRESS.md` historical master, and all evidence logs zero-diff. Scheduler 7A/7B remains DEFER. F407 remains HOLD/DEFER. UART TX remains minimal response only. POST_FLASH_AUTOSTART discipline unchanged. ACTIVE disarm widening `USER_DECISION_REQUIRED_ACTIVE_DISARM` preserved and decoupled. The **single** intentional change since Phase 9E baseline remains the Phase 11D delta in `devkit/prj.conf` adding `CONFIG_I2C=y` + `CONFIG_SENSOR=y` (no SPI, no ADC, no CBPRINTF_FP_SUPPORT, no overlay); Phase 11Z does not modify this delta.
+- **Verdict:** Docs-only close. No firmware change, no test change, no scope expansion, no semantics change, no purchase authorization, no new command candidate. Stable shelf before any future Framework, scheduler, F407, or housekeeping work.
+- **Next gate:** **Hold.** No phase opens automatically. Future possible phases — each requires explicit user authorization: (1) Phase 12A-class docs-only Framework API surface planning (recommended next planning step if advancing into Framework territory); (2) ACTIVE disarm widening (cheap one-line + supplemental run); (3) Adapter SPI/ADC probe (only if a specific workload motivates it); (4) POST_FLASH_AUTOSTART root cause investigation (optional engineering work); (5) Scheduler 7A/7B (do not reopen without new workload evidence); (6) F407/custom board (do not reopen without explicit portability requirement); (7) Application/product layer (requires product direction). Phase 11Z authorizes none of these.
+
+---
+
 ### Phase 11E — On-board MEMS Accelerometer Probe Evidence Closeout (hardware-validated)
 
 - **Date:** 2026-05-12
