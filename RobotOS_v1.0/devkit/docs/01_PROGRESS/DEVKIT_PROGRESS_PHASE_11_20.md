@@ -112,6 +112,7 @@ table contains only the reserved placeholders.
 | 11E | On-board MEMS Accelerometer Probe Evidence Closeout | CLOSED_WITH_HARDWARE_EVIDENCE | [->](#phase-11e) |
 | 11Z | Command-Set Checkpoint (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-11z) |
 | 12A | Robot Framework API Surface Planning (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12a) |
+| 12B | Robot Framework FSM API Draft (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12b) |
 | 20Z | RESERVED -- future checkpoint / closeout slot | NOT_STARTED | [->](#phase-20z) |
 
 When future phases are added:
@@ -843,6 +844,99 @@ All preserved unchanged:
 no semantics change, no purchase authorization. Framework planning boundary
 established. Recommended next gate: Phase 12B — Robot Framework FSM API Draft
 (docs-only; explicit user authorization required).
+
+---
+
+<a id="phase-12b"></a>
+## Phase 12B -- Robot Framework FSM API Draft
+
+**Status:** `CLOSED_DOCS_ONLY`
+**Type:** Docs-only API surface draft. **No source, runtime, test, CMake,
+Zephyr, board, host-tool, script, `prj.conf`, DTS overlay, evidence log,
+`framework/` directory, or `.h`/`.c` Framework file change.**
+**Date opened/closed:** 2026-05-12 (same-day docs-only close)
+**Published baseline at open:** `origin/master = 76cb241`
+**Closeout doc:**
+[`../02_PHASE_CLOSEOUTS/PHASE_12B_FRAMEWORK_FSM_API_DRAFT.md`](../02_PHASE_CLOSEOUTS/PHASE_12B_FRAMEWORK_FSM_API_DRAFT.md).
+**Long-lived spec draft:**
+[`../03_SPECS/FRAMEWORK_FSM_API_DRAFT.md`](../03_SPECS/FRAMEWORK_FSM_API_DRAFT.md).
+**Companion docs:**
+[`../02_PHASE_CLOSEOUTS/PHASE_12A_FRAMEWORK_API_SURFACE_PLANNING.md`](../02_PHASE_CLOSEOUTS/PHASE_12A_FRAMEWORK_API_SURFACE_PLANNING.md),
+[`../02_PHASE_CLOSEOUTS/PHASE_11Z_COMMAND_SET_CHECKPOINT.md`](../02_PHASE_CLOSEOUTS/PHASE_11Z_COMMAND_SET_CHECKPOINT.md).
+
+### 12B.1 Purpose
+
+Phase 12B drafts the Robot Framework flat FSM API surface at design level.
+It is the first spec-only phase for the Framework layer, analogous to Phase
+11C (probe spec before probe implementation).
+
+Phase 12B:
+
+- Defines the FSM model: flat, table-driven, no heap, static config.
+- Drafts conceptual types and function signatures (DRAFT / NON-FINAL).
+- Audits the devkit event type allocation (100–103) and confirms that
+  Framework FSM event IDs are decoupled from `robotos_event_type_t`.
+- Records open design decisions for Phase 12C confirmation.
+- Creates `03_SPECS/FRAMEWORK_FSM_API_DRAFT.md` as a long-lived spec.
+
+Phase 12B does **not** implement the FSM, create a `framework/` directory,
+modify devkit source, change command semantics, or authorize Phase 12C
+automatically.
+
+### 12B.2 Decision result
+
+**`PHASE_12B_FSM_API_DRAFTED_DOCS_ONLY`**
+
+FSM model confirmed: flat, table-driven, static config, no heap. Illustrative
+`robotos_fw_fsm_*` API surface drafted in closeout §F and spec §4 (all DRAFT /
+NON-FINAL). Two open decisions flagged for Phase 12C:
+
+1. **Event bridge pattern** — Application layer translates Adapter events
+   to `robotos_fw_event_id_t`; recommended as `OPEN_RECOMMENDATION_PENDING_CONFIRMATION`.
+2. **Status model** — reuse `robotos_core_status_t` (Option A) recommended;
+   `OPEN_RECOMMENDATION_PENDING_CONFIRMATION`.
+
+### 12B.3 FSM model summary
+
+| Model axis | Decision |
+|---|---|
+| Flat vs hierarchical | Flat only (Phase 12B scope) |
+| Table-driven vs callback-router | Table-driven: `const robotos_fw_transition_t[]` |
+| Static vs dynamic config | Static compile-time; no heap |
+| State / event IDs | Product-defined `uint32_t` |
+| Event namespace | Separate from `robotos_event_type_t`; no sub-range needed |
+| Transition evaluation | First-match FIFO; guard-skip on reject |
+| Dispatch thread | Thread context only; ISR-safe state query only |
+
+### 12B.4 Remaining decisions
+
+All preserved unchanged:
+
+1. ACTIVE disarm widening — **`USER_DECISION_REQUIRED_ACTIVE_DISARM`**
+2. Scheduler 7A/7B — **`DEFER`**
+3. F407 / custom board — **`HOLD/DEFER`**
+4. POST_FLASH_AUTOSTART — **`OPEN`** / `MITIGATED_BY_WORKFLOW`
+5. Application / product layer — **`NOT_STARTED`**
+6. Robot Framework (implementation) — **`NOT_STARTED`**; Phase 12B drafts API only
+
+### 12B.5 Scope guards intact
+
+All 12 UART TX scope-guard constraints preserved. Zero source/config/evidence-
+log changes. `devkit_app_state` not promoted (scope-guard #11). `core/`,
+`platform/`, `devkit/src/`, board DTS, `prj.conf`, and evidence logs
+zero-diff. `T` remains Adapter probe evidence, not Framework API.
+
+### 12B.6 Verdict
+
+`CLOSED_DOCS_ONLY`. Framework FSM API surface drafted at design level.
+Long-lived spec created at `03_SPECS/FRAMEWORK_FSM_API_DRAFT.md`. No
+implementation, no source change, no `framework/` dir.
+
+### 12B.7 Next gate
+
+Phase 12C — Framework FSM Event Bridge Spec + Status Model Confirmation
+(docs-only). Entry requires explicit user authorization. Confirms the two
+open decisions from §N before any header or implementation work.
 
 ---
 

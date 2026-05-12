@@ -9,6 +9,41 @@
 
 ## Last Closed Phase
 
+### Phase 12B — Robot Framework FSM API Draft (docs-only)
+
+- **Date:** 2026-05-12
+- **Type:** Docs-only API surface draft. No source, runtime, test, CMake, Zephyr, board, `prj.conf`, DTS overlay, evidence log, `framework/` directory, or `.h`/`.c` Framework file change.
+- **Close status:** `CLOSED_DOCS_ONLY`
+- **Decision result:** `PHASE_12B_FSM_API_DRAFTED_DOCS_ONLY`
+- **Published baseline at open:** `origin/master = 76cb241`
+- **Closeout doc:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12B_FRAMEWORK_FSM_API_DRAFT.md`
+- **Long-lived spec draft:** `RobotOS_v1.0/devkit/docs/03_SPECS/FRAMEWORK_FSM_API_DRAFT.md` (DRAFT / NON-FINAL; evolves through Phase 12C+)
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md` `<a id="phase-12b"></a>`
+- **Robot Framework status:** **NOT BUILT.** No `framework/` directory, no Framework header, no Framework implementation. Phase 12B defines the API surface at design level only.
+- **FSM model (confirmed at Phase 12B):** Flat, table-driven (`const robotos_fw_transition_t[]`), static compile-time config, no heap, product-defined `uint32_t` state/event IDs, first-match FIFO evaluation, thread-context dispatch, ISR-safe state query.
+- **Draft API surface (NON-FINAL):** `robotos_fw_fsm_init`, `robotos_fw_fsm_dispatch`, `robotos_fw_fsm_get_state`, `robotos_fw_fsm_reset`, `robotos_fw_fsm_is_in_state`, `robotos_fw_fsm_get_snapshot` — all DRAFT; no header file created.
+- **Event namespace:** Framework `robotos_fw_event_id_t` is decoupled from `robotos_event_type_t`; no sub-range allocation needed. Devkit uses types 100–103; Framework FSM event IDs are application-defined `uint32_t` in a separate namespace.
+- **Open decisions (Phase 12C must confirm before any implementation):**
+  1. Event bridge pattern — how Application layer translates Adapter events to `robotos_fw_event_id_t` calls; recommendation documented (`OPEN_RECOMMENDATION_PENDING_CONFIRMATION`).
+  2. Status model — reuse `robotos_core_status_t` (Option A, recommended) vs new `robotos_fw_status_t` (`OPEN_RECOMMENDATION_PENDING_CONFIRMATION`).
+  3. Event payload lifetime rules — documented; confirmation needed.
+  4. Action return semantics on non-OK — documented (no rollback policy); confirmation needed.
+- **`devkit_app_state` status:** Devkit-local; not promoted (scope-guard #11 re-affirmed). Used as design reference only; IDLE/ARMED/ACTIVE vocabulary does NOT appear in Framework API.
+- **Validated command set (unchanged):** `a / s / r / ? / x / v / L / d / T` (9 commands; hardware-evidence-backed).
+- **Last runtime implementation phase:** Phase 11D (`2040bfb`).
+- **Last hardware evidence phase:** Phase 11E (`10710b3`; `CLOSED_WITH_HARDWARE_EVIDENCE`).
+- **All scope guards preserved:** Zero source/config/script changes. All 12 UART TX scope-guard constraints from `PHASE_9EZ_CHECKPOINT.md §H` intact. `core/`, `platform/`, `devkit/src/`, board DTS, board defconfig, Zephyr workspace, `DEVKIT_PROGRESS.md` historical master, and all evidence logs zero-diff.
+- **Remaining decisions (all preserved unchanged at Phase 12B):**
+  1. ACTIVE disarm widening — `USER_DECISION_REQUIRED_ACTIVE_DISARM`
+  2. Scheduler 7A/7B — `DEFER`
+  3. F407 / custom board — `HOLD/DEFER`
+  4. POST_FLASH_AUTOSTART root cause — `OPEN` / `MITIGATED_BY_WORKFLOW`
+  5. Application / product layer — `NOT_STARTED`
+  6. Robot Framework (implementation) — `NOT_STARTED`
+- **Next gate:** Phase 12C — Framework FSM Event Bridge Spec + Status Model Confirmation (docs-only). Confirms open decisions before any header/implementation work. Requires explicit user authorization.
+
+---
+
 ### Phase 12A — Robot Framework API Surface Planning (docs-only)
 
 - **Date:** 2026-05-12
