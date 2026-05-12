@@ -9,6 +9,28 @@
 
 ## Last Closed Phase
 
+### Phase 11D — On-board MEMS Accelerometer Probe Implementation (firmware, build-validated)
+
+- **Date:** 2026-05-12
+- **Type:** Devkit-local firmware + tooling implementation of the Phase 11C-frozen on-board MEMS accelerometer probe (`T` command). Source + `prj.conf` + host harness changes only. No `core/`, no `platform/`, no `tests/`, no scheduler/queue constants, no board DTS, no DTS overlay, no Zephyr module, no hardware purchase.
+- **Close status:** `IMPLEMENTATION_CLOSED_HARDWARE_EVIDENCE_PENDING` — build-validated pristine for `stm32f411e_disco`; hardware evidence deferred to Phase 11E.
+- **Published baseline at open:** `origin/master = cc101cd`
+- **Closeout doc:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_11D_ACCEL_PROBE_IMPLEMENTATION.md`
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md` `<a id="phase-11d"></a>`
+- **Companion docs:** `COMMAND_SET_DRAFT.md` Section B intro and `T` row updated to mark `T` implemented-build-validated, hardware evidence pending Phase 11E; status preamble updated to Phase 11D checkpoint.
+- **Source change:** `devkit/src/devkit_app_state.c` (+12 lines, `case 't':` recognition — LOG_INF, no transition, not ignored), `devkit/src/devkit_app_state.h` (+5/-1 lines, doc-only), and `devkit/src/devkit_uart_producer.c` (+88/-2 lines — new includes `<errno.h>`, `<stdlib.h>`, `<zephyr/drivers/sensor.h>`; new `DEVKIT_ACCEL_NODE = DT_ALIAS(accel0)` with `#error` guard; new `s_accel_dev = DEVICE_DT_GET(...)`; new internal `devkit_accel_format_value()` helper; new `case 't':` TX branch — `sensor_sample_fetch` + `sensor_channel_get` + frozen `ACC`/`ERR` response). Plus new host harness `tools/runtime/run_phase11d_accel_probe_demo.ps1` (Phase 6O sidecar-`reset-run` discipline, default sequence `T T ?`, PowerShell-parse OK).
+- **Config change:** `devkit/prj.conf` (+9/-1 lines) — appended `CONFIG_I2C=y` and `CONFIG_SENSOR=y` with leading comment block. **No other Kconfig added.** `CONFIG_LIS2DH_TRIGGER_NONE=y` not added explicitly — pristine `.config` already sets it as the driver default (first option of `choice LIS2DH_TRIGGER_MODE`).
+- **Generated `.config` observations:** `CONFIG_I2C=y`, `CONFIG_SENSOR=y`, `CONFIG_LIS2DH=y`, `CONFIG_LIS2DH_TRIGGER_NONE=y`, `CONFIG_LIS2DH_OPER_MODE_NORMAL=y`, `CONFIG_LIS2DH_ACCEL_RANGE_RUNTIME=y`, `CONFIG_LIS2DH_ODR_RUNTIME=y` all set (driver defaults). **Forbidden Kconfigs absent:** `CONFIG_SPI` not set, `CONFIG_ADC` not set, `CONFIG_CBPRINTF_FP_SUPPORT` not set.
+- **Response/error implementation:** Success line `ACC x=<v1>.<v2_6d> y=<v1>.<v2_6d> z=<v1>.<v2_6d>\r\n` (worst case 68 B, typical ~44 B); error line `ERR accel read=<errno>\r\n` (worst case 28 B; errno is numeric signed-decimal from failing Zephyr API; no symbolic mapping; no retry). Both paths share the existing 96-byte stack buffer via the existing `uart_poll_out` path. **Sign rule** `PHASE_11C_FORMAT_SIGN_EDGE`: for the Zephyr edge case `val1=0, val2<0` (sub-unit negative), implementation emits a leading `-` and absolute val2, e.g. `-0.500000`, staying within the frozen `<v1>.<v2_6d>` shape. Documented in closeout doc §D.5.
+- **Build delta vs Phase 10B-d baseline `125779c`:** FLASH 36780 B → 41528 B (+4748 B); RAM 12224 B → 12352 B (+128 B). Cost dominated by Zephyr sensor subsystem + STM32 I2C driver + `lis2dh` driver. Comfortably within `stm32f411e_disco` budget; no fault-stack adjustment needed. No new warnings.
+- **`T` behavioral contract realized:** Recognition in `devkit_app_state.c`; `transitions / ignored / button` unchanged; `uart` +1 per `T`; read in thread/handler context only (no ISR TX); single attempt; no retry; no symbolic errno; handler returns OK in both success and sensor-error paths. Other commands' branches (`v / L / d / a / s / r / ? / x`) byte-for-byte unchanged.
+- **Hardware evidence status:** **`HARDWARE_EVIDENCE_PENDING_PHASE_11E`.** Board not flashed; RTT not captured; harness not run by Phase 11D. The `T T ?` host harness exists, PowerShell-parses OK, and is ready for Phase 11E.
+- **All scope guards preserved:** All 12 UART TX scope-guard constraints from `PHASE_9EZ_CHECKPOINT.md §H` intact. `core/`, `platform/`, `tests/`, `devkit/CMakeLists.txt` top-level, `devkit_runtime.{c,h}`, `devkit_status_led.{c,h}`, `devkit_button_producer.c`, `devkit_timer_producer.c`, `devkit_observability.c`, `devkit_build_info.c`, `devkit_fault.c`, board DTS, board defconfig, B-revision overlay, Zephyr workspace tracked files, and all evidence logs zero-diff. Scheduler 7A/7B remains DEFER. F407 remains HOLD/DEFER. UART TX remains minimal response only. POST_FLASH_AUTOSTART discipline unchanged. ACTIVE disarm widening `USER_DECISION_REQUIRED_ACTIVE_DISARM` preserved and decoupled.
+- **Verdict:** Build-validated close. `T` is implemented per the Phase 11C-frozen contract; build passes pristine for `stm32f411e_disco`; generated `.config` matches the Phase 11C §D rules. **Hardware-runtime PASS / FAIL is a Phase 11E decision; Phase 11D does NOT claim runtime evidence.**
+- **Next gate:** **Phase 11E — Accelerometer Probe Evidence Closeout.** Hardware evidence-only. Reserved; not opened by Phase 11D. Phase 11E opening requires **explicit user authorization**. Phase 11E must flash the Phase 11D image, run `run_phase11d_accel_probe_demo.ps1`, capture RTT + host transcript under `RobotOS_v1.0/devkit/logs/phase_11D_*_<date>.txt`, verify §I.1/§I.2 counter expectations from Phase 11C, optionally record `OPERATOR_PHYSICAL_SANITY_CONFIRMED` for ~+9.8 m/s² Z reading with board flat, and publish a Phase 11E closeout with status `CLOSED_WITH_HARDWARE_EVIDENCE`.
+
+---
+
 ### Phase 11C — On-board MEMS Accelerometer Probe Spec (docs-only)
 
 - **Date:** 2026-05-12

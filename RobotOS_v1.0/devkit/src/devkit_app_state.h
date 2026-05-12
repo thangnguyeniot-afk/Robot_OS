@@ -21,6 +21,8 @@
  *   uart 'r'/'R' -> IDLE    (from any state)
  *   uart 'd'/'D' -> IDLE    (from ARMED only; recognized no-op from IDLE;
  *                             ACTIVE disarm is USER_DECISION_REQUIRED)
+ *   uart 't'/'T' -> accelerometer probe (Phase 11D); no state change,
+ *                   not ignored; ACC/ERR response emitted by UART TX path
  *   uart '?'     -> report current state only, no transition
  *   any other    -> ignored (incremented in ignored counter)
  *
@@ -88,6 +90,7 @@ void devkit_app_state_on_button(uint32_t seq);
  *   's' / 'S' -> ACTIVE
  *   'r' / 'R' -> IDLE
  *   'd' / 'D' -> IDLE (from ARMED); no-op from IDLE; ACTIVE USER_DECISION_REQUIRED
+ *   't' / 'T' -> accelerometer probe (Phase 11D); no transition, not ignored
  *   '?'       -> report current state (no transition)
  *   any other -> ignored (counter incremented; no transition)
  *

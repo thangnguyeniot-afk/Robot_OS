@@ -23,13 +23,16 @@
 
 #include "devkit_uart_producer.h"
 
+#include <errno.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
+#include <zephyr/drivers/sensor.h>
 #include <zephyr/drivers/uart.h>
 #include <zephyr/logging/log.h>
 
@@ -58,6 +61,24 @@ LOG_MODULE_REGISTER(devkit_uart, LOG_LEVEL_INF);
 #endif
 
 static const struct device *const s_uart_dev = DEVICE_DT_GET(UART_NODE);
+
+/*
+ * Phase 11D: on-board MEMS accelerometer (LSM303AGR, lis2dh driver, I2C1).
+ * DT alias is `accel0` -> `lsm303agr_accel` (board revision D default;
+ * see PHASE_11C_ACCEL_PROBE_SPEC.md §C). The device handle is resolved
+ * at link time via DEVICE_DT_GET; runtime readiness is verified each
+ * time the `T` command is invoked. No driver init is performed here:
+ * the Zephyr device driver SYS_INIT chain is the sole owner.
+ *
+ * If the alias is missing at compile time, fail the build now rather
+ * than at runtime. This is the spec-mandated DT_ALIAS_ACCEL0_MISSING
+ * stop-and-report behavior.
+ */
+#define DEVKIT_ACCEL_NODE DT_ALIAS(accel0)
+#if !DT_NODE_EXISTS(DEVKIT_ACCEL_NODE)
+#error "Phase 11D requires DT alias 'accel0' (DT_ALIAS_ACCEL0_MISSING)"
+#endif
+static const struct device *const s_accel_dev = DEVICE_DT_GET(DEVKIT_ACCEL_NODE);
 
 /*
  * Volatile: written from UART ISR callback context, read from thread context.
@@ -170,6 +191,41 @@ static void devkit_uart_send_bytes(const char *buf, int len)
 	}
 }
 
+/*
+ * Phase 11D: format one struct sensor_value into the frozen
+ * "<v1>.<v2_6d>" sub-token of the Phase 11C `ACC` response.
+ *
+ * Phase 11C §E.1 rules (frozen):
+ *   - val1 is rendered as a signed decimal (sign-carrying integer part).
+ *   - val2 is rendered as 6-digit absolute fractional; sign is NOT
+ *     double-printed.
+ *
+ * Phase 11C §E.1 sign ambiguity for val1 == 0 and val2 < 0:
+ *   - Zephyr convention for negative sub-unit magnitudes is to put the
+ *     sign on val2 when val1 cannot carry it (e.g. value = -0.5 ->
+ *     val1=0, val2=-500000). The frozen "<v1>.<v2_6d>" textual shape
+ *     requires the sign on the integer part. We preserve the sign by
+ *     emitting "-0.<abs(val2)>" in that specific case. This stays
+ *     inside the frozen shape (no extra fields, no extra prefix) and
+ *     is documented as PHASE_11C_FORMAT_SIGN_EDGE in the Phase 11D
+ *     closeout. All other cases are rendered with val1's natural sign.
+ *
+ * Returns the snprintf return code (caller must guard against
+ * truncation when composing the full ACC line).
+ */
+static int devkit_accel_format_value(char *dst, size_t dst_size,
+				     const struct sensor_value *v)
+{
+	bool negative = (v->val1 < 0) || (v->val1 == 0 && v->val2 < 0);
+	long abs_v1   = (long)(v->val1 < 0 ? -(long)v->val1 : (long)v->val1);
+	long abs_v2   = (long)(v->val2 < 0 ? -(long)v->val2 : (long)v->val2);
+
+	if (negative) {
+		return snprintf(dst, dst_size, "-%ld.%06ld", abs_v1, abs_v2);
+	}
+	return snprintf(dst, dst_size, "%ld.%06ld", abs_v1, abs_v2);
+}
+
 static void devkit_uart_emit_tx_response(uint8_t byte,
 					 const devkit_app_state_snapshot_t *before,
 					 const devkit_app_state_snapshot_t *after)
@@ -237,6 +293,55 @@ static void devkit_uart_emit_tx_response(uint8_t byte,
 				     "OK led=toggle state=%s\r\n",
 				     devkit_app_state_state_name(after->state));
 		}
+		break;
+	}
+
+	case 't': {
+		/* Phase 11D: on-board MEMS accelerometer probe. Frozen by
+		 * PHASE_11C_ACCEL_PROBE_SPEC.md §E (success) / §F (error).
+		 *
+		 * Success line (worst case 68 B; typical ~44 B):
+		 *   ACC x=<v1>.<v2_6d> y=<v1>.<v2_6d> z=<v1>.<v2_6d>\r\n
+		 * Error line (worst case 28 B):
+		 *   ERR accel read=<errno>\r\n
+		 *
+		 * Thread-context only. No retry. No symbolic errno mapping.
+		 * No floating point. Fixed 96-byte stack buffer (the
+		 * surrounding `buf`). Single attempt; report; return.
+		 *
+		 * App-state, transitions, button, ignored counters are
+		 * unchanged regardless of success/error (§F.4, §G).
+		 */
+		if (!device_is_ready(s_accel_dev)) {
+			n = snprintf(buf, sizeof(buf),
+				     "ERR accel read=%d\r\n", -ENODEV);
+			break;
+		}
+
+		int rc = sensor_sample_fetch(s_accel_dev);
+		if (rc < 0) {
+			n = snprintf(buf, sizeof(buf),
+				     "ERR accel read=%d\r\n", rc);
+			break;
+		}
+
+		struct sensor_value accel[3];
+		rc = sensor_channel_get(s_accel_dev,
+					SENSOR_CHAN_ACCEL_XYZ, accel);
+		if (rc < 0) {
+			n = snprintf(buf, sizeof(buf),
+				     "ERR accel read=%d\r\n", rc);
+			break;
+		}
+
+		char xs[24];
+		char ys[24];
+		char zs[24];
+		(void)devkit_accel_format_value(xs, sizeof(xs), &accel[0]);
+		(void)devkit_accel_format_value(ys, sizeof(ys), &accel[1]);
+		(void)devkit_accel_format_value(zs, sizeof(zs), &accel[2]);
+		n = snprintf(buf, sizeof(buf),
+			     "ACC x=%s y=%s z=%s\r\n", xs, ys, zs);
 		break;
 	}
 

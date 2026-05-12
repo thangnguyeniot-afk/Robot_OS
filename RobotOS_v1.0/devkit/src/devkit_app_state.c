@@ -167,6 +167,18 @@ void devkit_app_state_on_uart_byte(uint8_t byte, uint32_t handler_count)
 		LOG_INF("Phase 10B-L LED command: state=%s",
 			state_name(s_state));
 		break;
+	case 't':
+		/* Phase 11D: on-board MEMS accelerometer probe command.
+		 * No app-state change; not an ignored command. Adapter-level
+		 * probe: the actual sensor read (sensor_sample_fetch +
+		 * sensor_channel_get) and the ACC/ERR response formatting are
+		 * performed in the UART TX layer (devkit_uart_producer.c) so
+		 * this module stays hardware-free. Case-insensitive: `T` and
+		 * `t` both land here via the upcase normalization above.
+		 * Spec: PHASE_11C_ACCEL_PROBE_SPEC.md §G. */
+		LOG_INF("Phase 11D-T accel probe: state=%s",
+			state_name(s_state));
+		break;
 	case 'd':
 		/* Phase 10B-d: explicit disarm. ARMED -> IDLE with transition.
 		 * IDLE: recognized no-op (not ignored -- distinct from 'r').

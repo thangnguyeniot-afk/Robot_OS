@@ -108,6 +108,7 @@ table contains only the reserved placeholders.
 | 11A | Adapter Boundary & Sensor Surface Decision (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-11a) |
 | 11B | Device / Driver Feasibility Gate (docs-only / audit) | CLOSED_DOCS_ONLY | [->](#phase-11b) |
 | 11C | On-board MEMS Accelerometer Probe Spec (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-11c) |
+| 11D | On-board MEMS Accelerometer Probe Implementation (firmware) | IMPLEMENTATION_CLOSED_HARDWARE_EVIDENCE_PENDING | [->](#phase-11d) |
 | 20Z | RESERVED -- future checkpoint / closeout slot | NOT_STARTED | [->](#phase-20z) |
 
 When future phases are added:
@@ -394,6 +395,128 @@ Phase 11D -- Sensor Probe Implementation (firmware). Reserved; not
 opened by this doc. Phase 11D opening requires explicit user
 authorization for code / `prj.conf` changes. Phase 11E (evidence
 closeout) follows Phase 11D and is also conditional.
+
+---
+
+<a id="phase-11d"></a>
+## Phase 11D -- On-board MEMS Accelerometer Probe Implementation
+
+**Status:** `IMPLEMENTATION_CLOSED_HARDWARE_EVIDENCE_PENDING`
+**Type:** Devkit-local firmware + tooling implementation of the
+Phase 11C-frozen on-board MEMS accelerometer probe (`T` command).
+Source + `prj.conf` + host harness changes only. No `core/`, no
+`platform/`, no `tests/`, no scheduler/queue constants, no board
+DTS, no DTS overlay, no Zephyr module, no hardware purchase.
+Build-validated pristine for `stm32f411e_disco`. Hardware evidence
+is deferred to Phase 11E.
+**Date opened/closed:** 2026-05-12
+**Published baseline at open:** `origin/master = cc101cd`
+**Closeout doc:**
+[`../02_PHASE_CLOSEOUTS/PHASE_11D_ACCEL_PROBE_IMPLEMENTATION.md`](../02_PHASE_CLOSEOUTS/PHASE_11D_ACCEL_PROBE_IMPLEMENTATION.md).
+**Companion docs:**
+[`../02_PHASE_CLOSEOUTS/PHASE_11C_ACCEL_PROBE_SPEC.md`](../02_PHASE_CLOSEOUTS/PHASE_11C_ACCEL_PROBE_SPEC.md),
+[`../03_SPECS/COMMAND_SET_DRAFT.md`](../03_SPECS/COMMAND_SET_DRAFT.md).
+
+### 11D.1 Purpose
+
+Phase 11D implements the Phase 11C-frozen on-board MEMS accelerometer
+probe as a bounded devkit-local Adapter command `T` (case-insensitive
+`T`/`t`). It follows the Phase 11C contract verbatim and does not
+widen the spec.
+
+### 11D.2 Source / config / tooling delta
+
+- `devkit/prj.conf`: append exactly `CONFIG_I2C=y` and `CONFIG_SENSOR=y`
+  (plus a leading comment block). **No other Kconfig**.
+- `devkit/src/devkit_app_state.h`: doc-only update to include `T` in
+  the recognized-command list. No new exported symbol.
+- `devkit/src/devkit_app_state.c`: add `case 't':` branch matching the
+  `case 'v':` shape -- LOG_INF only, no transition, not ignored.
+- `devkit/src/devkit_uart_producer.c`: include `<errno.h>`,
+  `<stdlib.h>`, `<zephyr/drivers/sensor.h>`; resolve
+  `DEVICE_DT_GET(DT_ALIAS(accel0))` at link time with a compile-time
+  `#error` guard for missing alias; add internal
+  `devkit_accel_format_value()` helper; add `case 't':` TX branch
+  (`sensor_sample_fetch` + `sensor_channel_get` + frozen response
+  composition into the existing 96-byte stack buffer).
+- `tools/runtime/run_phase11d_accel_probe_demo.ps1`: new
+  PowerShell 5.1 host harness, pure ASCII, default sequence `T T ?`,
+  Phase 6O sidecar-`reset run` discipline; PowerShell-parse OK.
+
+### 11D.3 Build result
+
+```text
+[161/161] Linking C executable zephyr\zephyr.elf
+Memory region         Used Size  Region Size  %age Used
+           FLASH:       41528 B       512 KB      7.92%
+             RAM:       12352 B       128 KB      9.42%
+```
+
+Delta vs Phase 10B-d baseline `125779c` (36780 B / 12224 B):
+**+4748 B FLASH / +128 B RAM** -- dominated by Zephyr sensor
+subsystem + I2C STM32 driver + `lis2dh` driver. No new warnings.
+
+### 11D.4 Generated `.config` observations
+
+`CONFIG_I2C=y`, `CONFIG_SENSOR=y`, `CONFIG_LIS2DH=y`,
+`CONFIG_LIS2DH_TRIGGER_NONE=y`, `CONFIG_LIS2DH_OPER_MODE_NORMAL=y`,
+`CONFIG_LIS2DH_ACCEL_RANGE_RUNTIME=y`, `CONFIG_LIS2DH_ODR_RUNTIME=y`
+all set (driver defaults). **Forbidden Kconfigs absent**:
+`CONFIG_SPI` not set, `CONFIG_ADC` not set,
+`CONFIG_CBPRINTF_FP_SUPPORT` not set. `CONFIG_LIS2DH_TRIGGER_NONE=y`
+is the driver default; **not** explicitly added to `prj.conf` to
+avoid redundant Kconfig noise.
+
+### 11D.5 Sign rule for `struct sensor_value`
+
+The frozen `<v1>.<v2_6d>` shape places the sign on the integer part.
+For the Zephyr edge case `val1=0, val2<0` (sub-unit negative), the
+implementation emits a leading `-` and prints both fields as
+absolute values, e.g. `-0.500000`. This stays inside the frozen
+shape and is recorded as **`PHASE_11C_FORMAT_SIGN_EDGE`** in the
+closeout doc §D.5.
+
+### 11D.6 `T` behavioral contract realized
+
+- Recognition in `devkit_app_state.c` (`case 't':`).
+- App-state, `transitions`, `ignored`, `button` counters unchanged.
+- `uart` counter +1 per `T` (existing pre-switch increment).
+- Read in thread/handler context (`uart_irq` -> queue -> dispatcher
+  thread).
+- Single attempt; no retry.
+- Frozen success line `ACC x=<v1>.<v2_6d> y=<v1>.<v2_6d>
+  z=<v1>.<v2_6d>\r\n`.
+- Frozen error line `ERR accel read=<errno>\r\n` with numeric errno
+  (no symbolic mapping).
+- Other commands' branches (`v`/`L`/`d`/`a`/`s`/`r`/`?`/`x`) are
+  byte-for-byte unchanged.
+
+### 11D.7 Hardware evidence status
+
+**`HARDWARE_EVIDENCE_PENDING_PHASE_11E`.** The board was not flashed,
+RTT was not captured, and the harness was not run by Phase 11D. The
+`T T ?` harness exists and is ready for Phase 11E.
+
+### 11D.8 Scope guards intact
+
+All 12 UART TX scope-guard constraints from
+[`../02_PHASE_CLOSEOUTS/PHASE_9EZ_CHECKPOINT.md`](../02_PHASE_CLOSEOUTS/PHASE_9EZ_CHECKPOINT.md)
+§H preserved. `core/`, `platform/`, `tests/`,
+`devkit/CMakeLists.txt` top-level, `devkit_runtime.{c,h}`,
+`devkit_status_led.{c,h}`, `devkit_button_producer.c`,
+`devkit_timer_producer.c`, `devkit_observability.c`,
+`devkit_build_info.c`, `devkit_fault.c`, board DTS, board defconfig,
+B-revision overlay, Zephyr workspace tracked files, and all evidence
+logs zero-diff. Scheduler 7A/7B remains DEFER. F407 remains
+HOLD/DEFER. UART TX remains minimal response only.
+POST_FLASH_AUTOSTART discipline unchanged. ACTIVE disarm widening
+`USER_DECISION_REQUIRED_ACTIVE_DISARM` preserved and decoupled.
+
+### 11D.9 Next gate
+
+Phase 11E -- Accelerometer Probe Evidence Closeout. Hardware
+evidence-only. Reserved; not opened by this doc. Phase 11E opening
+requires explicit user authorization.
 
 ---
 

@@ -26,7 +26,7 @@ progress streams and closeout docs, editing rules).
 |---|---|---|
 | Phase 1 through Phase 9E / 9E-Z | [`DEVKIT_PROGRESS.md`](../01_PROGRESS/DEVKIT_PROGRESS.md) | Historical master — **not rewritten** when later phases land. |
 | Phase 10 (10A, 10B-*, 10C, ...) | [`DEVKIT_PROGRESS_PHASE_10.md`](../01_PROGRESS/DEVKIT_PROGRESS_PHASE_10.md) | Running log; Phase 10C is latest closed entry. |
-| Phase 11 through Phase 20 | [`DEVKIT_PROGRESS_PHASE_11_20.md`](../01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md) | Running log; Phase 11C is latest closed entry (docs-only spec); Phase 11A/11B/11C closed; Phase 11D not started. |
+| Phase 11 through Phase 20 | [`DEVKIT_PROGRESS_PHASE_11_20.md`](../01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md) | Running log; Phase 11D is latest closed entry (`IMPLEMENTATION_CLOSED_HARDWARE_EVIDENCE_PENDING`); Phase 11A/11B/11C/11D closed; Phase 11E not started. |
 | Phase 21+ | future `DEVKIT_PROGRESS_PHASE_21_30.md`, etc. | Create when the window opens. |
 
 **Per-phase closeout / checkpoint docs remain a separate artifact
@@ -55,6 +55,7 @@ rewritten after a phase closes.**
 - [`PHASE_11A_ADAPTER_BOUNDARY_SENSOR_SURFACE.md`](../02_PHASE_CLOSEOUTS/PHASE_11A_ADAPTER_BOUNDARY_SENSOR_SURFACE.md) -- Adapter API surface inventory + sensor surface classification (docs-only).
 - [`PHASE_11B_DEVICE_DRIVER_FEASIBILITY.md`](../02_PHASE_CLOSEOUTS/PHASE_11B_DEVICE_DRIVER_FEASIBILITY.md) -- Device / driver feasibility gate (docs-only audit; `FEASIBILITY_CONFIRMED_ONBOARD_MEMS`).
 - [`PHASE_11C_ACCEL_PROBE_SPEC.md`](../02_PHASE_CLOSEOUTS/PHASE_11C_ACCEL_PROBE_SPEC.md) -- On-board MEMS accelerometer probe spec (docs-only; `PHASE_11C_SPEC_FROZEN_ACCEL_LIS2DH_REV_D`).
+- [`PHASE_11D_ACCEL_PROBE_IMPLEMENTATION.md`](../02_PHASE_CLOSEOUTS/PHASE_11D_ACCEL_PROBE_IMPLEMENTATION.md) -- On-board MEMS accelerometer probe implementation (firmware; `IMPLEMENTATION_CLOSED_HARDWARE_EVIDENCE_PENDING`; build-validated pristine on stm32f411e_disco).
 
 Future `PHASE_*_CLOSE.md` and `PHASE_*_CHECKPOINT.md` docs belong here.
 

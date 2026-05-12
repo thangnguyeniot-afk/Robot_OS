@@ -1,6 +1,6 @@
 # COMMAND_SET_DRAFT.md — RobotOS Devkit Product Command Vocabulary
 
-**Status at Phase 11C checkpoint (`origin/master = 2aa0435`):**
+**Status at Phase 11D checkpoint (`origin/master = cc101cd` at Phase 11D open; this checkpoint runs on the Phase 11D implementation commit):**
 
 - **Section A — IMPLEMENTED + hardware-validated:** `a` (0x61), `s`
   (0x73), `r` (0x72), `?` (0x3f), `x` (0x78) (Phase 9E baseline);
@@ -9,9 +9,15 @@
   Phase 10B-L ([`PHASE_10B_L_CLOSE.md`](../02_PHASE_CLOSEOUTS/PHASE_10B_L_CLOSE.md)) with
   `OPERATOR_VISUAL_CONFIRMED`; `d` (0x64) per Phase 10B-d
   ([`PHASE_10B_D_CLOSE.md`](../02_PHASE_CLOSEOUTS/PHASE_10B_D_CLOSE.md)).
-- **Section B — `USER_DECISION_REQUIRED` (not implemented):** `T`
-  (0x54) sensor read; **AND** the ACTIVE disarm widening for `d`
-  (currently no-op from ACTIVE; remains
+- **Section A* — IMPLEMENTED + build-validated, hardware evidence pending:** `T`
+  (0x54) on-board MEMS accelerometer probe per Phase 11D
+  ([`PHASE_11D_ACCEL_PROBE_IMPLEMENTATION.md`](../02_PHASE_CLOSEOUTS/PHASE_11D_ACCEL_PROBE_IMPLEMENTATION.md)).
+  Pristine build PASS on `stm32f411e_disco`; `T T ?` host harness
+  exists at `tools/runtime/run_phase11d_accel_probe_demo.ps1`. Phase
+  11E (Evidence Closeout) is the hardware-evidence gate and is
+  reserved / not started; opening requires explicit user authorization.
+- **Section B — `USER_DECISION_REQUIRED` (not implemented):** the
+  ACTIVE disarm widening for `d` (currently no-op from ACTIVE; remains
   `USER_DECISION_REQUIRED_ACTIVE_DISARM`).
 - **Section C — rejected / deferred shapes:** unchanged from Phase 10A.
 
@@ -96,35 +102,42 @@ implemented. Opening a Phase 10B-class implementation for any row requires
 explicit user approval of that specific row, including answering its
 `USER_DECISION_REQUIRED` notes.
 
-Section B at the Phase 11C checkpoint contains:
+Section B at the Phase 11D checkpoint contains:
 
-- **One unimplemented command:** `T` (sensor read, 0x54). Classified
-  at Phase 11A as `SENSOR_SURFACE_DECIDED_ADAPTER_PROBE`. Phase 11B
-  (`CLOSED_DOCS_ONLY`, 2026-05-12) confirms feasibility via the
-  on-board LSM303AGR accelerometer (`lsm303agr_accel` / `lis2dh`
-  driver / I2C1) with decision `FEASIBILITY_CONFIRMED_ONBOARD_MEMS`.
-  No purchase needed. **Phase 11C (`CLOSED_DOCS_ONLY`, 2026-05-12,
-  `PHASE_11C_SPEC_FROZEN_ACCEL_LIS2DH_REV_D`) freezes the probe
-  spec**: target = `accel0` → `lsm303agr_accel` on
-  `stm32f411e_disco` revision D (operator-confirmed); polling /
-  `CONFIG_LIS2DH_TRIGGER_NONE`; channel `SENSOR_CHAN_ACCEL_XYZ` raw
-  `val1`/`val2`. Frozen success response:
+- **`T` (sensor read, 0x54) — IMPLEMENTED at Phase 11D, build-validated,
+  hardware evidence pending Phase 11E.** Classified at Phase 11A as
+  `SENSOR_SURFACE_DECIDED_ADAPTER_PROBE`. Phase 11B (`CLOSED_DOCS_ONLY`,
+  2026-05-12) confirmed feasibility (`FEASIBILITY_CONFIRMED_ONBOARD_MEMS`).
+  Phase 11C (`CLOSED_DOCS_ONLY`, 2026-05-12,
+  `PHASE_11C_SPEC_FROZEN_ACCEL_LIS2DH_REV_D`) froze the probe spec.
+  **Phase 11D (`IMPLEMENTATION_CLOSED_HARDWARE_EVIDENCE_PENDING`,
+  2026-05-12) implemented `T` per the frozen contract**: target =
+  `accel0` → `lsm303agr_accel` on `stm32f411e_disco` revision D;
+  polling / `CONFIG_LIS2DH_TRIGGER_NONE` (driver default); channel
+  `SENSOR_CHAN_ACCEL_XYZ` raw `val1`/`val2`. Phase 11D added exactly
+  `CONFIG_I2C=y` + `CONFIG_SENSOR=y` to `devkit/prj.conf` (nothing
+  else); did **not** add `CONFIG_SPI`, `CONFIG_ADC`, or
+  `CONFIG_CBPRINTF_FP_SUPPORT`. Frozen success response:
   `ACC x=<v1>.<v2_6d> y=<v1>.<v2_6d> z=<v1>.<v2_6d>\r\n` (worst case
   68 B; fits 96-byte stack buffer). Frozen error response:
   `ERR accel read=<errno>\r\n` (worst case 28 B). Frozen canonical
-  host harness sequence: `T T ?`. The required `prj.conf` additions
-  in Phase 11D are `CONFIG_I2C=y` and `CONFIG_SENSOR=y` (Phase 11D
-  only; both currently absent from `devkit/prj.conf`); `CONFIG_SPI`,
-  `CONFIG_ADC`, `CONFIG_CBPRINTF_FP_SUPPORT` must **not** be added.
-  Phase 11D (Implementation) and Phase 11E (Evidence Closeout) are
-  conditional and require **explicit user authorization** to open.
-  `T` remains `USER_DECISION_REQUIRED` until Phase 11D is
-  authorized. See
+  host harness sequence: `T T ?` (harness file
+  `tools/runtime/run_phase11d_accel_probe_demo.ps1` exists,
+  PowerShell-parse OK). Phase 11E (Evidence Closeout) is reserved
+  and requires **explicit user authorization** to open; it will
+  flash the Phase 11D image, run the harness, capture RTT + host
+  transcript, and verify the §I counter expectations from Phase 11C.
+  `T` remains in Section B as a historical anchor; it is
+  cross-listed under "Section A*" (build-validated) in the status
+  preamble above and will be fully promoted to Section A when Phase
+  11E closes. See
+  [`PHASE_11D_ACCEL_PROBE_IMPLEMENTATION.md`](../02_PHASE_CLOSEOUTS/PHASE_11D_ACCEL_PROBE_IMPLEMENTATION.md)
+  for the implementation closeout,
   [`PHASE_11C_ACCEL_PROBE_SPEC.md`](../02_PHASE_CLOSEOUTS/PHASE_11C_ACCEL_PROBE_SPEC.md)
-  §§C–J,
+  §§C–J for the frozen contract,
   [`PHASE_11B_DEVICE_DRIVER_FEASIBILITY.md`](../02_PHASE_CLOSEOUTS/PHASE_11B_DEVICE_DRIVER_FEASIBILITY.md)
-  §J, and
-  [`PHASE_11A_ADAPTER_BOUNDARY_SENSOR_SURFACE.md`](../02_PHASE_CLOSEOUTS/PHASE_11A_ADAPTER_BOUNDARY_SENSOR_SURFACE.md) §F.
+  §J for feasibility, and
+  [`PHASE_11A_ADAPTER_BOUNDARY_SENSOR_SURFACE.md`](../02_PHASE_CLOSEOUTS/PHASE_11A_ADAPTER_BOUNDARY_SENSOR_SURFACE.md) §F for classification.
 - **One unresolved semantic decision** on an already-implemented
   command: ACTIVE disarm widening for `d`. Phase 10B-d implemented `d`
   with ARMED -> IDLE plus IDLE / ACTIVE recognized no-op; whether `d`
@@ -147,7 +160,7 @@ traceability and must not be re-edited as if they were live drafts.
 | ~~`d` (0x64)~~ | **PROMOTED to Section A** — implemented at Phase 10B-d, 2026-05-11 | — | — | `OK disarm state=IDLE\r\n` (ARMED → IDLE) / `OK disarm no-op state=<S>\r\n` (IDLE or ACTIVE) | **DONE** | No | No | See [`PHASE_10B_D_CLOSE.md`](../02_PHASE_CLOSEOUTS/PHASE_10B_D_CLOSE.md). `d` from ARMED transitions to IDLE; `d` from IDLE is a recognized no-op (not ignored — distinct from `r`); `d` from ACTIVE remains `USER_DECISION_REQUIRED_ACTIVE_DISARM` and is treated as a recognized no-op for now. `r` is preserved zero-diff and remains the canonical reset path. |
 | ~~`v` (0x76)~~ | **PROMOTED to Section A** — implemented at Phase 10B-v, 2026-05-11 | — | — | `INFO phase=10b-v app=devkit board=<CONFIG_BOARD> tick_ms=<DEVKIT_TICK_MS> uart=minimal\r\n` | **DONE** | No | No | See [`PHASE_10B_V_CLOSE.md`](../02_PHASE_CLOSEOUTS/PHASE_10B_V_CLOSE.md). Phase tag `10b-v` is the closeout identifier; the response format may be reviewed in a future planning phase but is **frozen** as published baseline. |
 | ~~`L` (0x4c)~~ | **PROMOTED to Section A** — implemented at Phase 10B-L, 2026-05-11 | — | — | `OK led=toggle state=<S>\r\n` | **DONE** | No (existing `devkit_status_led_toggle()` API reused; no new LED function) | No | See [`PHASE_10B_L_CLOSE.md`](../02_PHASE_CLOSEOUTS/PHASE_10B_L_CLOSE.md). Physical effect: single GPIO toggle interleaved with the existing 500 ms heartbeat. LED state is **not** exposed in `?` (existing toggle is stateless). Visual LED observation is `PHYSICAL_OBSERVATION_AMBIGUOUS` pending operator-witnessed re-run. |
-| `T` (0x54) | DRAFT — Sensor read (decision gate / step-up candidate, NOT product semantics) | any | Driver-dependent read; no actuator change | **Frozen at Phase 11C:** Success `ACC x=<v1>.<v2_6d> y=<v1>.<v2_6d> z=<v1>.<v2_6d>\r\n` (worst case 68 B); error `ERR accel read=<errno>\r\n` (worst case 28 B); raw `sensor_value.val1`/`val2`, six-digit absolute fractional part, sign carried by `val1`; no floating point. | **Not implemented;** classified at Phase 11A as `SENSOR_SURFACE_DECIDED_ADAPTER_PROBE`. Phase 11B (`CLOSED_DOCS_ONLY`) confirms `FEASIBILITY_CONFIRMED_ONBOARD_MEMS`: `lsm303agr_accel` / `lis2dh` driver / I2C1; no purchase. **Phase 11C (`CLOSED_DOCS_ONLY`, 2026-05-12) freezes the probe spec** for revision D / `accel0` / polling / `SENSOR_CHAN_ACCEL_XYZ`. Phase 11D (firmware) requires explicit user authorization. | **Phase 11D must add:** `CONFIG_I2C=y` + `CONFIG_SENSOR=y` (both currently absent from `devkit/prj.conf`). **Phase 11D must NOT add:** `CONFIG_SPI`, `CONFIG_ADC`, `CONFIG_CBPRINTF_FP_SUPPORT`, `CONFIG_LIS2DH_*` range/ODR overrides. Optional `CONFIG_LIS2DH_TRIGGER_NONE=y` only if pristine `.config` does not already set it. No overlay. **Phase 11D NOT authorized by Phase 11C — user must explicitly approve.** | No — frozen at Phase 11C to fit 96-byte stack buffer with margin (worst case 68 B success / 28 B error). | **`USER_DECISION_REQUIRED`** pending **Phase 11D authorization** (Phase 11C spec is frozen). Phase 11C spec: [`PHASE_11C_ACCEL_PROBE_SPEC.md`](../02_PHASE_CLOSEOUTS/PHASE_11C_ACCEL_PROBE_SPEC.md) §§C–J. Phase 11B feasibility: [`PHASE_11B_DEVICE_DRIVER_FEASIBILITY.md`](../02_PHASE_CLOSEOUTS/PHASE_11B_DEVICE_DRIVER_FEASIBILITY.md) §J. Phase 11A classification: [`PHASE_11A_ADAPTER_BOUNDARY_SENSOR_SURFACE.md`](../02_PHASE_CLOSEOUTS/PHASE_11A_ADAPTER_BOUNDARY_SENSOR_SURFACE.md) §F. `T` is **not** a mistake; spec is frozen, only implementation authorization remains. |
+| `T` (0x54) | **IMPLEMENTED at Phase 11D (build-validated; hardware evidence pending Phase 11E)** — On-board MEMS accelerometer probe (Adapter-level, NOT product semantics) | any | I2C1 read of `lsm303agr_accel` via `lis2dh` driver; no actuator change | **Frozen at Phase 11C, implemented at Phase 11D:** Success `ACC x=<v1>.<v2_6d> y=<v1>.<v2_6d> z=<v1>.<v2_6d>\r\n` (worst case 68 B; typical ~44 B); error `ERR accel read=<errno>\r\n` (worst case 28 B). Raw `sensor_value.val1`/`val2`, six-digit absolute fractional part, sign carried by `val1` (edge case `val1=0, val2<0` -> leading `-` on integer part per `PHASE_11C_FORMAT_SIGN_EDGE`); no floating point. | **IMPLEMENTED.** Source: `devkit_app_state.c` `case 't':` (recognition, no transition, not ignored); `devkit_uart_producer.c` `case 't':` (`sensor_sample_fetch` + `sensor_channel_get` + frozen response). Host harness `tools/runtime/run_phase11d_accel_probe_demo.ps1`. Build PASS on `stm32f411e_disco` (FLASH 41528 B / RAM 12352 B; +4748 B / +128 B vs Phase 10B-d baseline). See [`PHASE_11D_ACCEL_PROBE_IMPLEMENTATION.md`](../02_PHASE_CLOSEOUTS/PHASE_11D_ACCEL_PROBE_IMPLEMENTATION.md). | **Added by Phase 11D:** `CONFIG_I2C=y` + `CONFIG_SENSOR=y` (and nothing else). `CONFIG_LIS2DH_TRIGGER_NONE=y` is set automatically as the driver default; not explicitly added to `prj.conf`. **NOT added** (forbidden by Phase 11C §D.2): `CONFIG_SPI`, `CONFIG_ADC`, `CONFIG_CBPRINTF_FP_SUPPORT`, `CONFIG_LIS2DH_*` range/ODR/HP overrides. No DTS overlay. | No — frozen at Phase 11C and verified in Phase 11D build: worst case 68 B success / 28 B error fit the 96-byte stack buffer. | **`IMPLEMENTATION_CLOSED_HARDWARE_EVIDENCE_PENDING_PHASE_11E`.** Phase 11D closeout: [`PHASE_11D_ACCEL_PROBE_IMPLEMENTATION.md`](../02_PHASE_CLOSEOUTS/PHASE_11D_ACCEL_PROBE_IMPLEMENTATION.md). Phase 11C spec (frozen contract): [`PHASE_11C_ACCEL_PROBE_SPEC.md`](../02_PHASE_CLOSEOUTS/PHASE_11C_ACCEL_PROBE_SPEC.md) §§C–J. Phase 11B feasibility: [`PHASE_11B_DEVICE_DRIVER_FEASIBILITY.md`](../02_PHASE_CLOSEOUTS/PHASE_11B_DEVICE_DRIVER_FEASIBILITY.md) §J. Phase 11A classification: [`PHASE_11A_ADAPTER_BOUNDARY_SENSOR_SURFACE.md`](../02_PHASE_CLOSEOUTS/PHASE_11A_ADAPTER_BOUNDARY_SENSOR_SURFACE.md) §F. Phase 11E (hardware evidence closeout) is reserved; **explicit user authorization required** to open. |
 
 DRAFT rows that were considered and intentionally **omitted** from
 Section B because they do not align cleanly with the existing model:
