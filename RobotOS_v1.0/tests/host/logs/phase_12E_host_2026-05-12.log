@@ -1,0 +1,160 @@
+Internal ctest changing into directory: /mnt/d/Robot_OS/build-phase12e-host
+UpdateCTestConfiguration  from :/mnt/d/Robot_OS/build-phase12e-host/DartConfiguration.tcl
+UpdateCTestConfiguration  from :/mnt/d/Robot_OS/build-phase12e-host/DartConfiguration.tcl
+Test project /mnt/d/Robot_OS/build-phase12e-host
+Constructing a list of tests
+Done constructing a list of tests
+Updating test list for fixtures
+Added 0 tests to meet fixture requirements
+Checking test dependency graph...
+Checking test dependency graph end
+test 21
+    Start 21: robotos_fw_fsm_contract
+
+21: Test command: /mnt/d/Robot_OS/build-phase12e-host/robotos_fw_fsm_contract_test
+21: Working Directory: /mnt/d/Robot_OS/build-phase12e-host
+21: Test timeout computed to be: 10000000
+21: === robotos_fw_fsm host contract tests (Phase 12E) ===
+21: 
+21: [ TC01: init valid config ]
+21:   PASS  init returns OK
+21:   PASS  initialized true
+21:   PASS  current_state==S_A
+21:   PASS  event_count == 0
+21:   PASS  transition_count==0
+21:   PASS  init calls entry once
+21: 
+21: [ TC02: init NULL guards ]
+21:   PASS  init(NULL, cfg) == ERR_NULL
+21:   PASS  init(fsm, NULL) == ERR_NULL
+21:   PASS  init(fsm, {.transitions=NULL}) == ERR_NULL
+21: 
+21: [ TC03: init invalid args ]
+21:   PASS  transition_count==0 -> ERR_INVALID_ARG
+21:   PASS  initial==UNINIT -> ERR_INVALID_ARG
+21: 
+21: [ TC04: dispatch uninit and NULL ]
+21:   PASS  dispatch on uninit -> ERR_INVALID_STATE
+21:   PASS  dispatch NULL fsm -> ERR_NULL
+21: 
+21: [ TC05: dispatch matched transition ]
+21:   PASS  dispatch returns OK
+21:   PASS  current_state == S_B
+21:   PASS  event_count == 1
+21:   PASS  transition_count == 1
+21:   PASS  no_transition_count == 0
+21:   PASS  guard_rejected_count == 0
+21:   PASS  last_event_id == E_AB
+21:   PASS  last_status == OK
+21: 
+21: [ TC06: eval order exit -> state -> action -> entry ]
+21:   PASS  seq == X1 a2 E2 (exit, action sees to, entry)
+21:   PASS  no order violation marker present
+21: 
+21: [ TC07: first-match FIFO ]
+21:   PASS  first row wins (state == S_B, not S_C)
+21:   PASS  transition_count == 1
+21: 
+21: [ TC08: no transition matched ]
+21:   PASS  returns OK
+21:   PASS  state unchanged (S_A)
+21:   PASS  event_count == 1
+21:   PASS  transition_count == 0
+21:   PASS  no_transition_count == 1
+21:   PASS  guard_rejected_count == 0
+21:   PASS  last_event_id == E_NOP
+21: 
+21: [ TC09: guard reject (single matching row) ]
+21:   PASS  returns OK
+21:   PASS  state unchanged (S_A)
+21:   PASS  transition_count == 0
+21:   PASS  guard_rejected_count == 1
+21:   PASS  no_transition_count == 1
+21: 
+21: [ TC10: guard_rejected/no_transition counter independence ]
+21:   PASS  guard_rejected_count == 2 (per rejection)
+21:   PASS  no_transition_count == 1 (once at end)
+21:   PASS  transition_count == 0
+21: 
+21: [ TC11: guard true commits row (not the unguarded fallback) ]
+21:   PASS  first row (guard_true) wins -> S_B
+21:   PASS  guard saw pre-transition state (S_A=1)
+21: 
+21: [ TC12: action non-OK NO rollback ]
+21:   PASS  dispatch returns action's non-OK
+21:   PASS  state IS committed (S_B; no rollback)
+21:   PASS  transition_count == 1
+21:   PASS  entry still ran
+21:   PASS  last_status == non-OK
+21:   PASS  seq order X1 f2 E2
+21: 
+21: [ TC13: reset ]
+21:   PASS  reset returns OK
+21:   PASS  state == initial (S_A)
+21:   PASS  transition_count zeroed
+21:   PASS  event_count zeroed
+21:   PASS  guard_rejected_count zeroed
+21:   PASS  no_transition_count zeroed
+21:   PASS  last_event_id zeroed
+21:   PASS  last_status == OK
+21:   PASS  reset calls exit(prev=B) then entry(initial=A)
+21:   PASS  reset(NULL) -> ERR_NULL
+21:   PASS  reset(uninit) -> ERR_INVALID_STATE
+21: 
+21: [ TC14: get_state ]
+21:   PASS  get_state == S_A
+21:   PASS  get_state == S_B after dispatch
+21:   PASS  get_state(NULL) == UNINIT
+21:   PASS  get_state(uninit) == UNINIT
+21: 
+21: [ TC15: is_in_state ]
+21:   PASS  is_in_state(fsm, S_A) == true
+21:   PASS  is_in_state(fsm, S_B) == false
+21:   PASS  is_in_state(NULL, S_A) == false
+21:   PASS  is_in_state(uninit, S_A) == false
+21: 
+21: [ TC16: get_snapshot ]
+21:   PASS  snapshot returns OK
+21:   PASS  snap.current_state == S_B
+21:   PASS  snap.transition_count == 1
+21:   PASS  snap.event_count == 1
+21:   PASS  snap.no_transition_count == 0
+21:   PASS  snap.guard_rejected_count == 0
+21:   PASS  snap.last_event_id == E_AB
+21:   PASS  snap.last_status == OK
+21:   PASS  snap.initialized == true
+21:   PASS  snapshot(NULL fsm, &out) -> ERR_NULL
+21:   PASS  snapshot(&fsm, NULL out) -> ERR_NULL
+21:   PASS  snapshot(uninit) -> ERR_INVALID_STATE
+21: 
+21: [ TC17: event_count increments per dispatch ]
+21:   PASS  event_count == 3 (3 dispatches)
+21:   PASS  transition_count == 2
+21:   PASS  no_transition_count == 1
+21: 
+21: [ TC18: payload borrowed, not cached ]
+21:   PASS  action observed the payload pointer
+21:   PASS  payload_calls == 1
+21:   PASS  snapshot has no field for payload (review-confirmed)
+21: 
+21: [ TC19: re-init policy (idempotent) ]
+21:   PASS  re-init returns OK
+21:   PASS  re-init resets state to initial
+21:   PASS  re-init zeroes transition_count
+21:   PASS  re-init zeroes event_count
+21:   PASS  re-init zeroes last_event_id
+21:   PASS  re-init still initialized
+21: 
+21: [ TC20: get_state/is_in_state/get_snapshot use critical section ]
+21:   PASS  3 enters observed (get_state, is_in_state, get_snapshot)
+21:   PASS  3 exits observed (balanced enter/exit)
+21: 
+21: === Summary: 93 passed, 0 failed ===
+1/1 Test #21: robotos_fw_fsm_contract ..........   Passed    0.06 sec
+
+The following tests passed:
+	robotos_fw_fsm_contract
+
+100% tests passed, 0 tests failed out of 1
+
+Total Test time (real) =   0.12 sec

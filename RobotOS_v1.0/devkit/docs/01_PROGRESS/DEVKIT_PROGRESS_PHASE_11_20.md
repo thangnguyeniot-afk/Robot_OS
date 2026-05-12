@@ -117,6 +117,7 @@ table contains only the reserved placeholders.
 | 12D-pre | Legacy Framework Scaffold Disposition (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12d-pre) |
 | 12D | Framework FSM Header Stub (header-only + docs) | CLOSED_HEADER_STUB_ONLY | [->](#phase-12d) |
 | 12E-pre | Framework FSM Consumer / Test Plan (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12e-pre) |
+| 12E | Framework FSM Host-Test Implementation | CLOSED_WITH_HOST_TEST_EVIDENCE | [->](#phase-12e) |
 | 20Z | RESERVED -- future checkpoint / closeout slot | NOT_STARTED | [->](#phase-20z) |
 
 When future phases are added:
@@ -1445,6 +1446,122 @@ only on **explicit user authorization**. The recommended scope, file
 list, test cases, and exit criteria are recorded in
 [`../02_PHASE_CLOSEOUTS/PHASE_12E_PRE_FSM_CONSUMER_TEST_PLAN.md`](../02_PHASE_CLOSEOUTS/PHASE_12E_PRE_FSM_CONSUMER_TEST_PLAN.md)
 §E and §J. Phase 12E **remains `NOT_STARTED`**.
+
+---
+
+<a id="phase-12e"></a>
+## Phase 12E -- Framework FSM Host-Test Implementation
+
+**Status:** `CLOSED_WITH_HOST_TEST_EVIDENCE`
+**Type:** First Framework implementation phase. **No devkit integration.
+No UART command. No Zephyr config change. No hardware run. No legacy
+Architecture B modification. No `core/`, `platform/`, `devkit/src/`,
+`devkit/CMakeLists.txt`, root `RobotOS_v1.0/CMakeLists.txt`,
+`framework/robotos_fw_fsm.h`, or `framework/README.md` change.**
+**Date opened/closed:** 2026-05-12 (same-day host-test close)
+**Published baseline at open:** `origin/master = a8019b5`
+**Closeout doc:**
+[`../02_PHASE_CLOSEOUTS/PHASE_12E_FSM_HOST_TEST_IMPLEMENTATION.md`](../02_PHASE_CLOSEOUTS/PHASE_12E_FSM_HOST_TEST_IMPLEMENTATION.md).
+**New files:**
+[`../../../framework/robotos_fw_fsm.c`](../../../framework/robotos_fw_fsm.c) (first Framework `.c` body),
+[`../../../tests/host/test_robotos_fw_fsm.c`](../../../tests/host/test_robotos_fw_fsm.c) (host contract test, 20 cases / 93 assertions),
+[`../../../tests/host/logs/phase_12E_host_2026-05-12.log`](../../../tests/host/logs/phase_12E_host_2026-05-12.log) (tracked test log).
+**Updated:**
+[`../../../tests/host/CMakeLists.txt`](../../../tests/host/CMakeLists.txt) (additive: 1 `add_executable` + 1 `add_test`; existing 20 targets untouched).
+[`../03_SPECS/FRAMEWORK_FSM_API_DRAFT.md`](../03_SPECS/FRAMEWORK_FSM_API_DRAFT.md) (header revision marker advanced; §1 adds `IMPLEMENTED_AT_12E` rows; entry/exit non-OK choice documented).
+**Companion docs:**
+[`../02_PHASE_CLOSEOUTS/PHASE_12E_PRE_FSM_CONSUMER_TEST_PLAN.md`](../02_PHASE_CLOSEOUTS/PHASE_12E_PRE_FSM_CONSUMER_TEST_PLAN.md),
+[`../02_PHASE_CLOSEOUTS/PHASE_12D_FSM_HEADER_STUB.md`](../02_PHASE_CLOSEOUTS/PHASE_12D_FSM_HEADER_STUB.md),
+[`../02_PHASE_CLOSEOUTS/PHASE_12C_FSM_EVENT_BRIDGE_STATUS_MODEL.md`](../02_PHASE_CLOSEOUTS/PHASE_12C_FSM_EVENT_BRIDGE_STATUS_MODEL.md).
+
+### 12E.1 Purpose
+
+Phase 12E implements the six functions declared in the Phase 12D-LOCKED
+header `robotos_fw_fsm.h` and validates them with host unit tests only.
+This is the first Framework `.c` body in the repo and the first concrete
+Framework consumer (a host test). The phase deliberately stops short of
+devkit integration, Application bridge, UART command exposure, and
+hardware evidence.
+
+### 12E.2 Decision result
+
+**`PHASE_12E_FSM_HOST_TEST_IMPLEMENTATION_CLOSED`** (`CLOSED_WITH_HOST_TEST_EVIDENCE`).
+
+All six Phase 12D-LOCKED functions implemented in
+`RobotOS_v1.0/framework/robotos_fw_fsm.c`. All 25 contract items from
+the Phase 12E-pre plan satisfied: 21 `ASSERTED_BY_TEST`, 4
+`REVIEW_VALIDATED`, 0 `BLOCKED`. Header zero-diff (LOCKED-AT-12D held;
+no contract revision required).
+
+### 12E.3 Host build / test result
+
+- Environment: WSL Ubuntu 24.04, gcc 13.3.0, system cmake, Unix Makefiles.
+- Local MSYS2 MinGW64 deliberately not used — Phase 12D documented it as
+  unreliable; Phase 12E-pre §G mandated WSL/Linux for this phase.
+- Configure: PASS.
+- Build (FSM target only and full suite): PASS.
+- Test (FSM contract, targeted): **PASS — 93 assertions, 0 failures, 20
+  test cases**.
+- Full host suite regression: **PASS — 21/21 tests (the new target plus
+  the 20 pre-existing Phase 4-6 contract tests)**.
+- Log: `RobotOS_v1.0/tests/host/logs/phase_12E_host_2026-05-12.log`
+  (160-line ctest verbose transcript, tracked).
+
+### 12E.4 Phase 12D syntax-check finding resolved
+
+Phase 12D recorded `SYNTAX_CHECK_NOT_RUN_TOOLCHAIN_OUTPUT_SUPPRESSED`.
+Phase 12E's WSL Ubuntu / gcc 13.3.0 build compiles the header and the
+new `.c` cleanly; the Phase 12D open question is closed.
+
+### 12E.5 What is not changed
+
+- All files under `RobotOS_v1.0/core/`, `RobotOS_v1.0/platform/`,
+  `RobotOS_v1.0/devkit/src/`, `RobotOS_v1.0/devkit/boards/`,
+  `RobotOS_v1.0/devkit/zephyr/` — zero-diff.
+- `RobotOS_v1.0/devkit/CMakeLists.txt`, root `RobotOS_v1.0/CMakeLists.txt` —
+  zero-diff.
+- `RobotOS_v1.0/framework/robotos_fw_fsm.h` (LOCKED-AT-12D held) — zero-diff.
+- `RobotOS_v1.0/framework/README.md` — zero-diff.
+- `RobotOS_v1.0/src/`, `RobotOS_v1.0/include/robotos/`,
+  `RobotOS_v1.0/include/app/` — zero-diff (Architecture B frozen).
+- `RobotOS_v1.0/tests/CMakeLists.txt` (Architecture B legacy test build),
+  all tracked test sources under `RobotOS_v1.0/tests/test_*.c` and
+  prior `RobotOS_v1.0/tests/host/test_*.c` — zero-diff.
+- `prj.conf`, DTS files, board overlays, Zephyr workspace files — zero-diff.
+- Host tools, runtime scripts, devkit evidence logs — zero-diff.
+- All prior closeout docs — not rewritten.
+- `devkit_app_state`: devkit-local; not promoted, not replaced, not
+  copied (scope-guard #11 re-affirmed).
+- Validated command set `a / s / r / ? / x / v / L / d / T` — unchanged.
+- All 12 UART TX scope-guard constraints from
+  [`../02_PHASE_CLOSEOUTS/PHASE_9EZ_CHECKPOINT.md`](../02_PHASE_CLOSEOUTS/PHASE_9EZ_CHECKPOINT.md)
+  §H — preserved.
+
+### 12E.6 Remaining decisions (all preserved)
+
+1. ACTIVE disarm widening -- `USER_DECISION_REQUIRED_ACTIVE_DISARM`.
+2. Scheduler 7A/7B -- `DEFER`.
+3. F407 / custom board -- `HOLD/DEFER`.
+4. POST_FLASH_AUTOSTART root cause -- `OPEN` / `MITIGATED_BY_WORKFLOW`.
+5. Application / product layer -- `NOT_STARTED`.
+6. Devkit integration of Framework FSM -- `NOT_STARTED`; gated by
+   scope-guard #11 and Application/product `NOT_STARTED`.
+7. Architecture A ↔ Architecture B reconciliation -- `NOT_STARTED`;
+   out of scope.
+
+### 12E.7 Next gate
+
+**Hold.** Candidates for Phase 12F (see closeout §H.2):
+
+- **Phase 12F-pre — Application bridge planning** (recommended when
+  user is ready to move toward devkit integration).
+- **Phase 12F — additional FSM host behavior** (lower priority; 25-item
+  coverage from Phase 12E-pre is met).
+- **Hold** (acceptable indefinitely; Framework FSM core is now complete
+  at the host-test surface).
+
+Devkit integration is **not** the next phase — that would collide with
+scope-guard #11 and the Application-layer-NOT_STARTED constraint.
 
 ---
 

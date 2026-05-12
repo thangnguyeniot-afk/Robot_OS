@@ -1,28 +1,38 @@
 # RobotOS Framework FSM API — Draft Spec
 
-**Status:** `DRAFT / EXPERIMENTAL — LOCKED-AT-12D HEADER STUB`. Function
-names and parameter shapes are frozen as of the Phase 12D header stub.
-ABI is **NOT** stable; behavioral guarantees beyond the Phase 12B/12C
-contracts are NOT promised. No `.c` body exists.
-**Revision:** Phase 12D (2026-05-12, `CLOSED_HEADER_STUB_ONLY`) — header
-stub created at `RobotOS_v1.0/framework/robotos_fw_fsm.h`; §4 names move
-from DRAFT to **LOCKED-AT-12D**.
-**Prior revision:** Phase 12C (2026-05-12, `CLOSED_DOCS_ONLY`) — confirmed
+**Status:** `DRAFT / EXPERIMENTAL — IMPLEMENTED_AT_12E (HOST-TEST EVIDENCE)`.
+Function names and parameter shapes are frozen at the Phase 12D header
+stub (LOCKED-AT-12D). Function bodies exist as of Phase 12E and are
+host-test-validated (93/93 assertions). **ABI is still NOT stable**;
+the implementation has not been exercised against devkit or hardware,
+and behavioral guarantees beyond the Phase 12B/12C contracts plus
+Phase 12E §D.5 entry/exit non-OK choice are NOT promised.
+**Revision:** Phase 12E (2026-05-12, `CLOSED_WITH_HOST_TEST_EVIDENCE`) —
+first implementation `.c` body added at
+`RobotOS_v1.0/framework/robotos_fw_fsm.c`; host-test-validated under
+WSL Ubuntu / gcc 13.3.0; §1 decision-state table extended with
+`IMPLEMENTED_AT_12E` row; entry/exit non-OK behavior committed.
+**Prior revision:** Phase 12D (2026-05-12, `CLOSED_HEADER_STUB_ONLY`) —
+header stub created; §4 names move from DRAFT to LOCKED-AT-12D.
+**Earlier revision:** Phase 12C (2026-05-12, `CLOSED_DOCS_ONLY`) — confirmed
 event bridge pattern, status model, payload lifetime, action return
 semantics, and corrected evaluation order.
-**Earlier revision:** Phase 12B (2026-05-12, `CLOSED_DOCS_ONLY`) — initial
-draft.
-**Next revision condition:** Phase 12E or later — implementation (`.c`
-body) on explicit user authorization, with a concrete consumer or unit
-test identified in advance.
+**Original draft:** Phase 12B (2026-05-12, `CLOSED_DOCS_ONLY`) — initial
+draft of names and types.
+**Next revision condition:** Phase 12F or later — Application bridge
+planning, additional FSM host behavior, or hold; devkit integration
+remains a multi-phase ask gated by scope-guard #11 (`devkit_app_state`)
+and the `NOT_STARTED` status of the Application/product layer.
 
 > **Active Framework path: `RobotOS_v1.0/framework/`** (Architecture A).
 > Phase 12D created this directory with `README.md` and the header stub
-> `robotos_fw_fsm.h`. **No `.c` body exists.** The pre-existing
-> `RobotOS_v1.0/src/framework/*.c` files (committed at `43de448` and
-> classified `LEGACY_SCAFFOLD_MARKED_FROZEN_DOCS_ONLY` at Phase 12D-pre)
-> are part of frozen Architecture B and are not modified by any Phase
-> 12A/12B/12C/12D-pre/12D activity.
+> `robotos_fw_fsm.h`. **Phase 12E added `robotos_fw_fsm.c`** — the first
+> active Framework `.c` body. **No devkit integration exists. No hardware
+> evidence exists.** The pre-existing `RobotOS_v1.0/src/framework/*.c`
+> files (committed at `43de448` and classified
+> `LEGACY_SCAFFOLD_MARKED_FROZEN_DOCS_ONLY` at Phase 12D-pre) are part of
+> frozen Architecture B and are not modified by any Phase
+> 12A/12B/12C/12D-pre/12D/12E-pre/12E activity.
 
 This spec is extracted from
 [`../02_PHASE_CLOSEOUTS/PHASE_12B_FRAMEWORK_FSM_API_DRAFT.md`](../02_PHASE_CLOSEOUTS/PHASE_12B_FRAMEWORK_FSM_API_DRAFT.md)
@@ -59,8 +69,11 @@ implementation phase (Phase 12D-class) is authorized.
 | Action return semantics on non-OK | CONFIRMED at Phase 12C — `ACTION_NON_OK_NO_ROLLBACK_CONFIRMED` |
 | Guard return type (`bool` only) | CONFIRMED at Phase 12C — `GUARD_RETURNS_BOOL_ONLY_CONFIRMED` |
 | Evaluation order (exit → state update → action → entry) | CONFIRMED at Phase 12C — corrects Phase 12B draft order |
-| §4 API surface (names, parameter shapes) | **LOCKED-AT-12D** — header stub exists at `RobotOS_v1.0/framework/robotos_fw_fsm.h`; ABI not stable; bodies absent |
-| Implementation (`.c` body) | **NOT BUILT** — Phase 12E or later, on explicit user authorization with concrete consumer/test |
+| §4 API surface (names, parameter shapes) | **LOCKED-AT-12D** — header at `RobotOS_v1.0/framework/robotos_fw_fsm.h`; ABI still not stable |
+| Implementation (`.c` body) | **`IMPLEMENTED_AT_12E`** — first body at `RobotOS_v1.0/framework/robotos_fw_fsm.c`; host-test-validated (93/93 assertions) under WSL Ubuntu / gcc 13.3.0 |
+| Entry / exit non-OK behavior | **`IMPLEMENTED_AT_12E`** — entry/exit return values observed by FSM but **not propagated** by `dispatch()`/`init()`/`reset()`; action return is the sole driver of `last_status` and `dispatch()` return. Phase 12E design decision; revisable in a future API revision phase. |
+| Devkit integration | `NOT_STARTED` — gated by scope-guard #11 (`devkit_app_state`) and Application/product layer `NOT_STARTED` |
+| Hardware evidence | `NOT_STARTED` — Phase 12E close is `CLOSED_WITH_HOST_TEST_EVIDENCE`, not hardware |
 
 ---
 
@@ -492,12 +505,20 @@ This spec is revised when:
    `RobotOS_v1.0/framework/robotos_fw_fsm.h`. §4 names are now
    LOCKED-AT-12D. Active Framework path established under Architecture A.
    **No `.c` body. No CMake integration. No devkit consumer.**
-3. **Phase 12E or later (implementation):** Header gains a `.c` body;
+3. ~~**Phase 12E or later (implementation):** Header gains a `.c` body;
    dispatch logic, transition evaluation, counters, and critical-section
    protection are implemented and unit-tested. §3.2 pseudo-code maps to
-   real code. Phase 12E requires explicit user authorization AND a
-   concrete consumer or unit-test plan identified before the phase opens.
-4. **A new Framework domain is added:** Section added for new domain (timer
+   real code.~~ **DONE at Phase 12E** (2026-05-12). First implementation
+   `.c` body at `RobotOS_v1.0/framework/robotos_fw_fsm.c`;
+   host-test-validated (93/93 assertions, 20 test cases) under WSL Ubuntu /
+   gcc 13.3.0; entry/exit non-OK behavior committed to "observed but not
+   propagated". **No devkit integration. No hardware evidence.**
+4. **Phase 12F-pre or later (Application bridge planning):** Plans the
+   Application bridge translating `robotos_event_t` (Adapter events
+   100-103) to `robotos_fw_event_id_t`. Docs-only gate; required before
+   any devkit consumer of the Framework FSM is built. Phase 12F-pre
+   requires explicit user authorization.
+5. **A new Framework domain is added:** Section added for new domain (timer
    service, sensor, fault) following the same pattern as §3–§7. Each new
    domain is its own revision trigger.
 

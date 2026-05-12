@@ -37,6 +37,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 # Locate core/ relative to this CMakeLists (two levels up from tests/host/)
 set(CORE_DIR    "${CMAKE_CURRENT_SOURCE_DIR}/../../core")
 set(PLATFORM_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../platform")
+set(FRAMEWORK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../framework")
 
 # Host platform stubs — compiled into any target that includes robotos_core.c.
 # Phase 5E: robotos_core.c now calls robotos_platform_critical_enter/exit,
@@ -401,6 +402,29 @@ target_include_directories(robotos_timer_producer_contract_test PRIVATE
 
 add_test(NAME robotos_timer_producer_contract
          COMMAND robotos_timer_producer_contract_test)
+
+# ---- Framework FSM host contract test (Phase 12E) ---------------------------
+# Compiles framework/robotos_fw_fsm.c into a single host test executable that
+# exercises the Phase 12B/12C contract. Pulls in the platform critical host
+# stub because robotos_fw_fsm.c uses robotos_platform_critical_enter/exit for
+# ISR-safe state queries.
+#
+# No core/, devkit/, or Architecture B dependency.
+add_executable(robotos_fw_fsm_contract_test
+    test_robotos_fw_fsm.c
+    "${FRAMEWORK_DIR}/robotos_fw_fsm.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/robotos_platform_critical_host_stub.c"
+)
+
+target_include_directories(robotos_fw_fsm_contract_test PRIVATE
+    "${FRAMEWORK_DIR}"
+    "${CORE_DIR}"
+    "${PLATFORM_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+)
+
+add_test(NAME robotos_fw_fsm_contract
+         COMMAND robotos_fw_fsm_contract_test)
 
 # ---- Log persistence target --------------------------------------------------
 # Saves ctest output to a timestamped file in the version-controlled logs/
