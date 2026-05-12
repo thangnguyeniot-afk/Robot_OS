@@ -118,6 +118,7 @@ table contains only the reserved placeholders.
 | 12D | Framework FSM Header Stub (header-only + docs) | CLOSED_HEADER_STUB_ONLY | [->](#phase-12d) |
 | 12E-pre | Framework FSM Consumer / Test Plan (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12e-pre) |
 | 12E | Framework FSM Host-Test Implementation | CLOSED_WITH_HOST_TEST_EVIDENCE | [->](#phase-12e) |
+| 12F-pre | Application Bridge Planning (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12f-pre) |
 | 20Z | RESERVED -- future checkpoint / closeout slot | NOT_STARTED | [->](#phase-20z) |
 
 When future phases are added:
@@ -1562,6 +1563,173 @@ new `.c` cleanly; the Phase 12D open question is closed.
 
 Devkit integration is **not** the next phase — that would collide with
 scope-guard #11 and the Application-layer-NOT_STARTED constraint.
+
+---
+
+<a id="phase-12f-pre"></a>
+## Phase 12F-pre -- Application Bridge Planning
+
+**Status:** `CLOSED_DOCS_ONLY`
+**Type:** Docs-only planning gate. **No source, runtime, test, CMake,
+Zephyr, board, `prj.conf`, DTS overlay, evidence log, Framework header,
+Framework `.c` file, devkit integration, command-set, or
+`devkit_app_state` change.** No file under `framework/`, `tests/`,
+`core/`, `platform/`, `devkit/src/`, `src/`, `include/robotos/`
+modified.
+**Date opened/closed:** 2026-05-12 (same-day docs-only close)
+**Published baseline at open:** `origin/master = df9bb8e`
+**Closeout doc:**
+[`../02_PHASE_CLOSEOUTS/PHASE_12F_PRE_APPLICATION_BRIDGE_PLANNING.md`](../02_PHASE_CLOSEOUTS/PHASE_12F_PRE_APPLICATION_BRIDGE_PLANNING.md).
+**New long-lived spec draft:**
+[`../03_SPECS/FRAMEWORK_APPLICATION_BRIDGE_DRAFT.md`](../03_SPECS/FRAMEWORK_APPLICATION_BRIDGE_DRAFT.md)
+(`DRAFT / NON-FINAL`; no implementation exists yet).
+**Companion docs:**
+[`../02_PHASE_CLOSEOUTS/PHASE_12E_FSM_HOST_TEST_IMPLEMENTATION.md`](../02_PHASE_CLOSEOUTS/PHASE_12E_FSM_HOST_TEST_IMPLEMENTATION.md),
+[`../02_PHASE_CLOSEOUTS/PHASE_12E_PRE_FSM_CONSUMER_TEST_PLAN.md`](../02_PHASE_CLOSEOUTS/PHASE_12E_PRE_FSM_CONSUMER_TEST_PLAN.md),
+[`../02_PHASE_CLOSEOUTS/PHASE_12C_FSM_EVENT_BRIDGE_STATUS_MODEL.md`](../02_PHASE_CLOSEOUTS/PHASE_12C_FSM_EVENT_BRIDGE_STATUS_MODEL.md).
+
+### 12F-pre.1 Purpose
+
+Phase 12F-pre selects the next implementation gate for connecting the
+host-validated Framework FSM core (closed at Phase 12E) to a real
+event source. The FSM exists at `RobotOS_v1.0/framework/robotos_fw_fsm.c`
+and is host-test-validated, but it has **no consumer**. Phase 12F-pre
+is the docs-only gate that decides how the first consumer/bridge
+should be introduced without violating scope-guard #11
+(`devkit_app_state`), the frozen command set `a/s/r/?/x/v/L/d/T`, or
+the `NOT_STARTED` Application/product boundary.
+
+### 12F-pre.2 Decision result
+
+**`PHASE_12F_PRE_RECOMMEND_HOST_BRIDGE_PROTOTYPE`** (`CLOSED_DOCS_ONLY`).
+
+Phase 12F, when authorized, should add a host-only bridge prototype
+module under `RobotOS_v1.0/framework/` plus a single new host test
+target inside the existing `RobotOS_v1.0/tests/host/CMakeLists.txt`.
+No devkit code. No UART command. No `devkit_app_state` mutation. No
+hardware run.
+
+### 12F-pre.3 Candidate bridge paths evaluated
+
+Five options were evaluated against safety, feasibility, boundary
+impact, and risk:
+
+1. **Host-only bridge prototype (RECOMMENDED).** Bridge module +
+   host test; product-neutral; zero devkit drift; resolves Phase 12C
+   `APPLICATION_OWNED_EVENT_BRIDGE_CONFIRMED` contract concretely.
+2. **Devkit shadow bridge (REJECTED at Phase 12F).** Duplicate state
+   truth risk; requires devkit producer file changes; requires
+   hardware evidence; touches scope-guard #11 spirit.
+3. **Devkit replacement bridge (REJECTED).** Directly violates
+   scope-guard #11; `?` UART response shape can't reconcile with
+   product-neutral FSM; never recommended without dedicated
+   migration phase.
+4. **Application-layer bridge skeleton (REJECTED at Phase 12F).**
+   Application/product layer is `NOT_STARTED`; opening it inside an
+   implementation phase prematurely commits the repo.
+5. **Hold (FALLBACK ACCEPTABLE).** Leaves bridge contract untested;
+   acceptable only if user defers further.
+
+Full evaluation table in
+[`../02_PHASE_CLOSEOUTS/PHASE_12F_PRE_APPLICATION_BRIDGE_PLANNING.md`](../02_PHASE_CLOSEOUTS/PHASE_12F_PRE_APPLICATION_BRIDGE_PLANNING.md)
+§D.
+
+### 12F-pre.4 Bridge semantics frozen at planning depth
+
+Phase 12F-pre freezes the conceptual contract for the Phase 12F
+host bridge prototype (full detail in
+[`../03_SPECS/FRAMEWORK_APPLICATION_BRIDGE_DRAFT.md`](../03_SPECS/FRAMEWORK_APPLICATION_BRIDGE_DRAFT.md)):
+
+- Bridge owns the mapping table (static const array, FIFO first-match);
+  caller owns the FSM instance via pointer; caller owns mapping memory.
+- Adapter key shape: `(uint32_t adapter_type, uint32_t adapter_arg0)`
+  with optional `arg0` wildcard.
+- Unmapped events → silent OK + `unmapped_count++`; FSM not called.
+- Payload borrowed for dispatch duration only; bridge struct has no
+  payload field.
+- Status: reuse `robotos_core_status_t` via `robotos_fw_status_t`
+  alias; no new public status enum.
+- Thread context only; no ISR; no critical section needed.
+- Forbidden surface: no UART TX; no GPIO/PWM/I2C/SPI drivers; no
+  `robotos_core_register_event_handler`; no Zephyr / devkit / legacy
+  `ro_*` includes; no heap; no `devkit_app_state` reference.
+
+### 12F-pre.5 Relationship to `devkit_app_state`
+
+`devkit_app_state` remains **authoritative** for the devkit runtime
+state machine. Phase 12F-pre does not replace, promote, copy,
+shadow, or duplicate it. The Phase 12F host bridge prototype lives
+entirely in a separate translation unit exercised only by a host
+test executable; no devkit producer file calls into it. Three future
+devkit-integration modes (shadow, replacement, separate application)
+each require their own dedicated future planning phase and explicit
+user authorization. Scope-guard #11 is preserved unchanged.
+
+### 12F-pre.6 Relationship to command set
+
+`a / s / r / ? / x / v / L / d / T` remain the devkit/probe command
+surface. The bridge adds **no UART command** and **no UART
+exposure** of FSM state. Future command vocabulary belongs to the
+Application/product phase, not the bridge prototype. All 12 UART TX
+scope-guard constraints from
+[`../02_PHASE_CLOSEOUTS/PHASE_9EZ_CHECKPOINT.md`](../02_PHASE_CLOSEOUTS/PHASE_9EZ_CHECKPOINT.md)
+§H remain preserved.
+
+### 12F-pre.7 Required behavior coverage for Phase 12F
+
+12 contract cases mapped to bridge semantics: mapped dispatch,
+unmapped silent ignore, payload pass-through, FSM non-OK
+propagation, no payload caching, no UART/dispatcher coupling, mapping
+determinism, multi-row support, host-only synthetic events, no
+`devkit_app_state` reference, command-set zero-diff. Plus 5
+review-validated items (no heap; no Zephyr/devkit/legacy includes; no
+payload field on bridge struct; public symbol surface match; full host
+suite regression). Full mapping in
+[`../02_PHASE_CLOSEOUTS/PHASE_12F_PRE_APPLICATION_BRIDGE_PLANNING.md`](../02_PHASE_CLOSEOUTS/PHASE_12F_PRE_APPLICATION_BRIDGE_PLANNING.md)
+§I.
+
+### 12F-pre.8 What is not changed
+
+- All `.c` and `.h` files in the repo -- zero-diff.
+- `RobotOS_v1.0/framework/robotos_fw_fsm.h` -- zero-diff.
+- `RobotOS_v1.0/framework/robotos_fw_fsm.c` -- zero-diff.
+- `RobotOS_v1.0/framework/README.md` -- zero-diff.
+- All `CMakeLists.txt` -- zero-diff.
+- All tracked test files -- zero-diff.
+- `core/`, `platform/`, `devkit/src/`, `devkit/boards/`,
+  `devkit/zephyr/`, `prj.conf`, DTS overlays -- zero-diff.
+- `src/`, `include/robotos/`, `include/app/` -- zero-diff.
+- Architecture B legacy notices -- zero-diff.
+- All evidence logs -- zero-diff.
+- All prior closeout docs -- not rewritten.
+- `devkit_app_state` -- unchanged (scope-guard #11 re-affirmed).
+- Validated command set `a / s / r / ? / x / v / L / d / T` -- unchanged.
+
+### 12F-pre.9 Remaining decisions (preserved)
+
+1. ACTIVE disarm widening -- `USER_DECISION_REQUIRED_ACTIVE_DISARM`.
+2. Scheduler 7A/7B -- `DEFER`.
+3. F407 / custom board -- `HOLD/DEFER`.
+4. POST_FLASH_AUTOSTART root cause -- `OPEN` / `MITIGATED_BY_WORKFLOW`.
+5. Application / product layer -- `NOT_STARTED`.
+6. Devkit integration of Framework FSM -- `NOT_STARTED`; Phase 12F
+   recommended path = host bridge prototype only; opening Phase 12F
+   requires explicit user authorization.
+7. Architecture A ↔ Architecture B reconciliation -- `NOT_STARTED`.
+8. Future devkit-integration mode (shadow / replacement / separate
+   application) -- `UNDECIDED`; each mode requires its own future
+   planning phase and explicit user authorization.
+
+### 12F-pre.10 Next gate
+
+**Hold.** Phase 12F (Framework Application Bridge Host Prototype)
+may open only on **explicit user authorization**. The recommended
+scope, file list, 12-item test coverage map, and exit criteria are
+recorded in
+[`../02_PHASE_CLOSEOUTS/PHASE_12F_PRE_APPLICATION_BRIDGE_PLANNING.md`](../02_PHASE_CLOSEOUTS/PHASE_12F_PRE_APPLICATION_BRIDGE_PLANNING.md)
+§L and the bridge contract is recorded in
+[`../03_SPECS/FRAMEWORK_APPLICATION_BRIDGE_DRAFT.md`](../03_SPECS/FRAMEWORK_APPLICATION_BRIDGE_DRAFT.md).
+Phase 12F **remains `NOT_STARTED`**.
 
 ---
 
