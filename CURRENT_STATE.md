@@ -9,6 +9,44 @@
 
 ## Last Closed Phase
 
+### Phase 12C — Framework FSM Event Bridge + Status Model Confirmation (docs-only)
+
+- **Date:** 2026-05-12
+- **Type:** Docs-only design-confirmation phase. No source, runtime, test, CMake, Zephyr, board, `prj.conf`, DTS overlay, evidence log, `framework/` directory, or `.h`/`.c` Framework file change. Pre-existing `src/framework/*.c` (from `43de448`) unmodified.
+- **Close status:** `CLOSED_DOCS_ONLY`
+- **Decision result:** `PHASE_12C_EVENT_BRIDGE_STATUS_CONFIRMED_DOCS_ONLY`
+- **Published baseline at open:** `origin/master = cda3810`
+- **Closeout doc:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12C_FSM_EVENT_BRIDGE_STATUS_MODEL.md`
+- **Long-lived spec updated:** `RobotOS_v1.0/devkit/docs/03_SPECS/FRAMEWORK_FSM_API_DRAFT.md` (§1 decision-state, §3.2 evaluation order, §6.2/6.3, §7.2, §9 all CONFIRMED, §10 revision conditions). Spec remains `DRAFT / NON-FINAL` — function names lock in Phase 12D.
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md` `<a id="phase-12c"></a>`
+- **Robot Framework status:** **NOT BUILT.** No `framework/` directory created by Phase 12C, no Framework header, no `.h`/`.c` file. Phase 12C is design-confirmation only.
+- **Confirmed Phase 12B open decisions:**
+  1. Event bridge pattern → `APPLICATION_OWNED_EVENT_BRIDGE_CONFIRMED` — Application layer translates Adapter events to `robotos_fw_event_id_t`; FSM does not register with `robotos_core_register_event_handler()` directly; no `ROBOTOS_EVENT_USER` sub-range needed for FSM core.
+  2. Status model → `REUSE_ROBOTOS_CORE_STATUS_T_FOR_PHASE_12D_CONFIRMED` — Phase 12D reuses existing `robotos_core_status_t`; no new Framework status enum.
+  3. Payload lifetime → `PAYLOAD_BORROWED_FOR_DISPATCH_ONLY_CONFIRMED` — `const void *` payload valid only for `dispatch()` duration; FSM must not cache; Application owns memory; no heap.
+  4. Action non-OK semantics → `ACTION_NON_OK_NO_ROLLBACK_CONFIRMED` — state already updated before action runs; non-OK return does not roll back; entry still runs; `transition_count++` regardless.
+- **Additional Phase 12C confirmations:**
+  - Guard return type → `GUARD_RETURNS_BOOL_ONLY_CONFIRMED` (Phase 12B signature unchanged).
+  - **Evaluation order correction:** exit → **state update** → action → entry. Phase 12B had drafted exit → action → state update → entry; Phase 12C corrects to put state update before action to match the no-rollback policy.
+  - Counter independence: `guard_rejected_count` and `no_transition_count` are independent; both may increment in a single dispatch when matching rows exist but all guards reject.
+- **Status mapping (Phase 12D target):** OK = `ROBOTOS_CORE_OK`; no-match/guard-rejected = `ROBOTOS_CORE_OK` (audit counters); action failure = action's status (transition committed); invalid config = `ERR_INVALID_ARG` or `ERR_NULL`; uninit = `ERR_INVALID_STATE`.
+- **Validated command set (unchanged):** `a / s / r / ? / x / v / L / d / T` (9 commands; hardware-evidence-backed).
+- **`devkit_app_state` status:** Devkit-local; not promoted (scope-guard #11 re-affirmed); design reference only.
+- **`T` status:** Adapter probe evidence (Phase 11E `CLOSED_WITH_HARDWARE_EVIDENCE`); not promoted to Framework sensor API.
+- **Last runtime implementation phase:** Phase 11D (`2040bfb`).
+- **Last hardware evidence phase:** Phase 11E (`10710b3`).
+- **All scope guards preserved:** Zero source/config/script changes. All 12 UART TX scope-guard constraints from `PHASE_9EZ_CHECKPOINT.md §H` intact. `core/`, `platform/`, `devkit/src/`, `tests/`, board DTS, board defconfig, Zephyr workspace, `DEVKIT_PROGRESS.md` historical master, and all evidence logs zero-diff. Pre-existing `src/framework/*.c` unmodified.
+- **Remaining decisions (all preserved unchanged at Phase 12C):**
+  1. ACTIVE disarm widening — `USER_DECISION_REQUIRED_ACTIVE_DISARM`
+  2. Scheduler 7A/7B — `DEFER`
+  3. F407 / custom board — `HOLD/DEFER`
+  4. POST_FLASH_AUTOSTART root cause — `OPEN` / `MITIGATED_BY_WORKFLOW`
+  5. Application / product layer — `NOT_STARTED`
+  6. Robot Framework implementation — `NOT_STARTED`; Phase 12D not started
+- **Next gate:** Phase 12D — Framework FSM Header Stub / Compile-only Skeleton. Entry requires **explicit user authorization** (first Framework-layer source file) and user direction on the exact Framework layer path (e.g., `RobotOS_v1.0/framework/`). Non-goals: no `.c` body, no `devkit_app_state` replacement, no UART command integration, no hardware run, no scheduler change. **Hold** is fully acceptable.
+
+---
+
 ### Phase 12B — Robot Framework FSM API Draft (docs-only)
 
 - **Date:** 2026-05-12

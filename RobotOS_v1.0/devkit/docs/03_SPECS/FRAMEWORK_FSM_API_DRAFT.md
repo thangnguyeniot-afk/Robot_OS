@@ -1,18 +1,26 @@
 # RobotOS Framework FSM API — Draft Spec
 
-**Status:** `DRAFT / NON-FINAL`
-**Revision:** Phase 12B (2026-05-12, `CLOSED_DOCS_ONLY`)
-**Next revision condition:** Phase 12C — confirms event bridge pattern,
-status model, payload lifetime, and action return semantics.
+**Status:** `DRAFT / NON-FINAL` (behavior contracts confirmed at Phase 12C;
+function names and types remain DRAFT until Phase 12D)
+**Revision:** Phase 12C (2026-05-12, `CLOSED_DOCS_ONLY`) — confirmed event
+bridge pattern, status model, payload lifetime, action return semantics, and
+corrected evaluation order.
+**Prior revision:** Phase 12B (2026-05-12, `CLOSED_DOCS_ONLY`) — initial draft.
+**Next revision condition:** Phase 12D — header stub creation; function names
+and types lock from DRAFT to LOCKED-AT-12D.
 
 > **No `framework/` directory exists. No `.h` or `.c` Framework file
 > exists. This document describes a future API that has not been
-> implemented.**
+> implemented.** The pre-existing `RobotOS_v1.0/src/framework/*.c` files
+> (first committed at `43de448`) are unrelated to this Robot Framework FSM
+> spec and are not modified by Phase 12B or Phase 12C.
 
 This spec is extracted from
-[`../02_PHASE_CLOSEOUTS/PHASE_12B_FRAMEWORK_FSM_API_DRAFT.md`](../02_PHASE_CLOSEOUTS/PHASE_12B_FRAMEWORK_FSM_API_DRAFT.md).
-All items are DRAFT and subject to revision in Phase 12C before
-any header or implementation is written.
+[`../02_PHASE_CLOSEOUTS/PHASE_12B_FRAMEWORK_FSM_API_DRAFT.md`](../02_PHASE_CLOSEOUTS/PHASE_12B_FRAMEWORK_FSM_API_DRAFT.md)
+and updated by
+[`../02_PHASE_CLOSEOUTS/PHASE_12C_FSM_EVENT_BRIDGE_STATUS_MODEL.md`](../02_PHASE_CLOSEOUTS/PHASE_12C_FSM_EVENT_BRIDGE_STATUS_MODEL.md).
+Behavior contracts are CONFIRMED at Phase 12C; function names and types
+remain DRAFT pending Phase 12D.
 
 ---
 
@@ -29,17 +37,19 @@ implementation phase (Phase 12D-class) is authorized.
 - A promotion of `devkit_app_state`. That module remains devkit-local;
   this spec describes a new, separate, product-neutral Framework layer.
 
-**Current decision state (Phase 12B):**
+**Current decision state (Phase 12C):**
 
 | Decision | Status |
 |---|---|
 | Model: flat FSM, table-driven, no heap | CONFIRMED at Phase 12B |
 | State/event IDs: product-defined `uint32_t` | CONFIRMED at Phase 12B |
-| No `robotos_event_type_t` sub-range needed | CONFIRMED at Phase 12B |
-| Event bridge pattern | OPEN — recommendation documented |
-| Status model (reuse `robotos_core_status_t` vs new type) | OPEN — Option A recommended |
-| Payload lifetime rules | OPEN — rules documented, confirmation needed |
-| Action return semantics on non-OK | OPEN — policy documented, confirmation needed |
+| No `robotos_event_type_t` sub-range needed for FSM core | CONFIRMED at Phase 12B |
+| Event bridge pattern | **CONFIRMED at Phase 12C** — `APPLICATION_OWNED_EVENT_BRIDGE_CONFIRMED` |
+| Status model — reuse `robotos_core_status_t` | **CONFIRMED at Phase 12C** — `REUSE_ROBOTOS_CORE_STATUS_T_FOR_PHASE_12D_CONFIRMED` |
+| Payload lifetime rules | **CONFIRMED at Phase 12C** — `PAYLOAD_BORROWED_FOR_DISPATCH_ONLY_CONFIRMED` |
+| Action return semantics on non-OK | **CONFIRMED at Phase 12C** — `ACTION_NON_OK_NO_ROLLBACK_CONFIRMED` |
+| Guard return type (`bool` only) | **CONFIRMED at Phase 12C** — `GUARD_RETURNS_BOOL_ONLY_CONFIRMED` |
+| Evaluation order (exit → state update → action → entry) | **CONFIRMED at Phase 12C** — corrects Phase 12B draft order |
 
 ---
 
@@ -85,7 +95,13 @@ implementation phase (Phase 12D-class) is authorized.
 | **Transition row** | Tuple: `(current_state, event_id, guard, next_state, action)` |
 | **No-transition** | No matching row found or all guards reject; event counted but OK returned |
 
-### 3.2 Evaluation sequence (confirmed at Phase 12B)
+### 3.2 Evaluation sequence (Phase 12C confirmed; corrects Phase 12B order)
+
+**Phase 12C correction:** state update happens **before** the transition
+action (not after, as drafted in Phase 12B). Rationale recorded in
+[`../02_PHASE_CLOSEOUTS/PHASE_12C_FSM_EVENT_BRIDGE_STATUS_MODEL.md §G.4`](../02_PHASE_CLOSEOUTS/PHASE_12C_FSM_EVENT_BRIDGE_STATUS_MODEL.md):
+consistent with no-rollback policy; action runs in post-transition state
+context.
 
 ```
 dispatch(fsm, event_id, payload):
@@ -95,16 +111,27 @@ dispatch(fsm, event_id, payload):
     for each row where current_state matches AND event_id matches:
       if guard != NULL and guard() == false:
         guard_rejected_count++ ; continue
-      → on_exit(current_state)  [if state def exists]
-      → action(from, to, event, payload, ctx)  [if non-NULL]
-      → current_state = row.next_state
-      → on_entry(next_state)  [if state def exists]
+      → on_exit(current_state)              [if state def exists]
+      → current_state = row.next_state      ← STATE UPDATE (Phase 12C order)
+      → action(from, to, event, payload, ctx)   [if non-NULL]
+      → on_entry(next_state)                [if state def exists]
       → transition_count++
+      → last_status = action_status (or OK)
       return action_status (or OK)
-  if no row matched or all guards rejected:
+  if no row matched or all matching rows had rejecting guards:
     no_transition_count++
+    last_status = OK
     return OK
 ```
+
+Key invariants (Phase 12C):
+- Action runs in **new** state context (state already updated).
+- Action failure does **not** roll back state.
+- Entry action runs regardless of action status.
+- `transition_count` reflects committed transitions only.
+- `guard_rejected_count` and `no_transition_count` are **independent**;
+  both may increment in a single dispatch when matching rows exist but all
+  guards reject.
 
 ### 3.3 Model constraints (confirmed at Phase 12B)
 
@@ -297,21 +324,29 @@ Pending Phase 12C confirmation.
 - Returns `true` = allow; `false` = skip this row (evaluation continues).
 - Thread context only.
 
-### 6.2 Action
+### 6.2 Action (Phase 12C confirmed)
 
 - May mutate `user_context`.
 - May log via RTT (`LOG_INF`).
 - Must not call UART TX, block on I/O, or allocate heap.
 - Thread context only.
-- Non-OK return propagates as `dispatch()` return; transition is NOT rolled
-  back (see §9.4 for OPEN status of this rule).
+- **Runs in post-transition state context** (state already updated; Phase
+  12C order).
+- **Non-OK return does NOT roll back the transition.** State stays at target;
+  `dispatch()` returns the action's non-OK status. Entry action still runs.
+- No retry inside Framework FSM. Application monitors `last_status` or the
+  `dispatch()` return for failure handling.
+- No implicit fault escalation. Products that want a fault-on-action-fail
+  behavior must define an explicit fault state and a transition row.
 
-### 6.3 Entry / exit
+### 6.3 Entry / exit (Phase 12C confirmed)
 
-- Called on every transition that changes state.
+- Called on every committed transition.
 - Same constraints as action (§6.2).
-- Entry: called after `current_state` updated.
-- Exit: called before action.
+- **Exit:** called **before** state update and **before** action; sees
+  `from_state` as `current_state`.
+- **Entry:** called **after** state update and **after** action; sees
+  `next_state` as `current_state`. Runs regardless of action's status.
 
 ---
 
@@ -322,14 +357,21 @@ Pending Phase 12C confirmation.
 `robotos_fw_fsm_get_snapshot()` provides all audit counters. A future
 `ROBOTOS_FW` RTT log stream (not Phase 12B scope) would emit these periodically.
 
-### 7.2 Counter semantics
+### 7.2 Counter semantics (Phase 12C confirmed)
 
 | Counter | Increments when |
 |---|---|
-| `transition_count` | A transition row is selected, guard passes, and state changes |
-| `event_count` | Any call to `dispatch()` |
-| `guard_rejected_count` | A matching row's guard returns false |
-| `no_transition_count` | Full table scan finds no matching row (or all guards reject) |
+| `transition_count` | A committed transition completes (after state update; once per dispatch maximum) |
+| `event_count` | Any call to `dispatch()` (once per call) |
+| `guard_rejected_count` | A matching row's guard returns false (may increment multiple times per dispatch if multiple matching rows have rejecting guards) |
+| `no_transition_count` | Dispatch ends without a committed transition (either no matching row OR all matching rows had rejecting guards) |
+
+**Phase 12C clarification:** `guard_rejected_count` and `no_transition_count`
+are **independent**. In a single `dispatch()` where matching rows exist but
+all guards reject, `guard_rejected_count` is incremented once per rejection
+during the scan, **and** `no_transition_count` is incremented once at the
+end. See
+[`../02_PHASE_CLOSEOUTS/PHASE_12C_FSM_EVENT_BRIDGE_STATUS_MODEL.md §G.3`](../02_PHASE_CLOSEOUTS/PHASE_12C_FSM_EVENT_BRIDGE_STATUS_MODEL.md).
 
 ### 7.3 What is NOT changed
 
@@ -360,32 +402,56 @@ This spec does not cover:
 
 ---
 
-## 9. Open Decisions
+## 9. Decisions (CONFIRMED at Phase 12C)
 
-Items requiring Phase 12C confirmation before any header is written.
+All items in this section are **CONFIRMED at Phase 12C** for Phase 12D
+implementation entry. Function names and types in §4 remain DRAFT until
+Phase 12D locks them.
 
 ### 9.1 Event bridge pattern
-**Status:** `OPEN_RECOMMENDATION_PENDING_CONFIRMATION`
-**Recommendation:** Application bridge translates Adapter events
+**Status:** **`CONFIRMED at Phase 12C`** — `APPLICATION_OWNED_EVENT_BRIDGE_CONFIRMED`
+**Confirmed rule:** Application bridge translates Adapter events
 (`robotos_event_type_t` 100–103) to `robotos_fw_event_id_t` values and calls
-`robotos_fw_fsm_dispatch()`. No new `robotos_event_type_t` allocation needed.
-FSM does not register directly with `robotos_core_register_event_handler()`.
+`robotos_fw_fsm_dispatch()`. No new `robotos_event_type_t` allocation needed
+for the FSM core itself. FSM does not register directly with
+`robotos_core_register_event_handler()`. Bridge runs in thread/dispatch
+context, not ISR.
 
 ### 9.2 Status model
-**Status:** `OPEN_RECOMMENDATION_PENDING_CONFIRMATION`
-**Recommendation:** Option A — typedef `robotos_core_status_t` as
-`robotos_fw_status_t`. Simpler; no new type. Guard rejection maps to
-`ERR_INVALID_ARG`; unhandled event is `OK`.
+**Status:** **`CONFIRMED at Phase 12C`** — `REUSE_ROBOTOS_CORE_STATUS_T_FOR_PHASE_12D_CONFIRMED`
+**Confirmed rule:** Reuse `robotos_core_status_t` (the exact repo type name
+in `core/robotos_core.h`). The `robotos_fw_status_t` typedef in §4.1 is
+confirmed as an alias to `robotos_core_status_t`. No new Framework-specific
+status enum is introduced in Phase 12C or Phase 12D. Status mapping is
+documented in
+[`../02_PHASE_CLOSEOUTS/PHASE_12C_FSM_EVENT_BRIDGE_STATUS_MODEL.md §E.3`](../02_PHASE_CLOSEOUTS/PHASE_12C_FSM_EVENT_BRIDGE_STATUS_MODEL.md).
 
 ### 9.3 Event payload lifetime
-**Status:** `OPEN_RULES_DOCUMENTED_CONFIRMATION_NEEDED`
-**Rule documented:** `event_payload` valid only for duration of `dispatch()`.
-Callbacks must not cache pointer. Application owns memory.
+**Status:** **`CONFIRMED at Phase 12C`** — `PAYLOAD_BORROWED_FOR_DISPATCH_ONLY_CONFIRMED`
+**Confirmed rule:** `event_payload` is a borrowed `const void *`. Valid only
+for the duration of `robotos_fw_fsm_dispatch()`. FSM must not cache the
+pointer. Application owns all payload memory. Actions copy fields into
+`user_context` if durable state is needed. No heap allocation.
 
 ### 9.4 Action return semantics on non-OK
-**Status:** `OPEN_POLICY_DOCUMENTED_CONFIRMATION_NEEDED`
-**Policy documented:** Non-OK action return does NOT roll back transition.
-State update is committed; action error propagates as `dispatch()` return.
+**Status:** **`CONFIRMED at Phase 12C`** — `ACTION_NON_OK_NO_ROLLBACK_CONFIRMED`
+**Confirmed rule:** Action's non-OK return does NOT roll back the
+transition. State is already updated (Phase 12C order: state update before
+action). `transition_count++`, entry action still runs, `last_status`
+records the non-OK value, and `dispatch()` returns it. No retry inside FSM.
+No implicit fault escalation.
+
+### 9.5 Guard return type
+**Status:** **`CONFIRMED at Phase 12C`** — `GUARD_RETURNS_BOOL_ONLY_CONFIRMED`
+**Confirmed rule:** Guards return `bool` only. `false` = skip row (evaluation
+continues to next matching row). No status-returning guard variant in Phase
+12C or Phase 12D. Any guard-side error is handled inside the guard (log to
+RTT, return `false`).
+
+### 9.6 Evaluation order
+**Status:** **`CONFIRMED at Phase 12C`** — corrects Phase 12B draft order
+**Confirmed rule:** exit → state update → action → entry. See §3.2 for the
+authoritative pseudo-code.
 
 ---
 
@@ -393,16 +459,27 @@ State update is committed; action error propagates as `dispatch()` return.
 
 This spec is revised when:
 
-1. **Phase 12C closes:** All §9 open decisions are confirmed; §9 items move
-   from OPEN to CONFIRMED; doc revision note updated.
-2. **Phase 12D (implementation) opens:** Header stub is created; API names
-   are locked; §4 names move from DRAFT to CONFIRMED-NAME.
-3. **A new Framework domain is added:** Section added for new domain (timer
-   service, sensor, fault) following the same pattern as §3–§7.
+1. ~~**Phase 12C closes:** All §9 open decisions are confirmed.~~ **DONE at
+   Phase 12C** (2026-05-12). §9 items moved from OPEN to CONFIRMED;
+   evaluation order corrected; counter independence clarified.
+2. **Phase 12D opens (header stub):** Header stub `.h` file is created in an
+   agreed Framework path. §4 names move from DRAFT to LOCKED-AT-12D.
+   Function signatures and type definitions are frozen at this point. **No
+   `.c` body in Phase 12D — header only.**
+3. **Phase 12E or later (implementation):** Header gains a `.c` body;
+   dispatch logic, transition evaluation, counters, and critical-section
+   protection are implemented and unit-tested. §3.2 pseudo-code maps to
+   real code.
+4. **A new Framework domain is added:** Section added for new domain (timer
+   service, sensor, fault) following the same pattern as §3–§7. Each new
+   domain is its own revision trigger.
 
 This spec is NOT revised to:
+
 - Record devkit implementation details (devkit docs are authoritative for
   devkit; this spec is authoritative for Framework).
 - Track evidence logs (logs live under `../logs/INDEX.md`).
 - Record closed phase history (progress file is authoritative for phase
   history).
+- Track pre-existing `src/framework/*.c` content (unrelated; see header
+  note).

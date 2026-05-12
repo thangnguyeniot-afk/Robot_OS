@@ -113,6 +113,7 @@ table contains only the reserved placeholders.
 | 11Z | Command-Set Checkpoint (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-11z) |
 | 12A | Robot Framework API Surface Planning (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12a) |
 | 12B | Robot Framework FSM API Draft (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12b) |
+| 12C | Framework FSM Event Bridge + Status Model Confirmation (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12c) |
 | 20Z | RESERVED -- future checkpoint / closeout slot | NOT_STARTED | [->](#phase-20z) |
 
 When future phases are added:
@@ -937,6 +938,104 @@ implementation, no source change, no `framework/` dir.
 Phase 12C — Framework FSM Event Bridge Spec + Status Model Confirmation
 (docs-only). Entry requires explicit user authorization. Confirms the two
 open decisions from §N before any header or implementation work.
+
+---
+
+<a id="phase-12c"></a>
+## Phase 12C -- Framework FSM Event Bridge + Status Model Confirmation
+
+**Status:** `CLOSED_DOCS_ONLY`
+**Type:** Docs-only design-confirmation phase. **No source, runtime, test,
+CMake, Zephyr, board, host-tool, script, `prj.conf`, DTS overlay, evidence
+log, `framework/` directory, or `.h`/`.c` Framework file change.**
+**Date opened/closed:** 2026-05-12 (same-day docs-only close)
+**Published baseline at open:** `origin/master = cda3810`
+**Closeout doc:**
+[`../02_PHASE_CLOSEOUTS/PHASE_12C_FSM_EVENT_BRIDGE_STATUS_MODEL.md`](../02_PHASE_CLOSEOUTS/PHASE_12C_FSM_EVENT_BRIDGE_STATUS_MODEL.md).
+**Long-lived spec updated:**
+[`../03_SPECS/FRAMEWORK_FSM_API_DRAFT.md`](../03_SPECS/FRAMEWORK_FSM_API_DRAFT.md)
+(§1 decision-state table, §3.2 evaluation order, §6.2/6.3, §7.2, §9, §10).
+**Companion docs:**
+[`../02_PHASE_CLOSEOUTS/PHASE_12B_FRAMEWORK_FSM_API_DRAFT.md`](../02_PHASE_CLOSEOUTS/PHASE_12B_FRAMEWORK_FSM_API_DRAFT.md),
+[`../02_PHASE_CLOSEOUTS/PHASE_12A_FRAMEWORK_API_SURFACE_PLANNING.md`](../02_PHASE_CLOSEOUTS/PHASE_12A_FRAMEWORK_API_SURFACE_PLANNING.md).
+
+### 12C.1 Purpose
+
+Phase 12C confirms the four open design decisions left by Phase 12B before
+any Phase 12D header stub or implementation work. It also records one
+correction to the Phase 12B evaluation-order draft.
+
+Phase 12C:
+
+- Confirms event bridge pattern, status model, payload lifetime, and action
+  non-OK return semantics.
+- Updates `FRAMEWORK_FSM_API_DRAFT.md` §9 entries from `OPEN` to `CONFIRMED`.
+- Corrects evaluation order: exit → state update → action → entry (was
+  drafted as exit → action → state update → entry in Phase 12B §E.3).
+- Clarifies counter independence: `guard_rejected_count` and
+  `no_transition_count` may both increment in a single dispatch.
+
+Phase 12C does **not** implement the FSM, create a `framework/` directory,
+modify devkit source, change command semantics, or start Phase 12D.
+
+### 12C.2 Decision result
+
+**`PHASE_12C_EVENT_BRIDGE_STATUS_CONFIRMED_DOCS_ONLY`**
+
+| Decision | Phase 12C status |
+|---|---|
+| Event bridge pattern | `APPLICATION_OWNED_EVENT_BRIDGE_CONFIRMED` |
+| Status model | `REUSE_ROBOTOS_CORE_STATUS_T_FOR_PHASE_12D_CONFIRMED` |
+| Payload lifetime | `PAYLOAD_BORROWED_FOR_DISPATCH_ONLY_CONFIRMED` |
+| Action non-OK semantics | `ACTION_NON_OK_NO_ROLLBACK_CONFIRMED` |
+| Guard return type | `GUARD_RETURNS_BOOL_ONLY_CONFIRMED` |
+| Evaluation order | Corrected to exit → state update → action → entry |
+
+### 12C.3 Status mapping (Phase 12D target)
+
+| FSM situation | `robotos_core_status_t` | Audit counter |
+|---|---|---|
+| OK / transition accepted | `ROBOTOS_CORE_OK` | `transition_count++` |
+| No transition matched | `ROBOTOS_CORE_OK` | `no_transition_count++` |
+| Guard rejected | `ROBOTOS_CORE_OK` | `guard_rejected_count++`; scan continues |
+| Action returned non-OK | action's status | `transition_count++` (committed) |
+| NULL fsm/config/transitions | `ROBOTOS_CORE_ERR_NULL` | none |
+| Bad config values | `ROBOTOS_CORE_ERR_INVALID_ARG` | none |
+| Uninitialized FSM | `ROBOTOS_CORE_ERR_INVALID_STATE` | none |
+
+### 12C.4 Remaining decisions
+
+All preserved unchanged:
+
+1. ACTIVE disarm widening — **`USER_DECISION_REQUIRED_ACTIVE_DISARM`**
+2. Scheduler 7A/7B — **`DEFER`**
+3. F407 / custom board — **`HOLD/DEFER`**
+4. POST_FLASH_AUTOSTART — **`OPEN`** / `MITIGATED_BY_WORKFLOW`
+5. Application / product layer — **`NOT_STARTED`**
+6. Robot Framework implementation — **`NOT_STARTED`**; Phase 12D not started
+
+### 12C.5 Scope guards intact
+
+All 12 UART TX scope-guard constraints preserved. Zero source/config/evidence-
+log changes. `devkit_app_state` not promoted (scope-guard #11). `core/`,
+`platform/`, `devkit/src/`, board DTS, `prj.conf`, and evidence logs
+zero-diff. Pre-existing `src/framework/*.c` files (from `43de448`) unmodified.
+`T` remains Adapter probe evidence, not Framework API.
+
+### 12C.6 Verdict
+
+`CLOSED_DOCS_ONLY`. All four Phase 12B open decisions confirmed. Spec draft
+updated. No implementation, no source change, no `framework/` dir, no `.h`/
+`.c` file.
+
+### 12C.7 Next gate
+
+Phase 12D — Framework FSM Header Stub / Compile-only Skeleton. Entry
+requires **explicit user authorization** (first Framework-layer source file)
+and user direction on the exact Framework layer path. Non-goals: no `.c`
+body, no `devkit_app_state` replacement, no UART command integration, no
+hardware run, no scheduler change, no product behavior. **Hold** is also
+fully acceptable.
 
 ---
 

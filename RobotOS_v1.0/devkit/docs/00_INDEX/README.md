@@ -26,7 +26,7 @@ progress streams and closeout docs, editing rules).
 |---|---|---|
 | Phase 1 through Phase 9E / 9E-Z | [`DEVKIT_PROGRESS.md`](../01_PROGRESS/DEVKIT_PROGRESS.md) | Historical master — **not rewritten** when later phases land. |
 | Phase 10 (10A, 10B-*, 10C, ...) | [`DEVKIT_PROGRESS_PHASE_10.md`](../01_PROGRESS/DEVKIT_PROGRESS_PHASE_10.md) | Running log; Phase 10C is latest closed entry. |
-| Phase 11 through Phase 20 | [`DEVKIT_PROGRESS_PHASE_11_20.md`](../01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md) | Running log; Phase 12B is latest closed entry (`CLOSED_DOCS_ONLY` Framework FSM API draft); Phase 11A/11B/11C/11D/11E/11Z/12A/12B closed; Phase 11A-11E sensor track complete; Phase 12A/12B Framework planning in progress. |
+| Phase 11 through Phase 20 | [`DEVKIT_PROGRESS_PHASE_11_20.md`](../01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md) | Running log; Phase 12C is latest closed entry (`CLOSED_DOCS_ONLY` Framework FSM event bridge + status model confirmation); Phase 11A/11B/11C/11D/11E/11Z/12A/12B/12C closed; Phase 11A-11E sensor track complete; Phase 12A/12B/12C Framework planning complete; Phase 12D header stub pending explicit user authorization. |
 | Phase 21+ | future `DEVKIT_PROGRESS_PHASE_21_30.md`, etc. | Create when the window opens. |
 
 **Per-phase closeout / checkpoint docs remain a separate artifact
@@ -60,6 +60,7 @@ rewritten after a phase closes.**
 - [`PHASE_11Z_COMMAND_SET_CHECKPOINT.md`](../02_PHASE_CLOSEOUTS/PHASE_11Z_COMMAND_SET_CHECKPOINT.md) -- Post-Phase-11E command-set checkpoint (`CLOSED_DOCS_ONLY`; validated 9-command set `a/s/r/?/x/v/L/d/T`; Phase 11A–11E sensor-probe track shelved as complete).
 - [`PHASE_12A_FRAMEWORK_API_SURFACE_PLANNING.md`](../02_PHASE_CLOSEOUTS/PHASE_12A_FRAMEWORK_API_SURFACE_PLANNING.md) -- Robot Framework API surface planning gate (`CLOSED_DOCS_ONLY`; layer boundary established; 9 candidate domains evaluated; FSM abstraction recommended as first Framework slice).
 - [`PHASE_12B_FRAMEWORK_FSM_API_DRAFT.md`](../02_PHASE_CLOSEOUTS/PHASE_12B_FRAMEWORK_FSM_API_DRAFT.md) -- Robot Framework FSM API draft (`CLOSED_DOCS_ONLY`; `PHASE_12B_FSM_API_DRAFTED_DOCS_ONLY`; flat table-driven FSM model; draft `robotos_fw_fsm_*` API surface; event bridge and status model decisions open for Phase 12C).
+- [`PHASE_12C_FSM_EVENT_BRIDGE_STATUS_MODEL.md`](../02_PHASE_CLOSEOUTS/PHASE_12C_FSM_EVENT_BRIDGE_STATUS_MODEL.md) -- Framework FSM event bridge + status model confirmation (`CLOSED_DOCS_ONLY`; `PHASE_12C_EVENT_BRIDGE_STATUS_CONFIRMED_DOCS_ONLY`; all four Phase 12B open decisions confirmed; evaluation order corrected; Phase 12D pending explicit user authorization).
 
 Future `PHASE_*_CLOSE.md` and `PHASE_*_CHECKPOINT.md` docs belong here.
 
