@@ -267,10 +267,12 @@ The on-board LSM303AGR accelerometer (`lsm303agr_accel` node, Zephyr driver
   Zephyr board DTS (`zephyr/boards/arm/stm32f411e_disco/stm32f411e_disco.dts`).
 - The `lis2dh` driver is locally present and self-contained (no `hal_st`
   dependency; handles both board revision A/D and B via compatible "st,lis2dh").
-- `CONFIG_I2C=y` is already in `devkit/prj.conf`.
 - No DTS overlay is needed.
 - No hardware purchase is needed.
-- The only `prj.conf` addition required in Phase 11D is `CONFIG_SENSOR=y`.
+- The `prj.conf` additions required in Phase 11D are `CONFIG_I2C=y` and
+  `CONFIG_SENSOR=y` (neither currently enabled in `devkit/prj.conf`; an
+  earlier draft of this entry incorrectly claimed `CONFIG_I2C=y` was
+  pre-existing — that has been corrected docs-only at HEAD).
 - Zephyr sample `zephyr/samples/sensor/lis2dh/` confirms this path.
 
 Phase 11A listed die temperature as priority (a) and on-board MEMS as (b).

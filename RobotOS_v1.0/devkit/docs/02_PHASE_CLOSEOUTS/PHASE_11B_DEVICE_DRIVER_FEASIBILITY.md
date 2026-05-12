@@ -27,9 +27,11 @@ Adapter probe.
    Zephyr driver `lis2dh`) is the recommended candidate.** It is already
    defined with `status = "okay"` in the upstream Zephyr board DTS, the
    `lis2dh` driver is present locally and is self-contained (no external HAL
-   module dependency), `CONFIG_I2C=y` is already in `devkit/prj.conf`, and
-   no hardware purchase is needed. The only `prj.conf` addition required in
-   Phase 11D is `CONFIG_SENSOR=y`.
+   module dependency), and no hardware purchase is needed. The required
+   `prj.conf` additions in Phase 11D are `CONFIG_I2C=y` and `CONFIG_SENSOR=y`
+   (both currently absent from `devkit/prj.conf`; an earlier draft of this doc
+   incorrectly claimed `CONFIG_I2C=y` was pre-existing — that has been
+   corrected docs-only at HEAD).
 
 2. **The STM32 internal die-temperature / ADC path is viable in principle
    but more complex.** It requires `CONFIG_ADC=y` (not currently present),
@@ -68,8 +70,8 @@ Adapter probe.
 | Phase 11A | `CLOSED_DOCS_ONLY` | `DEVKIT_PROGRESS_PHASE_11_20.md` `<a id="phase-11a">` |
 | Sensor surface classification | `SENSOR_SURFACE_DECIDED_ADAPTER_PROBE` | `PHASE_11A_ADAPTER_BOUNDARY_SENSOR_SURFACE.md` §F |
 | `T` status | `USER_DECISION_REQUIRED` / not implemented | `COMMAND_SET_DRAFT.md` Section B `T` row |
-| `CONFIG_I2C` in `devkit/prj.conf` | `y` (pre-existing from Phase 4 bringup, `43de448`) | `devkit/prj.conf` line 19 |
-| `CONFIG_SPI` in `devkit/prj.conf` | `y` (pre-existing from Phase 4 bringup, `43de448`) | `devkit/prj.conf` line 20 |
+| `CONFIG_I2C` in `devkit/prj.conf` | **not present** (verified against Phase 4 bringup `43de448` and current HEAD; earlier draft "pre-existing" claim was incorrect — corrected docs-only) | `devkit/prj.conf` |
+| `CONFIG_SPI` in `devkit/prj.conf` | **not present** (verified against Phase 4 bringup `43de448` and current HEAD; earlier draft "pre-existing" claim was incorrect — corrected docs-only) | `devkit/prj.conf` |
 | `CONFIG_SENSOR` in `devkit/prj.conf` | **not present** | `devkit/prj.conf` grep |
 | `CONFIG_ADC` in `devkit/prj.conf` | **not present** | `devkit/prj.conf` grep |
 | DTS overlay in `devkit/` | **none present** (confirmed by grep) | filesystem audit |
@@ -88,10 +90,10 @@ Adapter probe.
 | Candidate | Device required? | Purchase required? | Local DTS evidence | Local driver evidence | Overlay / DTS change required? | `prj.conf` impact (future Phase 11D) | Risk | Adapter evidence value | Recommendation |
 |---|---|---|---|---|---|---|---|---|---|
 | **1. STM32 internal die temp / ADC** | No (internal to STM32F411) | No | `die_temp` node in `stm32f411.dtsi`; uses `io-channels = <&adc1 18>`; no compatible string matching `stm32_temp` driver; `adc1` is disabled in parent DTSI | `stm32_temp` driver at `zephyr/drivers/sensor/stm32_temp/`, present locally | Yes — must enable `adc1`, add compatible string to `die_temp` node, or add DT alias; requires DTS overlay | `CONFIG_ADC=y` + `CONFIG_STM32_TEMP=y` + `CONFIG_SENSOR=y` | Medium — ADC configuration, DTS overlay work, verify adc1 availability on F411 | Moderate — proves ADC path but channel 18 (internal temp) is the most constrained ADC use case | **FEASIBLE_AFTER_DRIVER_VERIFICATION** |
-| **2. On-board `lsm303agr_accel` (lis2dh driver)** | No (on-board, all board revisions) | **No** | `lsm303agr_accel` node in `stm32f411e_disco.dts`, `status = "okay"`, I2C1 SCL/SDA already configured; B-rev overlay swaps to `lsm303dlhc_accel` (same lis2dh driver) | `lis2dh` driver at `zephyr/drivers/sensor/lis2dh/`, present, **self-contained** (CMakeLists: own .c files only; no hal_st); sample at `zephyr/samples/sensor/lis2dh/` confirms `CONFIG_I2C=y + CONFIG_SENSOR=y` | **No** — sensor node already in upstream board DTS | `CONFIG_SENSOR=y` (only addition needed; `CONFIG_I2C=y` already present) | **Low** — established upstream path; sample exists; driver self-contained | **High** — proves I2C bus-backed driver-dependent read, the largest open Adapter gap | **FEASIBLE_NOW_NO_PURCHASE** ✓ RECOMMENDED |
+| **2. On-board `lsm303agr_accel` (lis2dh driver)** | No (on-board, all board revisions) | **No** | `lsm303agr_accel` node in `stm32f411e_disco.dts`, `status = "okay"`, I2C1 SCL/SDA already configured; B-rev overlay swaps to `lsm303dlhc_accel` (same lis2dh driver) | `lis2dh` driver at `zephyr/drivers/sensor/lis2dh/`, present, **self-contained** (CMakeLists: own .c files only; no hal_st); sample at `zephyr/samples/sensor/lis2dh/` confirms `CONFIG_I2C=y + CONFIG_SENSOR=y` | **No** — sensor node already in upstream board DTS | `CONFIG_I2C=y` + `CONFIG_SENSOR=y` (both required for Phase 11D; both currently absent from `devkit/prj.conf`) | **Low** — established upstream path; sample exists; driver self-contained | **High** — proves I2C bus-backed driver-dependent read, the largest open Adapter gap | **FEASIBLE_NOW_NO_PURCHASE** ✓ RECOMMENDED |
 | **3. On-board `lsm303agr_magn` (lis2mdl driver)** | No (on-board) | No | `lsm303agr_magn` node in `stm32f411e_disco.dts`, `status = "okay"`, I2C1 | `lis2mdl` driver at `zephyr/drivers/sensor/lis2mdl/`; **BLOCKED** — Kconfig requires `ZEPHYR_HAL_ST_MODULE` + `HAS_STMEMSC`; `hal_st` is not in workspace | No | `CONFIG_SENSOR=y` + `CONFIG_LIS2MDL=y` + `hal_st` module added to west.yml | **Blocked** — requires `west.yml` change + `west update` to fetch `hal_st` | High (if hal_st added) | **NOT_RECOMMENDED_NOW** |
 | **4. External I2C sensor module** | Yes (external breakout board) | **Yes** | None | Many options (BME280, SHT31, etc.) locally present in Zephyr sensor drivers | Yes — DTS overlay for external sensor node | `CONFIG_SENSOR=y` + specific driver | Medium — purchase + wiring + overlay | High | **FEASIBLE_AFTER_PURCHASE** (defer until on-board options exhausted) |
-| **5. External SPI sensor module** | Yes (external breakout board) | **Yes** | No SPI sensor node in board DTS | Multiple SPI sensor drivers locally present | Yes — SPI bus not configured for sensor use in board DTS | `CONFIG_SENSOR=y` + `CONFIG_SPI=y` already present + specific driver | Medium-High — SPI bus config, pin assignment, DTS overlay | Moderate (SPI bus already proven via `CONFIG_SPI=y`) | **FEASIBLE_AFTER_PURCHASE** (lower priority than I2C path) |
+| **5. External SPI sensor module** | Yes (external breakout board) | **Yes** | No SPI sensor node in board DTS | Multiple SPI sensor drivers locally present | Yes — SPI bus not configured for sensor use in board DTS | `CONFIG_SENSOR=y` + `CONFIG_SPI=y` (neither currently enabled in `devkit/prj.conf`) + specific driver | Medium-High — SPI bus config, pin assignment, DTS overlay | Moderate — SPI driver subsystem available in upstream Zephyr but not yet enabled for RobotOS | **FEASIBLE_AFTER_PURCHASE** (lower priority than I2C path) |
 | **6. F407 / custom board** | No | No | N/A | N/A | N/A | N/A | Per standing rule: HOLD/DEFER | N/A | **HOLD** |
 
 ---
@@ -199,13 +201,13 @@ handles both. Phase 11C should state the target board revision explicitly.
 | Kconfig gate | `menuconfig LIS2DH`; `default y`; `depends on DT_HAS_ST_LIS2DH_ENABLED` |
 | External module dependency | **None** — no `ZEPHYR_HAL_ST_MODULE` dependency |
 | `CONFIG_SENSOR` required? | **Yes** — top-level `drivers/sensor/Kconfig` wraps all sensor drivers under `menuconfig SENSOR` with an `if SENSOR` gate |
-| `CONFIG_I2C` required? | `select I2C` when on I2C bus (already `y` in `prj.conf`) |
+| `CONFIG_I2C` required? | **Yes** — driver Kconfig `select I2C if $(dt_compat_on_bus,$(DT_COMPAT_ST_LIS2DH),i2c)`; `CONFIG_I2C` is **not currently enabled** in `devkit/prj.conf` and must be added in Phase 11D |
 | `CONFIG_ADC` required? | No |
 | DTS overlay required? | **No** — sensor node already in upstream board DTS with `status = "okay"` |
 | Sample | `zephyr/samples/sensor/lis2dh/` — `prj.conf`: `CONFIG_I2C=y; CONFIG_SENSOR=y` |
 | Sample `depends_on` | `i2c` and `lis2dh` |
 | Trigger mode for probe | Use `CONFIG_LIS2DH_TRIGGER_NONE=y` (default choice = trigger none is first in the Kconfig `choice`; simplest for a polled bounded probe) |
-| Files likely touched in Phase 11D | `devkit/prj.conf` (add `CONFIG_SENSOR=y`); `devkit/src/devkit_app_state.c` + `devkit_uart_producer.c` (add `case 't':` arm); no new file required if a minimal probe is chosen |
+| Files likely touched in Phase 11D | `devkit/prj.conf` (add `CONFIG_I2C=y` + `CONFIG_SENSOR=y`); `devkit/src/devkit_app_state.c` + `devkit_uart_producer.c` (add `case 't':` arm); no new file required if a minimal probe is chosen |
 | Available channels | `SENSOR_CHAN_ACCEL_XYZ` (3-axis integer fixed-point via `struct sensor_value`) |
 | Board revision compatibility | **Both A/D and B revisions** — B-rev accel is also "st,lis2dh" per `_B.overlay` |
 
@@ -314,8 +316,12 @@ Phase 11D code is written:
    increments per `t` command; `state` unchanged; `transitions` unchanged;
    `ignored` unchanged; `dropped=0`; CFSR/HFSR = 0x00000000.
 
-8. **`prj.conf` additions.** `CONFIG_SENSOR=y`. Optionally `CONFIG_LIS2DH_TRIGGER_NONE=y`
-   (if not already the default for the build). No `CONFIG_ADC`. No `CONFIG_CBPRINTF_FP_SUPPORT`.
+8. **`prj.conf` additions.** `CONFIG_I2C=y` and `CONFIG_SENSOR=y` (both
+   required; neither currently enabled in `devkit/prj.conf`). Optionally
+   `CONFIG_LIS2DH_TRIGGER_NONE=y` (if not already the default for the
+   build). No `CONFIG_ADC`. No `CONFIG_SPI`. No
+   `CONFIG_CBPRINTF_FP_SUPPORT` (Phase 11D must emit raw `val1`/`val2`
+   without floating-point printf).
 
 9. **Overlay.** None required. The sensor node is already in the upstream board DTS.
 
@@ -376,7 +382,7 @@ probe.
 - No DTS overlay needed.
 - No hardware change needed.
 - Driver is locally present and self-contained.
-- Only `prj.conf` addition: `CONFIG_SENSOR=y` (Phase 11D only, not now).
+- Required `prj.conf` additions: `CONFIG_I2C=y` + `CONFIG_SENSOR=y` (Phase 11D only, not now; both currently absent from `devkit/prj.conf`).
 - Board revision note: user must confirm A/D vs B revision before Phase 11C spec freezes
   the exact DTS alias target.
 
