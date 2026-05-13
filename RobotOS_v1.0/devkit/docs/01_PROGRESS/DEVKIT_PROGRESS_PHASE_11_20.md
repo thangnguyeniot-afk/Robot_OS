@@ -122,6 +122,7 @@ table contains only the reserved placeholders.
 | 12F | Framework Application Bridge Host Prototype | CLOSED_WITH_HOST_TEST_EVIDENCE | [->](#phase-12f) |
 | 12G-pre | Devkit Integration Mode Decision (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12g-pre) |
 | 12G | Separate Application Mode / Application Boundary Planning (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12g) |
+| 12H-pre | First Application Candidate / Product Harness Selection (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12h-pre) |
 | 20Z | RESERVED -- future checkpoint / closeout slot | NOT_STARTED | [->](#phase-20z) |
 
 When future phases are added:
@@ -2197,8 +2198,180 @@ Product Harness Selection** (docs-only) only on **explicit user
 authorization**. The recommended scope, in-scope / non-goal list,
 and exit criteria are recorded in
 [`../02_PHASE_CLOSEOUTS/PHASE_12G_SEPARATE_APPLICATION_BOUNDARY_PLANNING.md`](../02_PHASE_CLOSEOUTS/PHASE_12G_SEPARATE_APPLICATION_BOUNDARY_PLANNING.md)
-§O. Phase 12H-pre **remains `NOT_STARTED`** at the close of Phase
-12G.
+§O. Phase 12H-pre **was opened** after this gate and is recorded in
+the entry below.
+
+---
+
+<a id="phase-12h-pre"></a>
+## Phase 12H-pre -- First Application Candidate / Product Harness Selection (docs-only)
+
+**Status:** `CLOSED_DOCS_ONLY`
+**Decision:** `PHASE_12H_PRE_RECOMMEND_PROBE_TRANSLATOR_APP`
+**Closeout:** [`../02_PHASE_CLOSEOUTS/PHASE_12H_PRE_FIRST_APPLICATION_CANDIDATE_SELECTION.md`](../02_PHASE_CLOSEOUTS/PHASE_12H_PRE_FIRST_APPLICATION_CANDIDATE_SELECTION.md)
+**New long-lived spec:** [`../03_SPECS/FIRST_APPLICATION_CANDIDATE_DRAFT.md`](../03_SPECS/FIRST_APPLICATION_CANDIDATE_DRAFT.md)
+**Date:** 2026-05-13
+
+### 12H-pre.1 Purpose
+
+Phase 12H-pre is the docs-only product / application planning gate
+that selects the first application candidate / product harness for
+the future `RobotOS_v1.0/app/<product>/` boundary reserved by Phase
+12G. It freezes the planning-level answer to "which first
+`<product>` placeholder, what kind of harness, what minimal state
+and event vocabulary, and what host-first validation plan?" before
+any `app/` directory or application source exists.
+
+Phase 12H-pre does not create source, does not modify Framework
+code, does not modify devkit runtime, does not modify
+`devkit_app_state`, does not change command semantics, does not run
+hardware, does not create the `app/` directory, and does not open
+Phase 12H or any implementation gate.
+
+### 12H-pre.2 Files added / modified
+
+- **New (2 docs):**
+  - `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12H_PRE_FIRST_APPLICATION_CANDIDATE_SELECTION.md`
+    -- decision closeout (sections A-Q).
+  - `RobotOS_v1.0/devkit/docs/03_SPECS/FIRST_APPLICATION_CANDIDATE_DRAFT.md`
+    -- new long-lived first-application-candidate spec
+    (`DRAFT / NON-FINAL`, sections 1-14).
+- **Modified:**
+  - `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md`
+    -- this entry + index row.
+  - `CURRENT_STATE.md` -- Phase 12H-pre as latest closed.
+  - `RobotOS_v1.0/devkit/docs/00_INDEX/README.md` -- Phase 12H-pre
+    closeout link + first-application-candidate spec link.
+  - `RobotOS_v1.0/devkit/docs/03_SPECS/FRAMEWORK_APPLICATION_BOUNDARY_DRAFT.md`
+    -- short cross-reference to the first-application-candidate
+    spec.
+- **Zero-diff held:**
+  - All `.c` and `.h` files under `framework/`, `core/`,
+    `platform/`, `devkit/src/`, `tests/`, `src/`,
+    `include/robotos/`.
+  - All `CMakeLists.txt`.
+  - All `prj.conf`, board DTS, overlay, Zephyr config files.
+  - All existing evidence logs.
+  - **No `app/` or `application/` directory created.**
+  - **No `app/probe_translator/` directory created.**
+
+### 12H-pre.3 Candidate first-app shapes evaluated
+
+Five candidates evaluated in the closeout §D:
+
+| # | Candidate | Product commitment | Validation strategy | Risk | Recommendation |
+|---|---|---|---|---|---|
+| 1 | `app/probe_translator/` | Minimal (neutral) | Host-first; clean | Low | **RECOMMENDED** |
+| 2 | `app/demo/` | Vague | Host-first; weak acceptance | Medium | Rejected (scope sink; reserved for future `examples/`) |
+| 3 | `app/devkit_shadow/` | Low | Cannot be host-first cleanly | High | Rejected (overrides Phase 12G-pre Mode 2 DEFER) |
+| 4 | `app/<real_product>/` | High | Needs product acceptance criteria | High | Rejected (premature; pending product direction) |
+| 5 | HOLD | None | None | Low short / Medium long | Acceptable fallback |
+
+### 12H-pre.4 Decision result
+
+**`PHASE_12H_PRE_RECOMMEND_PROBE_TRANSLATOR_APP`.** The first
+`<product>` placeholder under `RobotOS_v1.0/app/<product>/` is
+selected as `probe_translator`. Future first application harness
+lives at `RobotOS_v1.0/app/probe_translator/`. The harness is
+host-first, product-neutral, and synthetic-event-driven. The
+directory is reserved at planning depth and **not created** by
+Phase 12H-pre.
+
+### 12H-pre.5 Minimal state vocabulary (planning-level)
+
+| State | Meaning |
+|---|---|
+| `APP_IDLE` | Default after FSM init / `APP_EVT_RESET`. |
+| `APP_READY` | After `APP_EVT_CONFIGURED`. |
+| `APP_ACTIVE` | After `APP_EVT_START`. |
+| `APP_FAULT` (optional) | After `APP_EVT_FAULT`. May be deferred. |
+
+All names are application-local. Name overlap with
+`DEVKIT_APP_STATE_IDLE / ARMED / ACTIVE` is coincidental at the
+human-readable level only; `devkit_app_state` is **not** consumed
+by the application.
+
+### 12H-pre.6 Minimal event vocabulary (planning-level)
+
+`APP_EVT_CONFIGURED / APP_EVT_START / APP_EVT_STOP / APP_EVT_FAULT
+(optional) / APP_EVT_RESET`. All synthetic at first. None map from a
+real core event, UART byte, button, or hardware producer. No new
+`ROBOTOS_EVENT_USER` subrange required.
+
+### 12H-pre.7 Minimal bridge mapping table (planning-level)
+
+| Row | `adapter_type` | `adapter_arg0` | `match_arg0` | `fw_event_id` |
+|---|---|---|---|---|
+| 0 | `ADAPTER_EVT_CONFIG` | `0` | `true` | `APP_EVT_CONFIGURED` |
+| 1 | `ADAPTER_EVT_CONFIG` | `1` (RESET) | `true` | `APP_EVT_RESET` |
+| 2 | `ADAPTER_EVT_COMMAND` | `0` (START) | `true` | `APP_EVT_START` |
+| 3 | `ADAPTER_EVT_COMMAND` | `1` (STOP) | `true` | `APP_EVT_STOP` |
+| 4 | `ADAPTER_EVT_FAULT` | any | `false` (wildcard) | `APP_EVT_FAULT` |
+
+Planning-only; no source exists. `ADAPTER_EVT_*` tags are
+application-local numeric constants, not core allocations. FIFO row
+order matters (Phase 12F §5.3); specific rows ahead of wildcard
+rows.
+
+### 12H-pre.8 Host mapping test plan (planning-level)
+
+Future host test
+`tests/host/test_app_probe_translator_mapping.c` (when authorized)
+must cover at minimum: row-by-row mapping, wildcard precedence,
+unmapped-event accounting, full `IDLE -> READY -> ACTIVE -> READY
+-> IDLE` path, re-init idempotence, bridge reset policy, grep gates
+forbidding `devkit_app_state.h` / `a/s/r/?/x/v/L/d/T` references /
+Zephyr includes, and host regression preserved at >=22/22.
+
+### 12H-pre.9 Build strategy (preferred)
+
+**Option A** -- additive entry in existing
+`tests/host/CMakeLists.txt` (host test target). Same WSL Ubuntu /
+gcc 13.3.0 environment as Phase 12E / 12F. Option B (new
+`app/probe_translator/CMakeLists.txt`) acceptable but not preferred
+at first implementation. Option C (devkit integration) **not
+authorized**.
+
+### 12H-pre.10 Boundary preservation
+
+- `devkit_app_state` remains authoritative; not modified, not
+  consumed by `app/probe_translator/`. Scope-guard #11 re-affirmed.
+- Command set `a/s/r/?/x/v/L/d/T` unchanged; no UART command
+  added by Phase 12H-pre or by the future first application.
+- Architecture B (`src/`, `include/robotos/`) frozen; future
+  `app/probe_translator/` uses Architecture A contracts only.
+
+### 12H-pre.11 What remains NOT_STARTED
+
+1. Application implementation -- `NOT_STARTED`.
+2. `app/` directory creation -- `NOT_CREATED`.
+3. `app/probe_translator/` directory creation -- `NOT_CREATED`.
+4. Phase 12H -- `NOT_STARTED`; requires explicit user authorization.
+5. Numeric values for `APP_EVT_*` -- open for Phase 12H.
+6. Devkit hardware integration of Framework -- `NOT_STARTED`.
+7. Bridge ABI memory-layout lock -- `NOT_STARTED`.
+
+### 12H-pre.12 Open gates preserved unchanged
+
+- ACTIVE disarm widening -- `USER_DECISION_REQUIRED_ACTIVE_DISARM`.
+- Scheduler 7A/7B -- `DEFER`.
+- F407 / custom board -- `HOLD/DEFER`.
+- POST_FLASH_AUTOSTART -- `OPEN/MITIGATED_BY_WORKFLOW`.
+- Application / product layer -- `NOT_STARTED`; first `<product>`
+  placeholder = `probe_translator`.
+- Devkit integration of Framework -- `NOT_STARTED`.
+
+### 12H-pre.13 Next gate
+
+**Hold or open Phase 12H -- Probe Translator App Skeleton Planning
+(Variant 1, docs-only) or Probe Translator Host Prototype (Variant
+2, host-first implementation)** only on **explicit user
+authorization**. Variant 1 is preferred unless the user authorizes
+implementation directly. The recommended scope and exit criteria
+are recorded in
+[`../02_PHASE_CLOSEOUTS/PHASE_12H_PRE_FIRST_APPLICATION_CANDIDATE_SELECTION.md`](../02_PHASE_CLOSEOUTS/PHASE_12H_PRE_FIRST_APPLICATION_CANDIDATE_SELECTION.md)
+§P. Phase 12H **remains `NOT_STARTED`** at the close of Phase
+12H-pre.
 
 ---
 

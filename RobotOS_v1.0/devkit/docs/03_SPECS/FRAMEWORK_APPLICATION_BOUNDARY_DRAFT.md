@@ -6,12 +6,16 @@ between the Framework path (FSM + Application Event Bridge) and the
 future application / product layer. No `app/` or `application/`
 directory has been created, and no application `.c` / `.h` /
 `CMakeLists.txt` / README file exists.
-**Revision:** Phase 12G (2026-05-13, `CLOSED_DOCS_ONLY`;
-`PHASE_12G_RECOMMEND_APP_PRODUCT_PATH`) — initial draft.
-**Next revision condition:** Phase 12H-pre (when authorized) — when
-the first concrete product / app name is selected, this spec gains
-the resolved `<product>` placeholder and the first minimal mapping
-vocabulary.
+**Revision:** Phase 12H-pre (2026-05-13, `CLOSED_DOCS_ONLY`;
+`PHASE_12H_PRE_RECOMMEND_PROBE_TRANSLATOR_APP`) — added cross-
+reference to the first-application-candidate spec
+[`FIRST_APPLICATION_CANDIDATE_DRAFT.md`](FIRST_APPLICATION_CANDIDATE_DRAFT.md);
+sections 2-12 otherwise unchanged from the Phase 12G initial draft
+(`PHASE_12G_RECOMMEND_APP_PRODUCT_PATH`).
+**Next revision condition:** Phase 12H (when authorized) — when the
+first `app/probe_translator/` source / skeleton is frozen or
+implemented, this spec gains the materialized file list, build
+option (A or B), and the first concrete consumer cross-reference.
 
 > **No application implementation exists.** The path
 > `RobotOS_v1.0/app/<product>/` is *reserved at planning depth*, not

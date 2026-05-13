@@ -9,6 +9,122 @@
 
 ## Last Closed Phase
 
+### Phase 12H-pre — First Application Candidate / Product Harness Selection (docs-only)
+
+- **Date:** 2026-05-13
+- **Type:** Docs-only product / application planning gate. **No source, runtime, test, CMake, Zephyr, board, `prj.conf`, DTS overlay, evidence log, Framework header, Framework `.c` file, devkit integration, command-set, or `devkit_app_state` change.** No file under `framework/`, `tests/`, `core/`, `platform/`, `devkit/src/`, `src/`, `include/robotos/` modified. **No `app/` or `application/` directory created. No `app/probe_translator/` directory created.**
+- **Close status:** `CLOSED_DOCS_ONLY`
+- **Decision result:** `PHASE_12H_PRE_RECOMMEND_PROBE_TRANSLATOR_APP`
+- **Published baseline at open:** `origin/master = 629e062`
+- **Closeout doc:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12H_PRE_FIRST_APPLICATION_CANDIDATE_SELECTION.md`
+- **New long-lived spec draft:** `RobotOS_v1.0/devkit/docs/03_SPECS/FIRST_APPLICATION_CANDIDATE_DRAFT.md` (`DRAFT / NON-FINAL`; no application implementation exists; spec for the first application candidate `probe_translator`).
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md` `<a id="phase-12h-pre"></a>`
+
+#### First application candidate selected
+
+**`PHASE_12H_PRE_RECOMMEND_PROBE_TRANSLATOR_APP`** — The first `<product>` placeholder under `RobotOS_v1.0/app/<product>/` is selected as `probe_translator`. Future first application harness lives at `RobotOS_v1.0/app/probe_translator/`. The harness is host-first, product-neutral, and synthetic-event-driven. The directory is **reserved at planning depth and NOT created**. Phase 12H, when authorized, should either:
+
+- (Variant 1, preferred) be docs-only — freeze the exact file list, function signatures, build wiring choice (Option A preferred), and host test case list before any source lands; or
+- (Variant 2) be a host-first implementation — create `app/probe_translator/probe_translator.{c,h}`, add a new host test target under `tests/host/CMakeLists.txt` (Option A), and produce host evidence under WSL Ubuntu / gcc 13.3.0.
+
+Phase 12H **remains `NOT_STARTED`** at the close of Phase 12H-pre.
+
+#### Candidate first-app shapes evaluated
+
+| # | Candidate | Product commitment | Validation strategy | Risk | Verdict |
+|---|---|---|---|---|---|
+| 1 | `app/probe_translator/` | Minimal (neutral) | Host-first; clean | Low | **RECOMMENDED** |
+| 2 | `app/demo/` | Vague | Host-first; weak acceptance | Medium | Rejected (scope sink; reserved for future `examples/`) |
+| 3 | `app/devkit_shadow/` | Low | Cannot be host-first cleanly | High | Rejected (overrides Phase 12G-pre Mode 2 DEFER) |
+| 4 | `app/<real_product>/` | High | Needs product acceptance criteria | High | Rejected (premature; pending product direction) |
+| 5 | HOLD | None | None | Low short / Medium long | Acceptable fallback |
+
+Full evaluation in the closeout §D.
+
+#### Minimal state / event / mapping (planning-level)
+
+**States:** `APP_IDLE / APP_READY / APP_ACTIVE` + optional `APP_FAULT`. All application-local. Name overlap with `DEVKIT_APP_STATE_IDLE / ARMED / ACTIVE` is coincidental at the human-readable level only.
+
+**Events:** `APP_EVT_CONFIGURED / APP_EVT_START / APP_EVT_STOP / APP_EVT_FAULT (optional) / APP_EVT_RESET`. All synthetic at first. None map from real core events, UART bytes, buttons, or hardware producers. No new `ROBOTOS_EVENT_USER` subrange required.
+
+**Mapping table (planning-only; no source):**
+
+| Row | `adapter_type` | `adapter_arg0` | `match_arg0` | `fw_event_id` |
+|---|---|---|---|---|
+| 0 | `ADAPTER_EVT_CONFIG` | `0` | `true` | `APP_EVT_CONFIGURED` |
+| 1 | `ADAPTER_EVT_CONFIG` | `1` (RESET) | `true` | `APP_EVT_RESET` |
+| 2 | `ADAPTER_EVT_COMMAND` | `0` (START) | `true` | `APP_EVT_START` |
+| 3 | `ADAPTER_EVT_COMMAND` | `1` (STOP) | `true` | `APP_EVT_STOP` |
+| 4 | `ADAPTER_EVT_FAULT` | any | `false` (wildcard) | `APP_EVT_FAULT` |
+
+#### Build strategy preferred
+
+**Option A** — additive entry inside the existing `tests/host/CMakeLists.txt` (host test target). Same WSL Ubuntu / gcc 13.3.0 environment as Phase 12E / 12F. Option B (new `app/probe_translator/CMakeLists.txt`) acceptable but not preferred. Option C (devkit integration) **not authorized**.
+
+#### Relationship to `devkit_app_state` (scope-guard #11 preserved)
+
+- `devkit_app_state` remains **authoritative** for the current devkit runtime. Phase 12H-pre does **not** modify, replace, shadow, copy, or promote it.
+- `app/probe_translator/`, when created, **must not** include `devkit_app_state.h`, must not call any `devkit_*` function, and must not read or write `devkit_app_state` snapshots.
+- The application's `APP_IDLE / APP_READY / APP_ACTIVE / APP_FAULT` states are application-local; name overlap with `DEVKIT_APP_STATE_IDLE / ARMED / ACTIVE` is human-readable only.
+- No `?` response change. No `a/s/r/?/x/v/L/d/T` semantic change.
+- Scope-guard #11 remains active.
+
+#### Relationship to command set
+
+- `a / s / r / ? / x / v / L / d / T` remain the **devkit / probe surface**. Validated through Phase 11Z.
+- `app/probe_translator/` **does not** define a UART command. It has no UART surface at the first host implementation phase.
+- Framework is not exposed via UART automatically (bridge has no UART surface; Phase 12F locked).
+- All 12 UART TX scope-guard constraints from `PHASE_9EZ_CHECKPOINT.md §H` preserved.
+
+#### Relationship to legacy Architecture B
+
+- `src/`, `include/robotos/`, and root `RobotOS_v1.0/CMakeLists.txt` remain frozen at `LEGACY_SCAFFOLD_MARKED_FROZEN_DOCS_ONLY` (Phase 12D-pre).
+- The future `app/probe_translator/` directory does **not** reuse `src/app/`, `include/robotos/app*`, or any other Architecture B artifact. It uses Architecture A contracts only.
+- No Architecture A ↔ Architecture B reconciliation in Phase 12H-pre.
+
+#### What is preserved unchanged at Phase 12H-pre
+
+- All `.c` and `.h` files in the repo — zero-diff.
+- `framework/robotos_fw_fsm.{h,c}`, `framework/robotos_fw_event_bridge.{h,c}`, `framework/README.md` — zero-diff.
+- All `CMakeLists.txt` (root, `devkit/`, `tests/`, `tests/host/`) — zero-diff.
+- All tracked test files under `tests/` — zero-diff.
+- `core/`, `platform/`, `devkit/src/`, board DTS/overlays, Zephyr workspace — zero-diff.
+- `src/`, `include/robotos/`, `include/app/` — zero-diff.
+- Architecture B legacy notices — zero-diff.
+- All evidence logs — zero-diff.
+- All prior closeout docs — not rewritten.
+- **No `app/` directory created.** `RobotOS_v1.0/app/` does not exist.
+- **No `app/probe_translator/` directory created.**
+- Framework FSM host test (Phase 12E, 93/93), bridge host test (Phase 12F, 103/103), and full host regression (Phase 12F, 22/22) remain the latest tracked evidence.
+
+#### Remaining decisions (all preserved unchanged at Phase 12H-pre)
+
+1. ACTIVE disarm widening — `USER_DECISION_REQUIRED_ACTIVE_DISARM`
+2. Scheduler 7A/7B — `DEFER`
+3. F407 / custom board — `HOLD/DEFER`
+4. POST_FLASH_AUTOSTART root cause — `OPEN` / `MITIGATED_BY_WORKFLOW`
+5. Application / product layer — `NOT_STARTED`; first `<product>` placeholder = `probe_translator`; `app/` directory remains `NOT_CREATED`; `app/probe_translator/` remains `NOT_CREATED`
+6. Devkit integration of Framework FSM + bridge — `NOT_STARTED`; recommended mode = SEPARATE APPLICATION (Phase 12G-pre Mode 4)
+7. Architecture A ↔ Architecture B reconciliation — `NOT_STARTED`; out of scope
+8. Concrete numeric values for `APP_EVT_*` — open for Phase 12H
+9. Whether `APP_FAULT` ships in the first implementation or is deferred — open for Phase 12H
+10. Whether `probe_translator.c` and `probe_translator_mapping.c` are split into two TUs or kept as one — open for Phase 12H
+11. Final names for `ADAPTER_EVT_CONFIG / _COMMAND / _FAULT` and arg0 enum constants — open for Phase 12H
+12. Whether Phase 12H is docs-only (Variant 1) or implementation (Variant 2) — user decision before Phase 12H opens
+13. Exact CMake wiring choice (Option A: additive entry in `tests/host/CMakeLists.txt`; Option B: new `app/probe_translator/CMakeLists.txt`; Option C: devkit integration not authorized) — open for the first application implementation phase
+14. Whether the first application is also a hardware-runnable Zephyr application or strictly host-only at first — open for the first application implementation phase
+15. Whether to introduce `RobotOS_v1.0/examples/` for sample integrations in addition to `app/<product>/` — open for a future docs-only phase
+16. Multi-product coordination rules — open; reachable only after at least two applications exist
+17. Bridge ABI memory-layout lock — `NOT_STARTED`; only names + signatures are `LOCKED-AT-12F`
+
+#### Next gate
+
+**Hold.** Phase 12H — Probe Translator App Skeleton Planning (Variant 1, docs-only) or Probe Translator Host Prototype (Variant 2, host-first implementation) may open only on **explicit user authorization** AND with the recommended scope from §P of the Phase 12H-pre closeout. Variant 1 is preferred unless the user authorizes implementation directly. Phase 12H remains `NOT_STARTED`. If the user prefers to hold instead, no next phase is required — the first-application-candidate spec sits at planning depth indefinitely. Replacement / shadow / direct devkit integration modes remain blocked by Phase 12G-pre's enumeration.
+
+---
+
+## Prior Closed Phase
+
 ### Phase 12G — Separate Application Mode / Application Boundary Planning (docs-only)
 
 - **Date:** 2026-05-13
