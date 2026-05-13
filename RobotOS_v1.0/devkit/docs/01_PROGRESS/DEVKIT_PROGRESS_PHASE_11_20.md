@@ -119,6 +119,7 @@ table contains only the reserved placeholders.
 | 12E-pre | Framework FSM Consumer / Test Plan (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12e-pre) |
 | 12E | Framework FSM Host-Test Implementation | CLOSED_WITH_HOST_TEST_EVIDENCE | [->](#phase-12e) |
 | 12F-pre | Application Bridge Planning (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12f-pre) |
+| 12F | Framework Application Bridge Host Prototype | CLOSED_WITH_HOST_TEST_EVIDENCE | [->](#phase-12f) |
 | 20Z | RESERVED -- future checkpoint / closeout slot | NOT_STARTED | [->](#phase-20z) |
 
 When future phases are added:
@@ -1729,7 +1730,161 @@ recorded in
 [`../02_PHASE_CLOSEOUTS/PHASE_12F_PRE_APPLICATION_BRIDGE_PLANNING.md`](../02_PHASE_CLOSEOUTS/PHASE_12F_PRE_APPLICATION_BRIDGE_PLANNING.md)
 §L and the bridge contract is recorded in
 [`../03_SPECS/FRAMEWORK_APPLICATION_BRIDGE_DRAFT.md`](../03_SPECS/FRAMEWORK_APPLICATION_BRIDGE_DRAFT.md).
-Phase 12F **remains `NOT_STARTED`**.
+Phase 12F **remains `NOT_STARTED`** at the close of Phase 12F-pre.
+
+---
+
+<a id="phase-12f"></a>
+## Phase 12F -- Framework Application Bridge Host Prototype
+
+**Status:** `CLOSED_WITH_HOST_TEST_EVIDENCE`
+**Decision:** `PHASE_12F_APPLICATION_BRIDGE_HOST_PROTOTYPE_CLOSED`
+**Closeout:** [`../02_PHASE_CLOSEOUTS/PHASE_12F_APPLICATION_BRIDGE_HOST_PROTOTYPE.md`](../02_PHASE_CLOSEOUTS/PHASE_12F_APPLICATION_BRIDGE_HOST_PROTOTYPE.md)
+**Spec:** [`../03_SPECS/FRAMEWORK_APPLICATION_BRIDGE_DRAFT.md`](../03_SPECS/FRAMEWORK_APPLICATION_BRIDGE_DRAFT.md) (§5 now `LOCKED-AT-12F`)
+**Date:** 2026-05-13
+
+### 12F.1 Outcome
+
+Phase 12F implemented the Framework Application Event Bridge as a
+host-only prototype along the path Phase 12F-pre recommended. The
+bridge is a product-neutral mapping engine that translates Adapter
+event keys `(uint32_t adapter_type, uint32_t adapter_arg0)` into
+`robotos_fw_event_id_t` logical events and forwards them to a
+caller-owned `robotos_fw_fsm_t` via `robotos_fw_fsm_dispatch()`.
+
+### 12F.2 New / modified surfaces
+
+- **New (3 source files):**
+  - `RobotOS_v1.0/framework/robotos_fw_event_bridge.h` -- header.
+  - `RobotOS_v1.0/framework/robotos_fw_event_bridge.c` -- body.
+  - `RobotOS_v1.0/tests/host/test_robotos_fw_event_bridge.c` -- host
+    contract test.
+- **Modified (additive only):**
+  - `RobotOS_v1.0/tests/host/CMakeLists.txt` -- one new
+    `add_executable` + `add_test` block for
+    `robotos_fw_event_bridge_contract_test`. No existing target
+    altered.
+- **Zero-diff held:**
+  - `RobotOS_v1.0/framework/robotos_fw_fsm.h` (Phase 12D
+    LOCKED-AT-12D),
+  - `RobotOS_v1.0/framework/robotos_fw_fsm.c` (Phase 12E),
+  - `RobotOS_v1.0/framework/README.md`,
+  - `core/`, `platform/`, `devkit/src/`, `devkit/CMakeLists.txt`,
+  - root `RobotOS_v1.0/CMakeLists.txt` (Architecture B frozen),
+  - all `prj.conf`, board DTS, overlay files.
+
+### 12F.3 Public API (LOCKED-AT-12F for names + signatures)
+
+```c
+robotos_fw_status_t robotos_fw_event_bridge_init(
+    robotos_fw_event_bridge_t              *bridge,
+    const robotos_fw_event_bridge_config_t *config);
+robotos_fw_status_t robotos_fw_event_bridge_dispatch(
+    robotos_fw_event_bridge_t *bridge,
+    uint32_t                   adapter_type,
+    uint32_t                   adapter_arg0,
+    const void                *payload);
+robotos_fw_status_t robotos_fw_event_bridge_reset(
+    robotos_fw_event_bridge_t *bridge);
+robotos_fw_status_t robotos_fw_event_bridge_get_snapshot(
+    const robotos_fw_event_bridge_t    *bridge,
+    robotos_fw_event_bridge_snapshot_t *out);
+```
+
+Memory layout and behavioral guarantees beyond these signatures are
+still `DRAFT / EXPERIMENTAL`.
+
+### 12F.4 Behavior locked at Phase 12F
+
+- **Mapping:** FIFO first-match. Row order is the only precedence
+  rule -- a wildcard row (`match_arg0 == false`) shadows any
+  later exact-match row for the same type.
+- **Wildcard:** `match_arg0 == false` matches any `arg0` value for a
+  given `adapter_type`.
+- **Unmapped events:** silent OK + `unmapped_count++`; FSM is **not**
+  called.
+- **Payload:** borrowed `const void *` forwarded verbatim to
+  `robotos_fw_fsm_dispatch()`; bridge struct has no payload field.
+- **Status mapping:** reuses `robotos_core_status_t`. FSM non-OK
+  return propagates verbatim. No new enum.
+- **Reset:** zeroes bridge counters only; FSM state preserved.
+- **Re-init:** idempotent; FSM not touched.
+- **Threading:** thread context only. No critical section taken by
+  the bridge. No ISR support in Phase 12F.
+- **Counter invariant:**
+  `event_count == mapped_count + unmapped_count`.
+
+### 12F.5 Host evidence
+
+- **Environment:** WSL Ubuntu / gcc 13.3.0 / Unix Makefiles
+  (Phase 12E precedent). MSYS2 MinGW64 not used.
+- **Bridge direct run:** 17 cases / 103 assertions PASS, 0 FAIL.
+- **Full host regression:** 22/22 PASS (Phase 12E baseline 21/21 +
+  one new bridge ctest target).
+- **Tracked log:**
+  [`../../tests/host/logs/phase_12F_host_2026-05-13.log`](../../tests/host/logs/phase_12F_host_2026-05-13.log).
+
+### 12F.6 Coverage of Phase 12F-pre required behaviors
+
+| # | Required behavior | Verdict |
+|---|---|---|
+| 1-5, 7, 9-15 | Init validity, init NULL/invalid, mapped dispatch, unmapped ignored, payload borrowed, non-OK propagation, FIFO determinism, exact arg0, wildcard arg0, FIFO-beats-specificity, multi-mapping, bridge reset, snapshot, re-init | `ASSERTED_BY_TEST` (14 of 18 host-asserted) |
+| 6 | Bridge does not retain payload pointer | `ASSERTED_BY_TEST` (structural; TC08) |
+| 8, 16, 17, 18 | No UART/hardware/core registration; no `devkit_app_state` modification; no command semantic change; no heap | `REVIEW_VALIDATED` (no UART/hardware/registration/`devkit_app_state`/`malloc` symbol in any bridge file) |
+
+See the Phase 12F closeout §E for the full 18-item matrix.
+
+### 12F.7 Scope guards held
+
+- No devkit integration.
+- No UART command added; `a/s/r/?/x/v/L/d/T` unchanged.
+- No hardware run.
+- No `devkit_app_state` change. Scope-guard #11 re-affirmed.
+- No legacy Architecture B file changed.
+- No root or devkit CMake change.
+- No `core/` / `platform/` mutation.
+- No Zephyr / `prj.conf` / board change.
+- No heap allocation in bridge.
+- No Zephyr / devkit / legacy `ro_*` include in bridge.
+- ACTIVE disarm `USER_DECISION_REQUIRED_ACTIVE_DISARM` preserved.
+- Scheduler 7A/7B `DEFER` preserved.
+- F407 / custom board `HOLD/DEFER` preserved.
+- POST_FLASH_AUTOSTART `OPEN/MITIGATED_BY_WORKFLOW` preserved.
+- Application / product layer `NOT_STARTED` preserved.
+
+### 12F.8 Open items deferred from Phase 12F-pre §11
+
+- Open #4 (arg1 / hash matching) -- deferred to a later phase if a
+  use case appears.
+- Open #5 (fan-out single bridge -> multiple FSMs) -- deferred to
+  Phase 12G or later.
+- Open #7 (unmapped-event diagnostic hook) -- deferred to Phase 12G
+  or later.
+
+All other open decisions from Phase 12F-pre §11 are resolved at
+Phase 12F. See the bridge spec §11 for the full resolution table.
+
+### 12F.9 What remains NOT_STARTED
+
+1. Devkit integration of the Framework FSM + bridge --
+   `NOT_STARTED`. Three modes (shadow / replacement / separate
+   application) enumerated in Phase 12F-pre §G; each requires its
+   own future planning gate.
+2. Application / product layer -- `NOT_STARTED`.
+3. Hardware evidence for the Framework path -- `NOT_STARTED`. Phase
+   12F adds zero hardware runs. The Framework FSM + bridge have
+   host-test evidence only.
+4. Bridge ABI memory-layout lock -- `NOT_STARTED`. Only names and
+   signatures are locked.
+
+### 12F.10 Next gate
+
+**Hold or open a docs-only Phase 12G-pre devkit-integration-mode
+decision.** Do not open direct devkit integration without an
+explicit planning gate that chooses among shadow / replacement /
+separate application modes. A second viable next gate is additional
+host-only bridge behavior (e.g., `arg1` matching, unmapped-event
+diagnostic hook). Neither is authorized at this commit.
 
 ---
 

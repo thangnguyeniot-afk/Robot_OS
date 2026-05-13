@@ -9,6 +9,86 @@
 
 ## Last Closed Phase
 
+### Phase 12F — Framework Application Bridge Host Prototype (host-test evidence)
+
+- **Date:** 2026-05-13
+- **Type:** First Framework Application Bridge implementation phase. **Host-only prototype.** No devkit integration. No UART command. No Zephyr config change. No hardware run. No legacy Architecture B modification. No `core/`, `platform/`, `devkit/src/`, `devkit/CMakeLists.txt`, root `RobotOS_v1.0/CMakeLists.txt`, `framework/robotos_fw_fsm.h`, `framework/robotos_fw_fsm.c`, or `framework/README.md` change.
+- **Close status:** `CLOSED_WITH_HOST_TEST_EVIDENCE`
+- **Decision result:** `PHASE_12F_APPLICATION_BRIDGE_HOST_PROTOTYPE_CLOSED`
+- **Published baseline at open:** `origin/master = 023987a`
+- **Closeout doc:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12F_APPLICATION_BRIDGE_HOST_PROTOTYPE.md`
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md` `<a id="phase-12f"></a>`
+- **Tracked host log:** `RobotOS_v1.0/tests/host/logs/phase_12F_host_2026-05-13.log`
+
+#### Framework Application Bridge implementation status
+
+- **`HOST_TEST_VALIDATED_PROTOTYPE`.**
+- First Framework bridge module: `RobotOS_v1.0/framework/robotos_fw_event_bridge.c` (body) +`RobotOS_v1.0/framework/robotos_fw_event_bridge.h` (header — zero-diff against any prior Phase; this is its first appearance).
+- Public API (four functions, `LOCKED-AT-12F` for names + signatures): `robotos_fw_event_bridge_init`, `robotos_fw_event_bridge_dispatch`, `robotos_fw_event_bridge_reset`, `robotos_fw_event_bridge_get_snapshot`.
+- Memory layout / ABI: still `DRAFT / EXPERIMENTAL`.
+
+#### Host validation evidence
+
+- **Environment:** WSL Ubuntu / gcc 13.3.0 / Unix Makefiles (Phase 12E precedent; MSYS2 MinGW64 not used).
+- **Bridge contract test:** 17 cases / **103/103 assertions PASS, 0 FAIL** (`tests/host/test_robotos_fw_event_bridge.c`).
+- **Full host regression:** **22/22 PASS** (was 21/21 at Phase 12E; one additive ctest target — `robotos_fw_event_bridge_contract`).
+- **FSM regression:** 93/93 (unchanged from Phase 12E; FSM header + body zero-diff).
+- **Log convention:** `cmake --build … --target save_test_log` wrote `tests/host/logs/host_2026-05-13.log`; phase-tagged copy at `tests/host/logs/phase_12F_host_2026-05-13.log`.
+
+#### Bridge behavior locked at Phase 12F
+
+- **Mapping:** FIFO first-match; row order is the only precedence rule (wildcard rows at lower indices shadow exact-match rows at higher indices).
+- **Wildcard:** `match_arg0 == false` matches any `arg0` value for a given `adapter_type`.
+- **Unmapped events:** silent OK + `unmapped_count++`; FSM not called.
+- **Payload:** borrowed `const void *` forwarded verbatim; bridge struct has no payload field (structurally asserted by TC08).
+- **Status mapping:** reuses `robotos_core_status_t`; FSM non-OK propagates verbatim; no new enum.
+- **Reset:** zeroes bridge counters only; **FSM state preserved** (TC15).
+- **Re-init:** idempotent; FSM not touched (TC17).
+- **Threading:** thread context only; no critical section taken by the bridge; no ISR support.
+- **Counter invariant:** `event_count == mapped_count + unmapped_count`.
+
+#### Relationship to `devkit_app_state` (scope-guard #11 preserved)
+
+- `devkit_app_state` remains **authoritative** for the devkit runtime state machine (IDLE/ARMED/ACTIVE; owns `?` response, `a/s/r/d/t/T` byte handling, button cycle semantics).
+- Phase 12F host bridge prototype lives in a separate translation unit exercised **only** by a host test executable. No devkit producer file calls into the bridge in Phase 12F.
+- Three future devkit-integration modes (shadow, replacement, separate application) remain `UNDECIDED`; each requires its own future planning gate. None is authorized at this commit.
+
+#### Relationship to command set
+
+- `a / s / r / ? / x / v / L / d / T` unchanged. Bridge added zero UART commands; bridge surface is not reachable from UART RX or TX in Phase 12F.
+
+#### What is preserved unchanged at Phase 12F
+
+- Validated command set: `a / s / r / ? / x / v / L / d / T` (unchanged).
+- `devkit_app_state`: devkit-local; not promoted, not replaced, not copied (scope-guard #11 re-affirmed).
+- `T`: Adapter probe evidence (Phase 11E); not promoted.
+- All 12 UART TX scope-guard constraints from `PHASE_9EZ_CHECKPOINT.md §H` intact.
+- `framework/robotos_fw_fsm.h` (Phase 12D LOCKED-AT-12D), `framework/robotos_fw_fsm.c` (Phase 12E), `framework/README.md` — zero-diff.
+- `core/`, `platform/`, `devkit/src/`, `devkit/CMakeLists.txt`, root `RobotOS_v1.0/CMakeLists.txt` — zero-diff.
+- `tests/CMakeLists.txt`, all existing host test sources and targets — zero-diff (only `tests/host/CMakeLists.txt` modified, additively).
+- `src/`, `include/robotos/`, `include/app/` — zero-diff (Architecture B frozen at Phase 12D-pre).
+- All board DTS, overlays, `prj.conf`, Zephyr workspace files — zero-diff.
+- All evidence logs from prior phases — zero-diff.
+- All prior closeout docs — not rewritten.
+
+#### Remaining decisions (all preserved unchanged at Phase 12F)
+
+1. ACTIVE disarm widening — `USER_DECISION_REQUIRED_ACTIVE_DISARM`
+2. Scheduler 7A/7B — `DEFER`
+3. F407 / custom board — `HOLD/DEFER`
+4. POST_FLASH_AUTOSTART root cause — `OPEN` / `MITIGATED_BY_WORKFLOW`
+5. Application / product layer — `NOT_STARTED`
+6. Devkit integration of Framework FSM + bridge — `NOT_STARTED`; future planning gate required to choose a mode
+7. Architecture A ↔ Architecture B reconciliation — `NOT_STARTED`; out of scope
+8. Future devkit-integration mode (shadow / replacement / separate application) — `UNDECIDED`; each mode requires its own future planning phase
+9. Bridge ABI memory-layout lock — `NOT_STARTED`; only names + signatures are `LOCKED-AT-12F`
+
+#### Next gate
+
+**Hold or open a docs-only Phase 12G-pre devkit-integration-mode decision.** Do not open direct devkit integration without an explicit planning gate. A second viable next gate is additional host-only bridge behavior (e.g., `arg1` matching, unmapped-event diagnostic hook, fan-out). Neither is authorized at this commit. Phase 12G / 12G-pre / further bridge extension all remain `NOT_STARTED`.
+
+---
+
 ### Phase 12F-pre — Application Bridge Planning (docs-only)
 
 - **Date:** 2026-05-12

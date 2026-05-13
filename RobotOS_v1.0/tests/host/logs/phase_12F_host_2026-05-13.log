@@ -1,0 +1,1856 @@
+UpdateCTestConfiguration  from :/mnt/d/Robot_OS/build-phase12f-host/DartConfiguration.tcl
+UpdateCTestConfiguration  from :/mnt/d/Robot_OS/build-phase12f-host/DartConfiguration.tcl
+Test project /mnt/d/Robot_OS/build-phase12f-host
+Constructing a list of tests
+Done constructing a list of tests
+Updating test list for fixtures
+Added 0 tests to meet fixture requirements
+Checking test dependency graph...
+Checking test dependency graph end
+test 1
+      Start  1: robotos_core_contract
+
+1: Test command: /mnt/d/Robot_OS/build-phase12f-host/robotos_core_contract_test
+1: Working Directory: /mnt/d/Robot_OS/build-phase12f-host
+1: Test timeout computed to be: 10000000
+1: === robotos_core contract tests (Phase 4C) ===
+1: 
+1: [ Pre-init ]
+1:   PASS  TC01: version() != NULL
+1:   PASS  TC02: version() == "4B-contract"
+1:   PASS  TC03: initial state == UNINITIALIZED
+1:   PASS  TC04: initial tick_count() == 0
+1:   PASS  TC05: snapshot(NULL) returns ERR_NULL
+1:   PASS  TC06: tick() before init returns ERR_INVALID_STATE
+1:   PASS  TC07: tick_count() unchanged after invalid tick
+1:   PASS  TC08: snapshot() before init returns OK
+1:   PASS  TC09: snapshot.state == UNINITIALIZED before init
+1:   PASS  TC10: snapshot.tick_count == 0 before init
+1:   PASS  TC11: snapshot.init_count == 0 before init
+1:   PASS  TC12: snapshot.version == current version string
+1: 
+1: [ First init ]
+1:   PASS  TC13: first init() returns OK
+1:   PASS  TC14: state == READY after init
+1:   PASS  TC15: tick_count() == 0 after first init
+1:   PASS  TC16: snapshot.init_count == 1 after first init
+1:   PASS  TC17: snapshot.state == READY after first init
+1: 
+1: [ Ticks after init ]
+1:   PASS  TC18: first tick() returns OK
+1:   PASS  TC19: tick_count() == 1 after first tick
+1:   PASS  TC20: second tick() returns OK
+1:   PASS  TC21: tick_count() == 2 after second tick
+1:   PASS  TC22: tick_count() == 10 after 10 total ticks
+1: 
+1: [ Second init (idempotency) ]
+1:   PASS  TC23: second init() returns OK
+1:   PASS  TC24: state still READY after second init
+1:   PASS  TC25: tick_count() unchanged after second init (== 10)
+1:   PASS  TC26: snapshot.init_count == 2 after second init
+1:   PASS  TC27: snapshot.tick_count unchanged == 10
+1: 
+1: [ Ticks after re-init ]
+1:   PASS  TC28: tick() after second init returns OK
+1:   PASS  TC29: tick_count() == 11 — monotonic after re-init
+1:   PASS  TC30: tick_count() increments monotonically over 5 ticks
+1: 
+1: [ Final snapshot ]
+1:   PASS  TC31: final snapshot() returns OK
+1:   PASS  TC32: final snapshot.state == READY
+1:   PASS  TC33: final snapshot.tick_count == 16
+1:   PASS  TC34: final snapshot.init_count == 2
+1:   PASS  TC35: final snapshot.version == "4B-contract"
+1: 
+1: === Results: 35 passed, 0 failed ===
+ 1/22 Test  #1: robotos_core_contract .....................   Passed    0.01 sec
+test 2
+      Start  2: robotos_event_queue_contract
+
+2: Test command: /mnt/d/Robot_OS/build-phase12f-host/robotos_event_queue_contract_test
+2: Working Directory: /mnt/d/Robot_OS/build-phase12f-host
+2: Test timeout computed to be: 10000000
+2: === robotos_event_queue contract tests (Phase 4D) ===
+2: 
+2: [ NULL-safe queries ]
+2:   PASS  TC01: is_initialized(NULL) == false
+2:   PASS  TC02: is_empty(NULL) == true
+2:   PASS  TC03: is_full(NULL) == false
+2:   PASS  TC04: count(NULL) == 0
+2:   PASS  TC05: capacity(NULL) == 0
+2:   PASS  TC06: dropped_count(NULL) == 0
+2: 
+2: [ Pre-init contract ]
+2:   PASS  TC07: fresh zeroed queue is_initialized == false
+2:   PASS  TC08: init(NULL) returns ERR_NULL
+2:   PASS  TC09: push before init returns ERR_INVALID_STATE
+2:   PASS  TC10: pop before init returns ERR_INVALID_STATE
+2:   PASS  TC11: peek before init returns ERR_INVALID_STATE
+2:   PASS  TC12: clear before init returns ERR_INVALID_STATE
+2: 
+2: [ Init ]
+2:   PASS  TC13: init(valid) returns OK
+2:   PASS  TC14: after init: is_initialized == true
+2:   PASS  TC15: after init: is_empty == true
+2:   PASS  TC16: after init: is_full == false
+2:   PASS  TC17: after init: count == 0
+2:   PASS  TC18: after init: capacity == 16
+2:   PASS  TC19: after init: dropped_count == 0
+2: 
+2: [ NULL guards ]
+2:   PASS  TC20: push(NULL queue) returns ERR_NULL
+2:   PASS  TC21: push(NULL event) returns ERR_NULL
+2:   PASS  TC22: pop(NULL out) returns ERR_NULL
+2:   PASS  TC23: peek(NULL out) returns ERR_NULL
+2:   PASS  TC24: clear(NULL) returns ERR_NULL
+2: 
+2: [ Single push / peek / pop ]
+2:   PASS  TC25: push one event returns OK
+2:   PASS  TC26: count == 1 after push
+2:   PASS  TC27: is_empty == false after push
+2:   PASS  TC28: peek returns OK
+2:   PASS  TC29: peek returns correct event type
+2:   PASS  TC30: peek returns correct timestamp
+2:   PASS  TC31: peek returns correct arg0
+2:   PASS  TC32: count still 1 after peek (not consumed)
+2:   PASS  TC33: pop returns OK
+2:   PASS  TC34: popped event matches pushed event
+2:   PASS  TC35: count == 0 after pop
+2:   PASS  TC36: is_empty == true after pop
+2: 
+2: [ FIFO order ]
+2:   PASS  TC37: FIFO pop 1 — arg0 == 1
+2:   PASS  TC38: FIFO pop 2 — arg0 == 2
+2:   PASS  TC39: FIFO pop 3 — arg0 == 3
+2: 
+2: [ Ring buffer wrap-around ]
+2:   PASS  TC40: after push14/pop14 queue is empty
+2:   PASS  TC41: count == 5 after wrap push
+2:   PASS  TC42: wrap-around FIFO order preserved
+2:   PASS  TC43: count == 0 after draining wrapped events
+2: 
+2: [ Capacity / overflow / dropped ]
+2:   PASS  TC44: after filling: is_full == true
+2:   PASS  TC45: after filling: count == capacity
+2:   PASS  TC46: push when full returns ERR_FULL
+2:   PASS  TC47: dropped_count == 1 after overflow
+2:   PASS  TC48: count unchanged after overflow push
+2:   PASS  TC49: first popped event has arg0==0 (overflow did not overwrite)
+2:   PASS  TC50: queue empty after draining all
+2: 
+2: [ Empty queue behavior ]
+2:   PASS  TC51: pop empty returns ERR_EMPTY
+2:   PASS  TC52: peek empty returns ERR_EMPTY
+2: 
+2: [ Clear ]
+2:   PASS  TC53: count == 2 before clear
+2:   PASS  TC54: clear returns OK
+2:   PASS  TC55: count == 0 after clear
+2:   PASS  TC56: is_empty == true after clear
+2:   PASS  TC57: dropped_count preserved after clear
+2:   PASS  TC58: still initialized after clear
+2: 
+2: === Results: 58 passed, 0 failed ===
+ 2/22 Test  #2: robotos_event_queue_contract ..............   Passed    0.01 sec
+test 3
+      Start  3: robotos_event_dispatcher_contract
+
+3: Test command: /mnt/d/Robot_OS/build-phase12f-host/robotos_event_dispatcher_contract_test
+3: Working Directory: /mnt/d/Robot_OS/build-phase12f-host
+3: Test timeout computed to be: 10000000
+3: === robotos_event_dispatcher contract tests (Phase 4E) ===
+3: 
+3: [ NULL and pre-init guards ]
+3:   PASS  TC01: init(NULL dispatcher) returns ERR_NULL
+3:   PASS  TC02: init with NULL queue returns ERR_NULL
+3:   PASS  TC03: init with NULL handler returns ERR_NULL
+3:   PASS  TC04: init with uninitialized queue returns ERR_INVALID_STATE
+3:   PASS  TC05: is_initialized(NULL) == false
+3:   PASS  TC06: dispatched_count(NULL) == 0
+3:   PASS  TC07: handler_error_count(NULL) == 0
+3:   PASS  TC08: dispatch_one(NULL) returns ERR_NULL
+3:   PASS  TC09: dispatch_one before init returns ERR_INVALID_STATE
+3:   PASS  TC10: dispatch_all(NULL) returns ERR_NULL
+3:   PASS  TC11: dispatch_all before init returns ERR_INVALID_STATE
+3: 
+3: [ Valid init ]
+3:   PASS  TC12: valid init returns OK
+3:   PASS  TC13: after init: is_initialized == true
+3:   PASS  TC14: after init: dispatched_count == 0
+3:   PASS  TC15: after init: handler_error_count == 0
+3: 
+3: [ dispatch_one — empty queue ]
+3:   PASS  TC16: dispatch_one on empty queue returns ERR_EMPTY
+3:   PASS  TC17: handler not called when queue empty
+3: 
+3: [ dispatch_one — one event ]
+3:   PASS  TC18: dispatch_one with event returns OK
+3:   PASS  TC19: handler called exactly once
+3:   PASS  TC20: handler received correct event type
+3:   PASS  TC21: handler received correct timestamp
+3:   PASS  TC22: handler received correct arg0
+3:   PASS  TC23: handler received correct arg1
+3:   PASS  TC24: user_context passed correctly
+3:   PASS  TC25: event consumed from queue
+3:   PASS  TC26: dispatched_count == 1
+3:   PASS  TC27: handler_error_count unchanged == 0
+3: 
+3: [ FIFO order via dispatch_one ]
+3:   PASS  TC28: FIFO order preserved across 3 dispatch_one calls
+3:   PASS  TC29: dispatched_count == 4 after 4 total successes
+3: 
+3: [ dispatch_all — edge cases ]
+3:   PASS  TC30: dispatch_all with max_events=0 returns OK
+3:   PASS  TC31: dispatch_all with max_events>0 on empty queue returns ERR_EMPTY
+3: 
+3: [ dispatch_all — normal dispatch ]
+3:   PASS  TC32: dispatch_all drains fewer than max, returns OK
+3:   PASS  TC33: dispatch_all dispatched exactly 3 events
+3:   PASS  TC34: queue empty after dispatch_all
+3:   PASS  TC35: dispatch_all stops at max_events
+3:   PASS  TC36: exactly max_events dispatched
+3:   PASS  TC37: 2 events remain in queue after limited dispatch_all
+3: 
+3: [ Handler error behavior ]
+3:   PASS  TC38: dispatch_one returns handler's non-OK status
+3:   PASS  TC39: handler_error_count incremented
+3:   PASS  TC40: failing event was consumed (ec still in queue, count=1)
+3:   PASS  TC41: event after error-event still dispatched correctly
+3:   PASS  TC42: dispatch_all stops on first handler error
+3:   PASS  TC43: dispatched_count unchanged (first call failed)
+3:   PASS  TC44: handler_error_count incremented by 1
+3:   PASS  TC45: 2 remaining events still in queue
+3: 
+3: [ Re-init ]
+3:   PASS  TC46: re-init returns OK
+3:   PASS  TC47: dispatched_count reset to 0
+3:   PASS  TC48: handler_error_count reset to 0
+3:   PASS  TC49: re-init context is passed to handler
+3: 
+3: [ Queue state after dispatch ]
+3:   PASS  TC50: dropped_count > 0 after overflow
+3:   PASS  TC51: queue dropped_count unchanged after dispatch
+3: 
+3: [ Dispatch after clear ]
+3:   PASS  TC52: dispatch_one after clear returns ERR_EMPTY
+3: 
+3: [ Multiple event types ]
+3:   PASS  TC53: NONE event dispatched correctly
+3:   PASS  TC54: CORE_TICK event dispatched correctly
+3:   PASS  TC55: USER event dispatched with correct arg0
+3: 
+3: === Results: 55 passed, 0 failed ===
+ 3/22 Test  #3: robotos_event_dispatcher_contract .........   Passed    0.01 sec
+test 4
+      Start  4: robotos_core_ingestion_contract
+
+4: Test command: /mnt/d/Robot_OS/build-phase12f-host/robotos_core_ingestion_contract_test
+4: Working Directory: /mnt/d/Robot_OS/build-phase12f-host
+4: Test timeout computed to be: 10000000
+4: === robotos_core ingestion contract tests (Phase 4F) ===
+4: 
+4: [ Pre-init ]
+4:   PASS  TC01: pending_event_count() == 0 before init
+4:   PASS  TC02: dropped_event_count() == 0 before init
+4:   PASS  TC03: dispatched_event_count() == 0 before init
+4:   PASS  TC04: handler_error_count() == 0 before init
+4:   PASS  TC05: post_event(NULL) returns ERR_NULL
+4:   PASS  TC06: post_event(valid) before init returns ERR_INVALID_STATE
+4:   PASS  TC07: dispatch_events(0) before init returns ERR_INVALID_STATE
+4:   PASS  TC08: dispatch_events(1) before init returns ERR_INVALID_STATE
+4:   PASS  TC09: snapshot before init returns OK
+4:   PASS  TC10: snapshot.state == UNINITIALIZED
+4:   PASS  TC11: snapshot.pending_event_count == 0
+4:   PASS  TC12: snapshot.dropped_event_count == 0
+4:   PASS  TC13: snapshot.dispatched_event_count == 0
+4:   PASS  TC14: snapshot.handler_error_count == 0
+4: 
+4: [ After init ]
+4:   PASS  TC15: init() returns OK
+4:   PASS  TC16: state == READY
+4:   PASS  TC17: pending == 0 after init
+4:   PASS  TC18: dropped == 0 after init
+4:   PASS  TC19: dispatched == 0 after init
+4:   PASS  TC20: handler_errors == 0 after init
+4:   PASS  TC21: post_event(NULL) after init returns ERR_NULL
+4:   PASS  TC22: pending unchanged after NULL post
+4: 
+4: [ Post and dispatch ]
+4:   PASS  TC23: post one USER event returns OK
+4:   PASS  TC24: pending == 1 after one post
+4:   PASS  TC25: dropped unchanged == 0
+4:   PASS  TC26: dispatched unchanged == 0
+4:   PASS  TC27: dispatch_events(0) returns OK
+4:   PASS  TC28: pending unchanged == 1 after dispatch(0)
+4:   PASS  TC29: dispatched unchanged == 0 after dispatch(0)
+4:   PASS  TC30: dispatch_events(1) returns OK
+4:   PASS  TC31: pending == 0 after dispatch(1)
+4:   PASS  TC32: dispatched == 1 after dispatch(1)
+4:   PASS  TC33: handler_errors unchanged == 0
+4:   PASS  TC34: dispatch_events on empty queue returns ERR_EMPTY
+4:   PASS  TC35: dispatched unchanged == 1
+4: 
+4: [ Multiple post/dispatch ]
+4:   PASS  TC36: pending == 3 after 3 posts
+4:   PASS  TC37: pending == 1 after dispatch(2)
+4:   PASS  TC38: dispatched == 3 after dispatch(2)
+4:   PASS  TC39: pending == 0 after dispatch remaining
+4:   PASS  TC40: dispatched == 4 total
+4: 
+4: [ Full queue ]
+4:   PASS  TC41: pending == capacity after filling
+4:   PASS  TC42: post to full queue returns ERR_FULL
+4:   PASS  TC43: dropped == 1 after overflow
+4:   PASS  TC44: pending unchanged == capacity after overflow
+4:   PASS  TC45: dispatch_events(capacity) returns OK
+4:   PASS  TC46: pending == 0 after draining all
+4:   PASS  TC47: dispatched increased by capacity
+4: 
+4: [ Repeated init preserves queue ]
+4:   PASS  TC48: pending == 1 before re-init
+4:   PASS  TC49: pending still == 1 after re-init
+4:   PASS  TC50: dispatch after re-init returns OK
+4:   PASS  TC51: pending == 0 after dispatching
+4: 
+4: [ Snapshot after events ]
+4:   PASS  TC52: snapshot returns OK
+4:   PASS  TC53: snapshot.state == READY
+4:   PASS  TC54: snapshot.pending_event_count == 1
+4:   PASS  TC55: snapshot.dropped_event_count == 1 (from earlier overflow)
+4:   PASS  TC56: handler_error_count == 0 throughout
+4:   PASS  TC57: snapshot.version == "4B-contract"
+4: 
+4: === Results: 57 passed, 0 failed ===
+ 4/22 Test  #4: robotos_core_ingestion_contract ...........   Passed    0.01 sec
+test 5
+      Start  5: robotos_core_tick_policy_contract
+
+5: Test command: /mnt/d/Robot_OS/build-phase12f-host/robotos_core_tick_policy_contract_test
+5: Working Directory: /mnt/d/Robot_OS/build-phase12f-host
+5: Test timeout computed to be: 10000000
+5: === robotos_core tick policy contract tests (Phase 4G) ===
+5: 
+5: [ Pre-init tick guard ]
+5:   PASS  TC01: tick() before init returns ERR_INVALID_STATE
+5:   PASS  TC02: tick_count() == 0 before init
+5: 
+5: [ Max events per tick constant ]
+5:   PASS  TC03: ROBOTOS_CORE_MAX_EVENTS_PER_TICK >= 1
+5: 
+5: [ Tick on empty queue ]
+5:   PASS  TC04: tick() on empty queue returns OK (not ERR_EMPTY)
+5:   PASS  TC05: tick_count == 1 after first tick
+5:   PASS  TC06: pending == 0 after tick on empty
+5:   PASS  TC07: dispatched == 0 after tick on empty (no events to dispatch)
+5:   PASS  TC08: handler_errors == 0
+5: 
+5: [ Tick dispatches posted event ]
+5:   PASS  TC09: pending == 1 after post
+5:   PASS  TC10: tick() returns OK
+5:   PASS  TC11: tick_count == 2 after second tick
+5:   PASS  TC12: pending == 0 after tick consumed the event
+5:   PASS  TC13: dispatched == 1 after tick dispatch
+5:   PASS  TC14: handler_errors == 0
+5: 
+5: [ Tick bounded by MAX_EVENTS_PER_TICK ]
+5:   PASS  TC15: pending == 2 after two posts
+5:   PASS  TC16: tick() with 2 events returns OK
+5:   PASS  TC17: tick_count == 3
+5:   PASS  TC18: pending decremented by exactly MAX_EVENTS_PER_TICK
+5:   PASS  TC19: dispatched increased by exactly MAX_EVENTS_PER_TICK
+5:   PASS  TC20: second tick() returns OK
+5:   PASS  TC21: tick_count == 4
+5:   PASS  TC22: pending == 0 after second tick drains remainder
+5:   PASS  TC23: dispatched == 2 + 1 = 3 total
+5: 
+5: [ Explicit dispatch_events coexists with tick policy ]
+5:   PASS  TC24: pending == 3 after 3 posts
+5:   PASS  TC25: explicit dispatch_events(2) returns OK
+5:   PASS  TC26: pending == 1 after explicit dispatch(2)
+5:   PASS  TC27: dispatched increased by 2
+5:   PASS  TC28: tick drains remaining 1 event
+5:   PASS  TC29: dispatched increased by MAX_EVENTS_PER_TICK
+5: 
+5: [ Empty behavior difference: tick vs explicit ]
+5:   PASS  TC30: dispatch_events(1) on empty returns ERR_EMPTY
+5:   PASS  TC31: tick() on empty returns OK (normalised)
+5: 
+5: [ Full queue drained by ticks ]
+5:   PASS  TC32: pending == capacity after filling
+5:   PASS  TC33: extra post returns ERR_FULL
+5:   PASS  TC34: dropped_count == 1
+5:   PASS  TC35: tick from full queue reduces pending by MAX_EVENTS_PER_TICK
+5:   PASS  TC36+: tick returns OK even as queue empties
+5:   PASS  TC36+: tick returns OK even as queue empties
+5:   PASS  TC36+: tick returns OK even as queue empties
+5:   PASS  TC36+: tick returns OK even as queue empties
+5:   PASS  TC36+: tick returns OK even as queue empties
+5:   PASS  TC36+: tick returns OK even as queue empties
+5:   PASS  TC36+: tick returns OK even as queue empties
+5:   PASS  TC36+: tick returns OK even as queue empties
+5:   PASS  TC36+: tick returns OK even as queue empties
+5:   PASS  TC36+: tick returns OK even as queue empties
+5:   PASS  TC36+: tick returns OK even as queue empties
+5:   PASS  TC36+: tick returns OK even as queue empties
+5:   PASS  TC36+: tick returns OK even as queue empties
+5:   PASS  TC36+: tick returns OK even as queue empties
+5:   PASS  TC36+: tick returns OK even as queue empties
+5:   PASS  TC37: pending == 0 after draining via ticks
+5: 
+5: [ Repeated init: tick policy survives ]
+5:   PASS  TC38: pending == 1 before re-init
+5:   PASS  TC39: pending still == 1 after re-init
+5:   PASS  TC40: tick after re-init returns OK
+5:   PASS  TC41: pending == 0 after tick dispatched event
+5: 
+5: [ Handler error note ]
+5:   NOTE  TC42: handler error path not testable — internal handler always OK; no public handler override API yet.
+5: 
+5: === Results: 56 passed, 0 failed ===
+ 5/22 Test  #5: robotos_core_tick_policy_contract .........   Passed    0.01 sec
+test 6
+      Start  6: robotos_core_handler_policy_contract
+
+6: Test command: /mnt/d/Robot_OS/build-phase12f-host/robotos_core_handler_policy_contract_test
+6: Working Directory: /mnt/d/Robot_OS/build-phase12f-host
+6: Test timeout computed to be: 10000000
+6: === robotos_core handler policy contract tests (Phase 4H) ===
+6: 
+6: [ Pre-init guards ]
+6:   PASS  TC01: registered_handler_count == 0 before init
+6:   PASS  TC02: unhandled_event_count == 0 before init
+6:   PASS  TC03: has_handler(USER) == false before init
+6:   PASS  TC04: register before init returns ERR_INVALID_STATE
+6:   PASS  TC05: unregister before init returns ERR_INVALID_STATE
+6: 
+6: [ After init ]
+6:   PASS  TC06: registered_handler_count == 0 after init
+6:   PASS  TC07: unhandled_event_count == 0 after init
+6: 
+6: [ Register guards ]
+6:   PASS  TC08: register NULL handler returns ERR_NULL
+6:   PASS  TC09: register NONE type returns ERR_INVALID_ARG
+6: 
+6: [ Valid registration ]
+6:   PASS  TC10: register USER handler returns OK
+6:   PASS  TC11: has_handler(USER) == true
+6:   PASS  TC12: registered_handler_count == 1
+6:   PASS  TC13: has_handler(CORE_TICK) == false
+6: 
+6: [ Replacement ]
+6:   PASS  TC14: register USER again returns OK
+6:   PASS  TC15: count still 1 after replacement
+6:   PASS  TC16: has_handler(USER) still true
+6: 
+6: [ Dispatch routing ]
+6:   PASS  TC17: tick() returns OK
+6:   PASS  TC18: handler called exactly once
+6:   PASS  TC19: handler received correct event type
+6:   PASS  TC20: handler received correct arg0
+6:   PASS  TC21: handler received registered user_context
+6:   PASS  TC22: dispatched_count incremented
+6:   PASS  TC23: unhandled_event_count still 0 (event was handled)
+6: 
+6: [ Explicit dispatch routing ]
+6:   PASS  TC24: dispatch_events(1) returns OK
+6:   PASS  TC25: handler called once via explicit dispatch
+6:   PASS  TC26: unhandled still 0
+6: 
+6: [ Unregistered event type ]
+6:   PASS  TC27: tick with unregistered type returns OK
+6:   PASS  TC28: unhandled_event_count incremented
+6:   PASS  TC29: dispatch_count still incremented (event consumed by routing)
+6:   PASS  TC30: future/unknown type also increments unhandled_count
+6: 
+6: [ Unregister ]
+6:   PASS  TC31: unregister NONE returns ERR_INVALID_ARG
+6:   PASS  TC32: unregister USER returns OK
+6:   PASS  TC33: has_handler(USER) == false after unregister
+6:   PASS  TC34: registered_handler_count == 0
+6:   PASS  TC35: unregister USER again returns ERR_EMPTY
+6:   PASS  TC36: tick after unregister returns OK
+6:   PASS  TC37: unhandled_event_count incremented after unregister
+6: 
+6: [ Handler error ]
+6:   PASS  TC38: tick returns handler's non-OK status
+6:   PASS  TC39: handler_error_count incremented
+6:   PASS  TC40: core state remains READY
+6: 
+6: [ Handler table capacity ]
+6:   PASS  TC41: all MAX slots filled
+6:   PASS  TC42: register beyond capacity returns ERR_FULL
+6:   PASS  TC43: count unchanged after FULL
+6:   PASS  TC44: replacement at full capacity returns OK
+6:   PASS  TC45: count unchanged after replacement at capacity
+6: 
+6: [ Repeated init preserves handlers ]
+6:   PASS  TC46: handler count preserved after re-init
+6:   PASS  TC47: has_handler(CORE_TICK) still true after re-init
+6: 
+6: [ Snapshot ]
+6:   PASS  TC48: snapshot.registered_handler_count == current count
+6:   PASS  TC49: snapshot.unhandled_event_count == current unhandled
+6:   PASS  TC50: snapshot.state == READY
+6: 
+6: === Results: 50 passed, 0 failed ===
+ 6/22 Test  #6: robotos_core_handler_policy_contract ......   Passed    0.01 sec
+test 7
+      Start  7: robotos_platform_fault_contract
+
+7: Test command: /mnt/d/Robot_OS/build-phase12f-host/robotos_platform_fault_contract_test
+7: Working Directory: /mnt/d/Robot_OS/build-phase12f-host
+7: Test timeout computed to be: 10000000
+7: PASS: TC01 report_count starts at 0 after reset
+7: PASS: TC02 fault_report INFO increments report_count
+7: PASS: TC03 fault_report WARNING increments report_count
+7: PASS: TC04 fault_report ERROR increments report_count
+7: PASS: TC05 fault_report FATAL increments report_count
+7: PASS: TC06 last_severity reflects most recent report
+7: PASS: TC07 assert(true) returns true
+7: PASS: TC08 assert(true) does not increment report_count
+7: PASS: TC09 assert(false) returns false
+7: PASS: TC10 assert(false) increments assert_fail_count
+7: PASS: TC11 assert(false) reports ERROR severity
+7: PASS: TC12 assert(false) increments report_count
+7: 
+7: 12 passed, 0 failed
+ 7/22 Test  #7: robotos_platform_fault_contract ...........   Passed    0.01 sec
+test 8
+      Start  8: robotos_platform_critical_contract
+
+8: Test command: /mnt/d/Robot_OS/build-phase12f-host/robotos_platform_critical_contract_test
+8: Working Directory: /mnt/d/Robot_OS/build-phase12f-host
+8: Test timeout computed to be: 10000000
+8: === Phase 5D: Platform Critical Section Contract Tests ===
+8: 
+8: [PASS] TC01 initial enter_count == 0
+8: [PASS] TC01 initial exit_count == 0
+8: [PASS] TC01 initial current_depth == 0
+8: [PASS] TC01 initial max_depth == 0
+8: [PASS] TC02 enter_count == 1
+8: [PASS] TC02 current_depth == 1
+8: [PASS] TC02 max_depth == 1
+8: [PASS] TC03 token.opaque is nonzero
+8: [PASS] TC04 exit_count == 1
+8: [PASS] TC04 current_depth == 0 after exit
+8: [PASS] TC04 max_depth still 1
+8: [PASS] TC05 nested depth == 2
+8: [PASS] TC05 max_depth == 2
+8: [PASS] TC05 enter_count == 3 (one from TC02, two from TC05)
+8: [PASS] TC06 token opaque values are distinct (tok2 > tok)
+8: [PASS] TC07 depth == 1 after first exit
+8: [PASS] TC07 depth == 0 after second exit
+8: [PASS] TC07 exit_count == 3
+8: [PASS] TC08 extra exit at depth=0 does not underflow (depth stays 0)
+8: [PASS] TC08 exit_count incremented for extra exit
+8: [PASS] TC09 reset: enter_count == 0
+8: [PASS] TC09 reset: exit_count == 0
+8: [PASS] TC09 reset: current_depth == 0
+8: [PASS] TC09 reset: max_depth == 0
+8: [PASS] TC10 enter_count == 10
+8: [PASS] TC10 exit_count == 10
+8: [PASS] TC10 current_depth == 0
+8: [PASS] TC10 max_depth == 1 (non-nested)
+8: [PASS] TC11 token struct size == sizeof(uintptr_t)
+8: [PASS] TC12 depth == 3 after three nested enters
+8: [PASS] TC12 max_depth == 3
+8: [PASS] TC12 depth == 0 after all exits
+8: [PASS] TC12 max_depth remains 3 after exits
+8: 
+8: --- Critical Section Contract: 33 passed, 0 failed ---
+ 8/22 Test  #8: robotos_platform_critical_contract ........   Passed    0.01 sec
+test 9
+      Start  9: robotos_core_critical_boundary_contract
+
+9: Test command: /mnt/d/Robot_OS/build-phase12f-host/robotos_core_critical_boundary_contract_test
+9: Working Directory: /mnt/d/Robot_OS/build-phase12f-host
+9: Test timeout computed to be: 10000000
+9: === Phase 5E: Core Critical Boundary Contract Tests ===
+9: 
+9: [PASS] TC01 initial enter_count == 0
+9: [PASS] TC01 initial exit_count == 0
+9: [PASS] TC01 initial current_depth == 0
+9: [PASS] TC02 snapshot(NULL) returns ERR_NULL
+9: [PASS] TC02 depth 0 after snapshot(NULL) (null checked before lock)
+9: [PASS] TC03 init returns OK
+9: [PASS] TC03 enter_count increased after init
+9: [PASS] TC03 enter == exit (balanced) after init
+9: [PASS] TC03 depth 0 after init
+9: [PASS] TC04 post_event returns OK
+9: [PASS] TC04 enter_count increased
+9: [PASS] TC04 enter == exit (balanced) after post_event
+9: [PASS] TC04 depth 0 after post_event
+9: [PASS] TC05 try_post_event returns OK
+9: [PASS] TC05 enter == exit (balanced) after try_post_event
+9: [PASS] TC05 depth 0 after try_post_event
+9: [PASS] TC06 post_event NONE returns ERR_INVALID_ARG
+9: [PASS] TC06 enter == exit (balanced) after invalid post
+9: [PASS] TC06 depth 0 after invalid post
+9: [PASS] TC07 try_post_event throttled returns ERR_THROTTLED
+9: [PASS] TC07 enter == exit (balanced) after throttle
+9: [PASS] TC07 depth 0 after throttle
+9: [PASS] TC08 snapshot returns OK
+9: [PASS] TC08 enter == exit (balanced) after snapshot
+9: [PASS] TC08 depth 0 after snapshot
+9: [PASS] TC08 snapshot state == READY
+9: [PASS] TC09 register_handler returns OK
+9: [PASS] TC09 enter == exit (balanced) after register
+9: [PASS] TC09 depth 0 after register
+9: [PASS] TC09b unregister_handler returns OK
+9: [PASS] TC09b enter == exit (balanced) after unregister
+9: [PASS] TC09b depth 0 after unregister
+9: [PASS] TC10 register depth-check handler
+9: [PASS] TC10 tick returns OK
+9: [PASS] TC10 handler was called
+9: [PASS] TC10 CRITICAL: depth == 0 inside handler (no lock held during callback)
+9: [PASS] TC10 enter == exit (balanced) after tick
+9: [PASS] TC10 depth 0 after tick
+9: [PASS] TC11 register depth-check handler
+9: [PASS] TC11 dispatch_events returns OK
+9: [PASS] TC11 handler was called in dispatch_events
+9: [PASS] TC11 CRITICAL: depth == 0 inside handler during dispatch_events
+9: [PASS] TC11 depth 0 after dispatch_events
+9: [PASS] TC12 depth 0 after 5x post+tick loop
+9: [PASS] TC12 enter == exit (balanced) after stress loop
+9: [PASS] TC13 repeated init returns OK
+9: [PASS] TC13 enter == exit (balanced) after repeated init
+9: [PASS] TC13 depth 0 after repeated init
+9: [PASS] TC13 admission_accepted not reset by repeated init
+9: 
+9: --- Core Critical Boundary Contract: 49 passed, 0 failed ---
+ 9/22 Test  #9: robotos_core_critical_boundary_contract ...   Passed    0.01 sec
+test 10
+      Start 10: robotos_scheduler_admission_contract
+
+10: Test command: /mnt/d/Robot_OS/build-phase12f-host/robotos_scheduler_admission_contract_test
+10: Working Directory: /mnt/d/Robot_OS/build-phase12f-host
+10: Test timeout computed to be: 10000000
+10: === Phase 4I: Scheduler Admission Policy Contract Tests ===
+10: 
+10: [PASS] pre-init: admission_accepted_count == 0
+10: [PASS] pre-init: admission_rejected_count == 0
+10: [PASS] pre-init: post returns ERR_INVALID_STATE
+10: [PASS] pre-init: admission counts unchanged after pre-init post
+10: [PASS] init returns OK
+10: [PASS] post-init: admission_accepted == 0
+10: [PASS] post-init: admission_rejected == 0
+10: [PASS] post NULL returns ERR_NULL
+10: [PASS] NULL: admission counts unchanged
+10: [PASS] post NONE returns ERR_INVALID_ARG
+10: [PASS] NONE: rejected_count == 1
+10: [PASS] NONE: accepted_count == 0
+10: [PASS] post reserved(2) returns ERR_INVALID_ARG
+10: [PASS] reserved(2): rejected_count == 2
+10: [PASS] post reserved(50) returns ERR_INVALID_ARG
+10: [PASS] reserved(50): rejected_count == 3
+10: [PASS] post reserved(99) returns ERR_INVALID_ARG
+10: [PASS] reserved(99): rejected_count == 4
+10: [PASS] after reserved posts: accepted_count still 0
+10: [PASS] post CORE_TICK returns OK
+10: [PASS] CORE_TICK: accepted_count == 1
+10: [PASS] CORE_TICK: rejected_count unchanged (4)
+10: [PASS] post USER returns OK
+10: [PASS] USER: accepted_count == 2
+10: [PASS] post USER+1 returns OK
+10: [PASS] USER+1: accepted_count == 3
+10: [PASS] queue filled to capacity
+10: [PASS] post USER when full returns ERR_FULL
+10: [PASS] queue-full: accepted_count NOT incremented
+10: [PASS] queue-full: rejected_count NOT incremented (queue-full is not admission reject)
+10: [PASS] post NONE when full still returns ERR_INVALID_ARG
+10: [PASS] NONE when full: rejected_count == 5
+10: [PASS] second init returns OK
+10: [PASS] second init: accepted_count NOT reset
+10: [PASS] second init: rejected_count NOT reset
+10: [PASS] snapshot returns OK
+10: [PASS] snapshot: admission_accepted_count matches getter
+10: [PASS] snapshot: admission_rejected_count matches getter
+10: 
+10: --- Admission Policy Contract: 38 passed, 0 failed ---
+10/22 Test #10: robotos_scheduler_admission_contract ......   Passed    0.01 sec
+test 11
+      Start 11: robotos_scheduler_backpressure_contract
+
+11: Test command: /mnt/d/Robot_OS/build-phase12f-host/robotos_scheduler_backpressure_contract_test
+11: Working Directory: /mnt/d/Robot_OS/build-phase12f-host
+11: Test timeout computed to be: 10000000
+11: === Phase 4J: Scheduler Budget/Backpressure Contract Tests ===
+11: 
+11: [PASS] TC01 pre-init: dispatch_budget_per_tick == ROBOTOS_CORE_MAX_EVENTS_PER_TICK
+11: [PASS] TC02 pre-init: backpressure_active == false
+11: [PASS] init returns OK
+11: [PASS] TC03 post-init: pending_event_count == 0
+11: [PASS] TC04 post-init: backpressure_active == false
+11: [PASS] TC05 post 1 event returns OK
+11: [PASS] TC05 pending == 1
+11: [PASS] TC05 backpressure_active == false (pending == budget, not full)
+11: [PASS] TC06 post 2nd event returns OK
+11: [PASS] TC06 pending == 2
+11: [PASS] TC06 backpressure_active == true (pending > budget)
+11: [PASS] TC07 tick returns OK
+11: [PASS] TC07 pending == 1 after tick
+11: [PASS] TC07 backpressure_active == false (pending == budget again)
+11: [PASS] drain: pending == 0
+11: [PASS] TC08 queue filled to capacity
+11: [PASS] TC08 pending == ROBOTOS_EVENT_QUEUE_CAPACITY
+11: [PASS] TC08 backpressure_active == true (full queue)
+11: [PASS] TC09 post when full returns ERR_FULL
+11: [PASS] TC09 dropped_count incremented
+11: [PASS] TC09 admission_accepted_count NOT incremented (queue push failed)
+11: [PASS] TC09 admission_rejected_count NOT incremented (queue-full ≠ admission reject)
+11: [PASS] TC09 backpressure_active still true
+11: [PASS] TC10 post NONE under pressure returns ERR_INVALID_ARG
+11: [PASS] TC10 admission_rejected_count incremented
+11: [PASS] TC10 dropped_count unchanged (admission reject, not queue drop)
+11: [PASS] TC10 backpressure_active still true
+11: [PASS] TC11 dispatch_events drains backlog returns OK
+11: [PASS] TC11 pending == 0 after full drain
+11: [PASS] TC11 backpressure_active == false after drain
+11: [PASS] TC12 setup: pending == 2 before dispatch
+11: [PASS] TC12 unhandled_count incremented after unregistered dispatch
+11: [PASS] TC12 pending == 1 after partial drain
+11: [PASS] TC12 backpressure == false (pending 1 == budget 1)
+11: [PASS] TC13 register error handler returns OK
+11: [PASS] TC13 post event for handler_err returns OK
+11: [PASS] TC13 tick propagates handler error (non-OK)
+11: [PASS] TC13 handler_error_count incremented
+11: [PASS] TC13 event consumed: pending back to pre-post value
+11: [PASS] TC13 backpressure updated correctly after error dispatch
+11: [PASS] TC14 setup: pending == 2 before repeated init
+11: [PASS] TC14 setup: backpressure == true before repeated init
+11: [PASS] TC14 repeated init returns OK
+11: [PASS] TC14 pending NOT cleared by repeated init
+11: [PASS] TC14 backpressure still true after repeated init
+11: [PASS] TC14 admission_accepted NOT reset by repeated init
+11: [PASS] TC14 admission_rejected NOT reset by repeated init
+11: [PASS] TC15 setup: register OK handler
+11: [PASS] TC15 snapshot returns OK
+11: [PASS] TC15 snapshot pending_event_count matches getter
+11: [PASS] TC15 snapshot dropped_event_count matches getter
+11: [PASS] TC15 snapshot admission_accepted_count matches getter
+11: [PASS] TC15 snapshot admission_rejected_count matches getter
+11: [PASS] TC15 snapshot unhandled_event_count matches getter
+11: [PASS] TC15 snapshot handler_error_count matches getter
+11: [PASS] TC15 snapshot backpressure_active matches getter
+11: [PASS] TC15 snapshot backpressure_active == true (2 pending > budget 1)
+11: 
+11: --- Backpressure Policy Contract: 57 passed, 0 failed ---
+11/22 Test #11: robotos_scheduler_backpressure_contract ...   Passed    0.01 sec
+test 12
+      Start 12: robotos_scheduler_throttle_contract
+
+12: Test command: /mnt/d/Robot_OS/build-phase12f-host/robotos_scheduler_throttle_contract_test
+12: Working Directory: /mnt/d/Robot_OS/build-phase12f-host
+12: Test timeout computed to be: 10000000
+12: === Phase 4K: Scheduler Producer Throttle Contract Tests ===
+12: 
+12: [PASS] TC01 pre-init: producer_throttle_active == false
+12: [PASS] TC01 pre-init: producer_throttled_count == 0
+12: [PASS] TC02 try_post_event before init returns ERR_INVALID_STATE
+12: [PASS] TC02 throttled_count unchanged (state check fires before throttle)
+12: [PASS] init returns OK
+12: [PASS] TC03 post-init: throttle_active == false
+12: [PASS] TC03 post-init: throttled_count == 0
+12: [PASS] TC03 post-init: pending == 0
+12: [PASS] TC04 try_post_event NULL returns ERR_NULL
+12: [PASS] TC04 throttled_count unchanged
+12: [PASS] TC05 try_post_event NONE returns ERR_INVALID_ARG
+12: [PASS] TC05 admission_rejected incremented
+12: [PASS] TC05 throttled_count unchanged (admission fires before throttle)
+12: [PASS] TC06 try_post_event #1 returns OK
+12: [PASS] TC06 pending == 1
+12: [PASS] TC06 accepted incremented
+12: [PASS] TC06 throttle_active == false (pending == budget, not > budget)
+12: [PASS] TC06 backpressure_active == false
+12: [PASS] TC06 throttled_count still 0
+12: [PASS] TC07 try_post_event #2 returns OK (transition event is accepted)
+12: [PASS] TC07 pending == 2
+12: [PASS] TC07 accepted incremented for event #2
+12: [PASS] TC07 backpressure_active == true (pending > budget)
+12: [PASS] TC07 throttle_active == true (pending > budget, queue not full)
+12: [PASS] TC07 throttled_count still 0 (event #2 was accepted, not throttled)
+12: [PASS] TC08 try_post_event #3 returns ERR_THROTTLED
+12: [PASS] TC08 pending unchanged
+12: [PASS] TC08 accepted unchanged
+12: [PASS] TC08 rejected unchanged
+12: [PASS] TC08 dropped unchanged
+12: [PASS] TC08 throttled_count incremented
+12: [PASS] TC08 throttle_active still true
+12: [PASS] TC08b second throttled -> ERR_THROTTLED
+12: [PASS] TC08b throttled_count == 2
+12: [PASS] TC09 tick returns OK
+12: [PASS] TC09 pending == 1 after tick
+12: [PASS] TC09 throttle_active == false (pending == budget)
+12: [PASS] TC09 backpressure_active == false
+12: [PASS] TC10 try_post_event succeeds after throttle clear
+12: [PASS] TC10 pending == 2 again
+12: [PASS] TC10 accepted incremented
+12: [PASS] TC10 throttle_active == true again
+12: [PASS] TC10 drain: pending == 0
+12: [PASS] TC11 post_event (raw) fills queue to capacity
+12: [PASS] TC11 pending == ROBOTOS_EVENT_QUEUE_CAPACITY
+12: [PASS] TC11 extra post_event when full returns ERR_FULL
+12: [PASS] TC11 dropped_count incremented
+12: [PASS] TC11 throttled_count NOT incremented (post_event bypasses throttle)
+12: [PASS] TC12 try_post_event when full returns ERR_FULL (not ERR_THROTTLED)
+12: [PASS] TC12 dropped_count incremented
+12: [PASS] TC12 throttled_count NOT incremented (full queue is not throttle path)
+12: [PASS] TC12 throttle_active == false when queue is full
+12: [PASS] TC12 backpressure_active == true (queue full)
+12: [PASS] TC12 drain: pending == 0
+12: [PASS] TC13 setup: register OK handler
+12: [PASS] TC13 snapshot returns OK
+12: [PASS] TC13 snapshot.producer_throttle_active == true
+12: [PASS] TC13 snapshot.producer_throttle_active matches getter
+12: [PASS] TC13 snapshot.producer_throttled_count matches getter
+12: [PASS] TC13 snapshot.backpressure_active == true
+12: [PASS] TC13b snapshot after drain: throttle_active == false
+12: [PASS] TC13b snapshot after drain: backpressure_active == false
+12: [PASS] TC14 repeated init returns OK
+12: [PASS] TC14 producer_throttled_count NOT reset by repeated init
+12: [PASS] TC15 setup: throttle active with 2 pending
+12: [PASS] TC15 dispatch_events returns OK
+12: [PASS] TC15 pending == 0 after full drain
+12: [PASS] TC15 throttle_active == false after drain
+12: 
+12: --- Throttle Policy Contract: 68 passed, 0 failed ---
+12/22 Test #12: robotos_scheduler_throttle_contract .......   Passed    0.01 sec
+test 13
+      Start 13: robotos_core_dispatch_critical_contract
+
+13: Test command: /mnt/d/Robot_OS/build-phase12f-host/robotos_core_dispatch_critical_contract_test
+13: Working Directory: /mnt/d/Robot_OS/build-phase12f-host
+13: Test timeout computed to be: 10000000
+13: === Phase 5F: Dispatch Critical Split Contract Tests ===
+13: 
+13: [PASS] TC01 tick returns OK
+13: [PASS] TC01 handler called
+13: [PASS] TC01 depth inside handler == 0
+13: [PASS] TC01 depth after tick == 0
+13: [PASS] TC01 enter == exit
+13: [PASS] TC02 dispatch_events returns OK
+13: [PASS] TC02 handler called
+13: [PASS] TC02 depth inside handler == 0
+13: [PASS] TC02 depth after dispatch == 0
+13: [PASS] TC02 enter == exit
+13: [PASS] TC03 dispatch_events(3) returns OK
+13: [PASS] TC03 handler called 3 times
+13: [PASS] TC03 FIFO: first arg0 == 100
+13: [PASS] TC03 FIFO: second arg0 == 200
+13: [PASS] TC03 FIFO: third arg0 == 300
+13: [PASS] TC03 depth inside handlers == 0
+13: [PASS] TC04 dispatch returns OK
+13: [PASS] TC04 unhandled_count incremented
+13: [PASS] TC04 depth after dispatch == 0
+13: [PASS] TC04 enter == exit
+13: [PASS] TC05 dispatch returns handler error
+13: [PASS] TC05 handler_error_count incremented
+13: [PASS] TC05 handler was called
+13: [PASS] TC05 depth inside handler == 0
+13: [PASS] TC05 depth after dispatch == 0
+13: [PASS] TC06 tick empty returns OK
+13: [PASS] TC06 depth after tick == 0
+13: [PASS] TC06 enter == exit
+13: [PASS] TC07 dispatch_events empty returns ERR_EMPTY
+13: [PASS] TC07 depth after dispatch == 0
+13: [PASS] TC07 enter == exit
+13: [PASS] TC08 dispatch_events(0) returns OK
+13: [PASS] TC08 handler NOT called
+13: [PASS] TC09 dispatch_events(2) returns OK
+13: [PASS] TC09 handler called exactly 2 times
+13: [PASS] TC09 one event still pending
+13: [PASS] TC10 dispatch returns OK
+13: [PASS] TC10 handler NOT called (lookup at dispatch time)
+13: [PASS] TC10 unhandled_count incremented
+13: [PASS] TC10 depth after dispatch == 0
+13: [PASS] TC11 dispatch returns OK
+13: [PASS] TC11 handler was called
+13: [PASS] TC11 depth inside handler == 0
+13: [PASS] TC11 depth after dispatch == 0
+13: [PASS] TC11 enter == exit (no lock leak)
+13: [PASS] TC11 handler self-unregistered
+13: [PASS] TC12 dispatch returns OK
+13: [PASS] TC12 handler B NOT called
+13: [PASS] TC12 handler B2 called (latest)
+13: [PASS] TC12 depth inside handler == 0
+13: [PASS] TC13 depth always 0 in handler across 5 ticks
+13: [PASS] TC13 depth after loop == 0
+13: [PASS] TC13 enter == exit after loop
+13: 
+13: === Phase 5F Results: 53 passed, 0 failed ===
+13/22 Test #13: robotos_core_dispatch_critical_contract ...   Passed    0.01 sec
+test 14
+      Start 14: robotos_scheduler_retry_policy_contract
+
+14: Test command: /mnt/d/Robot_OS/build-phase12f-host/robotos_scheduler_retry_policy_contract_test
+14: Working Directory: /mnt/d/Robot_OS/build-phase12f-host
+14: Test timeout computed to be: 10000000
+14: === robotos_scheduler_retry_policy_contract ===
+14:   PASS: TC01: NULL out -> ERR_NULL
+14:   PASS: TC02: OK -> CORE_OK
+14:   PASS: TC02: OK -> RETRY_NONE
+14:   PASS: TC02: OK -> wait=0
+14:   PASS: TC02: OK -> drop=false
+14:   PASS: TC02: OK -> report=false
+14:   PASS: TC03: FULL -> CORE_OK
+14:   PASS: TC03: FULL -> RETRY_AFTER_TICK
+14:   PASS: TC03: FULL -> wait=1
+14:   PASS: TC03: FULL -> drop=false
+14:   PASS: TC03: FULL -> report=false
+14:   PASS: TC04: THROTTLED -> CORE_OK
+14:   PASS: TC04: THROTTLED -> RETRY_AFTER_TICK
+14:   PASS: TC04: THROTTLED -> wait=1
+14:   PASS: TC04: THROTTLED -> drop=false
+14:   PASS: TC04: THROTTLED -> report=false
+14:   PASS: TC05: INVALID_STATE -> CORE_OK
+14:   PASS: TC05: INVALID_STATE -> RETRY_SOON
+14:   PASS: TC05: INVALID_STATE -> wait=0
+14:   PASS: TC05: INVALID_STATE -> drop=false
+14:   PASS: TC05: INVALID_STATE -> report=false
+14:   PASS: TC06: INVALID_ARG -> CORE_OK
+14:   PASS: TC06: INVALID_ARG -> RETRY_NEVER
+14:   PASS: TC06: INVALID_ARG -> wait=0
+14:   PASS: TC06: INVALID_ARG -> drop=true
+14:   PASS: TC06: INVALID_ARG -> report=true
+14:   PASS: TC07: ERR_NULL -> CORE_OK
+14:   PASS: TC07: ERR_NULL -> RETRY_NEVER
+14:   PASS: TC07: ERR_NULL -> wait=0
+14:   PASS: TC07: ERR_NULL -> drop=true
+14:   PASS: TC07: ERR_NULL -> report=true
+14:   PASS: TC08: EMPTY -> CORE_OK
+14:   PASS: TC08: EMPTY -> RETRY_NONE
+14:   PASS: TC08: EMPTY -> wait=0
+14:   PASS: TC08: EMPTY -> drop=false
+14:   PASS: TC08: EMPTY -> report=false
+14:   PASS: TC09: unknown -> ERR_INVALID_ARG
+14:   PASS: TC09: unknown -> out.action zeroed
+14:   PASS: TC09: unknown -> out.wait zeroed
+14:   PASS: TC09: unknown -> out.drop zeroed
+14:   PASS: TC09: unknown -> out.report zeroed
+14:   PASS: TC10: FULL is retryable
+14:   PASS: TC10: THROTTLED is retryable
+14:   PASS: TC10: INVALID_STATE is retryable
+14:   PASS: TC11: OK is not retryable
+14:   PASS: TC11: INVALID_ARG is not retryable
+14:   PASS: TC11: ERR_NULL is not retryable
+14:   PASS: TC11: EMPTY is not retryable
+14:   PASS: TC11: unknown is not retryable
+14:   PASS: TC12: works before init
+14:   PASS: TC12: correct action before init
+14:   PASS: TC12: is_retryable works before init
+14:   PASS: TC13: pending unchanged
+14:   PASS: TC13: accepted unchanged
+14:   PASS: TC13: rejected unchanged
+14:   PASS: TC13: dropped unchanged
+14:   PASS: TC13: throttled_count unchanged
+14: 
+14: 57 passed, 0 failed
+14/22 Test #14: robotos_scheduler_retry_policy_contract ...   Passed    0.01 sec
+test 15
+      Start 15: robotos_mixed_event_policy_contract
+
+15: Test command: /mnt/d/Robot_OS/build-phase12f-host/robotos_mixed_event_policy_contract_test
+15: Working Directory: /mnt/d/Robot_OS/build-phase12f-host
+15: Test timeout computed to be: 10000000
+15: === Phase 6F: Mixed Event Policy Smoke Contract Tests ===
+15: 
+15: [ Init ]
+15: [PASS] TC01: init returns OK
+15: [PASS] TC02: state == READY after init
+15: 
+15: [ Invalid events (admission gate) ]
+15: [PASS] TC03: post NULL -> ERR_NULL
+15: [PASS] TC04: rejected_count unchanged after NULL post
+15: [PASS] TC05: accepted_count unchanged after NULL post
+15: [PASS] TC06: post NONE -> ERR_INVALID_ARG
+15: [PASS] TC07: rejected_count == 1 after NONE post
+15: [PASS] TC08: accepted_count still 0 after NONE post
+15: [PASS] TC09: dropped_count still 0 (admission reject, not drop)
+15: [PASS] TC10: post reserved type 99 -> ERR_INVALID_ARG
+15: [PASS] TC11: rejected_count == 2 after reserved type post
+15: [PASS] TC12: dropped_count still 0 (admission reject, not drop)
+15: 
+15: [ Valid event (accepted) ]
+15: [PASS] TC13: post USER -> OK
+15: [PASS] TC14: accepted_count == 1 after USER post
+15: [PASS] TC15: pending == 1 after USER post
+15: [PASS] TC16: dropped_count still 0 after valid post
+15: [PASS] TC17: pending == capacity after fill
+15: [PASS] TC18: accepted_count == capacity after fill
+15: 
+15: [ Full queue (drop path) ]
+15: [PASS] TC19: post USER to full queue -> ERR_FULL
+15: [PASS] TC20: dropped_count == 1 after overflow
+15: [PASS] TC21: pending unchanged == capacity after overflow
+15: [PASS] TC22: accepted_count unchanged after overflow (not admitted)
+15: 
+15: [ Invalid event while queue full ]
+15: [PASS] TC23: post NONE while full -> ERR_INVALID_ARG (not ERR_FULL)
+15: [PASS] TC24: rejected_count == 3 (admission checked before queue)
+15: [PASS] TC25: dropped_count still 1 (NONE not queued, not dropped)
+15: 
+15: [ Snapshot: all three paths in one run ]
+15: [PASS] TC26: snapshot returns OK
+15: [PASS] TC27: snapshot.accepted == capacity
+15: [PASS] TC28: snapshot.rejected == 3
+15: [PASS] TC29: snapshot.dropped == 1
+15: [PASS] TC30: snapshot.pending == capacity
+15: [PASS] TC31: accepted getter matches snapshot
+15: [PASS] TC32: rejected getter matches snapshot
+15: [PASS] TC33: dropped getter matches snapshot
+15: [PASS] TC34: accepted > 0 (valid path exercised)
+15: [PASS] TC35: rejected > 0 (invalid path exercised)
+15: [PASS] TC36: dropped > 0 (full-queue path exercised)
+15: 
+15: [ Dispatch ]
+15: [PASS] TC37: pending == 0 after drain
+15: [PASS] TC38: dispatched_count == capacity after drain
+15: 
+15: [ Retry policy alignment ]
+15: [PASS] TC39: retry_decision(ERR_FULL) returns OK
+15: [PASS] TC40: ERR_FULL -> action == RETRY_AFTER_TICK
+15: [PASS] TC41: ERR_FULL is retryable
+15: [PASS] TC42: retry_decision(ERR_INVALID_ARG) returns OK
+15: [PASS] TC43: ERR_INVALID_ARG -> action == RETRY_NEVER
+15: [PASS] TC44: ERR_INVALID_ARG -> producer_should_drop == true
+15: [PASS] TC45: ERR_INVALID_ARG is not retryable
+15: 
+15: === Phase 6F Results: 45 passed, 0 failed ===
+15/22 Test #15: robotos_mixed_event_policy_contract .......   Passed    0.01 sec
+test 16
+      Start 16: robotos_queue_pressure_contract
+
+16: Test command: /mnt/d/Robot_OS/build-phase12f-host/robotos_queue_pressure_contract_test
+16: Working Directory: /mnt/d/Robot_OS/build-phase12f-host
+16: Test timeout computed to be: 10000000
+16: === Phase 6I: Queue Pressure Producer Contract Tests ===
+16: 
+16: [ Init ]
+16: [PASS] TC01: init returns OK
+16: [PASS] TC02: state == READY
+16: 
+16: [ Rapid fill to capacity ]
+16: [PASS] TC03: all CAPACITY posts succeed
+16: [PASS] TC04: accepted_count == CAPACITY
+16: [PASS] TC05: pending == CAPACITY (queue full)
+16: [PASS] TC06: backpressure_active == true when queue full
+16: 
+16: [ Queue-pressure overflow (ERR_FULL) ]
+16: [PASS] TC07: post to full queue -> ERR_FULL
+16: [PASS] TC08: dropped_count == 1 after overflow
+16: [PASS] TC09: pending unchanged == CAPACITY after overflow
+16: [PASS] TC10: accepted_count unchanged (ERR_FULL not admitted)
+16: 
+16: [ Admission gate before queue check ]
+16: [PASS] TC11: post NONE while full -> ERR_INVALID_ARG (not ERR_FULL)
+16: [PASS] TC12: dropped_count still 1 (NONE rejected before queue check)
+16: [PASS] TC13: rejected_count == 1 (NONE rejected by admission)
+16: 
+16: [ try_post_event throttle under partial pressure ]
+16: [PASS] TC14: dispatch 1 returns OK
+16: [PASS] TC15: pending == CAPACITY-1 after dispatch
+16: [PASS] TC16: try_post_event with pending>budget and not full -> ERR_THROTTLED
+16: [PASS] TC17: producer_throttled_count == 1
+16: [PASS] TC18: pending unchanged after ERR_THROTTLED
+16: [PASS] TC19: dropped_count still 1 (throttle != drop)
+16: 
+16: [ Snapshot consistency under pressure ]
+16: [PASS] TC20: snapshot returns OK
+16: [PASS] TC21: snap.accepted == CAPACITY
+16: [PASS] TC22: snap.rejected == 1
+16: [PASS] TC23: snap.dropped == 1
+16: [PASS] TC24: snap.producer_throttled_count == 1
+16: [PASS] TC25: backpressure_active == true (pending > budget)
+16: [PASS] TC26: producer_throttle_active == true (pending > budget, not full)
+16: 
+16: [ Drain and settle ]
+16: [PASS] TC27: pending == 0 after drain
+16: [PASS] TC28: dispatched_count == CAPACITY (all queued events dispatched)
+16: [PASS] TC29: backpressure_active == false after drain
+16: [PASS] TC30: producer_throttle_active == false after drain
+16: 
+16: [ Retry policy alignment ]
+16: [PASS] TC31: retry_decision(ERR_FULL) returns OK
+16: [PASS] TC32: ERR_FULL -> RETRY_AFTER_TICK
+16: [PASS] TC33: ERR_FULL -> wait_ticks == 1
+16: [PASS] TC34: ERR_FULL is retryable
+16: [PASS] TC35: retry_decision(ERR_THROTTLED) returns OK
+16: [PASS] TC36: ERR_THROTTLED -> RETRY_AFTER_TICK
+16: [PASS] TC37: ERR_THROTTLED -> wait_ticks == 1
+16: [PASS] TC38: ERR_THROTTLED is retryable
+16: [PASS] TC39: ERR_FULL and ERR_THROTTLED both RETRY_AFTER_TICK -- same guidance
+16: 
+16: [ Post succeeds after drain ]
+16: [PASS] TC40: post succeeds after drain
+16: [PASS] TC41: accepted_count incremented after post
+16: [PASS] TC42: pending == 0 after final drain
+16: 
+16: === Phase 6I Results: 42 passed, 0 failed ===
+16/22 Test #16: robotos_queue_pressure_contract ...........   Passed    0.01 sec
+test 17
+      Start 17: robotos_handler_routing_stress_contract
+
+17: Test command: /mnt/d/Robot_OS/build-phase12f-host/robotos_handler_routing_stress_contract_test
+17: Working Directory: /mnt/d/Robot_OS/build-phase12f-host
+17: Test timeout computed to be: 10000000
+17: === Phase 6J-A: Handler Routing Stress Contract Tests ===
+17: 
+17: [ Init ]
+17: [PASS] TC01: init returns OK
+17: [PASS] TC02: state == READY
+17: 
+17: [ Dual-handler isolation ]
+17: [PASS] TC03: register USER handler returns OK
+17: [PASS] TC04: register USER+1 handler returns OK
+17: [PASS] TC05: registered_handler_count == 2
+17: [PASS] TC06: dispatch_events(4) returns OK
+17: [PASS] TC07: h0 called exactly 2 times
+17: [PASS] TC08: h1 called exactly 2 times
+17: [PASS] TC09: h2 not called (not yet registered)
+17: [PASS] TC10: h0 no cross-contamination
+17: [PASS] TC11: h1 no cross-contamination
+17: [PASS] TC12: h0 FIFO first arg0 == 10
+17: [PASS] TC13: h0 FIFO second arg0 == 11
+17: [PASS] TC14: h1 FIFO first arg0 == 20
+17: [PASS] TC15: h1 FIFO second arg0 == 21
+17: 
+17: [ Three-handler routing ]
+17: [PASS] TC16: register USER+2 handler returns OK
+17: [PASS] TC17: registered_handler_count == 3
+17: [PASS] TC18: dispatch_events(6) returns OK
+17: [PASS] TC19: h0 called exactly 2 times
+17: [PASS] TC20: h1 called exactly 2 times
+17: [PASS] TC21: h2 called exactly 2 times
+17: [PASS] TC22: h0 no cross-contamination
+17: [PASS] TC23: h1 no cross-contamination
+17: [PASS] TC24: h2 no cross-contamination
+17: [PASS] TC25: h0 FIFO sequence: arg0[0]==1, arg0[1]==2
+17: [PASS] TC26: h1 FIFO sequence: arg0[0]==1, arg0[1]==2
+17: [PASS] TC27: h2 FIFO sequence: arg0[0]==1, arg0[1]==2
+17: 
+17: [ Unhandled events alongside handled ]
+17: [PASS] TC28: registered_handler_count == 1 after two unregisters
+17: [PASS] TC29: dispatch_events(3) returns OK
+17: [PASS] TC30: h0 called exactly 1 time (USER only)
+17: [PASS] TC31: h0 received correct arg0 == 99
+17: [PASS] TC32: h1 not called (unregistered)
+17: [PASS] TC33: h2 not called (unregistered)
+17: [PASS] TC34: unhandled_count +2 (USER+1 and CORE_TICK unhandled)
+17: [PASS] TC35: dispatched_count +3 (all 3 events consumed from queue)
+17: 
+17: [ Repeated post/dispatch cycles ]
+17: [PASS] TC36: re-register USER+1 handler returns OK
+17: [PASS] TC37: h0 called 5 times over 5 cycles
+17: [PASS] TC38: h1 called 5 times over 5 cycles
+17: [PASS] TC39: h0 no cross-contamination across cycles
+17: [PASS] TC40: h1 no cross-contamination across cycles
+17: [PASS] TC41: h0 FIFO across cycles (arg0 0,1,2,3,4)
+17: [PASS] TC42: h1 FIFO across cycles (arg0 0,1,2,3,4)
+17: 
+17: [ USER+ range routing boundary ]
+17: [PASS] TC43: register USER+99 handler returns OK
+17: [PASS] TC44: dispatch USER+99 event returns OK
+17: [PASS] TC45: far handler called exactly once
+17: [PASS] TC46: far handler received correct type (no cross-contamination)
+17: [PASS] TC47: far handler received correct arg0 == 0xAB
+17: [PASS] TC48: h0 not called during far-type dispatch
+17: [PASS] TC49: h1 not called during far-type dispatch
+17: 
+17: [ Snapshot coherence after routing stress ]
+17: [PASS] TC50: snapshot returns OK
+17: [PASS] TC51: snapshot.state == READY
+17: [PASS] TC52: snapshot.pending == 0 (queue drained)
+17: [PASS] TC53: snapshot.unhandled_event_count matches getter
+17: [PASS] TC54: snapshot.dispatched_event_count matches getter
+17: [PASS] TC55: snapshot.registered_handler_count matches getter
+17: 
+17: === Phase 6J-A Results: 55 passed, 0 failed ===
+17/22 Test #17: robotos_handler_routing_stress_contract ...   Passed    0.01 sec
+test 18
+      Start 18: robotos_handler_lifecycle_contract
+
+18: Test command: /mnt/d/Robot_OS/build-phase12f-host/robotos_handler_lifecycle_contract_test
+18: Working Directory: /mnt/d/Robot_OS/build-phase12f-host
+18: Test timeout computed to be: 10000000
+18: === Phase 6J-B: Handler Lifecycle Edge Cases ===
+18: 
+18: [PASS] TC01: init returns OK
+18: 
+18: [ Slot reuse after unregister ]
+18: [PASS] TC02: register USER returns OK
+18: [PASS] TC03: count == 1
+18: [PASS] TC04: unregister USER returns OK
+18: [PASS] TC05: count == 0 after unregister
+18: [PASS] TC06: register new type after unregister returns OK (slot reused)
+18: [PASS] TC07: count == 1 after new type registration
+18: [PASS] TC08: handler_a dispatched via new type (slot reuse confirmed)
+18: [PASS] TC09: count == 0 after unregister new_type
+18: 
+18: [ Full table: unregister one slot, then register new type ]
+18: [PASS] TC10: all slots filled (count == max)
+18: [PASS] TC11: register beyond capacity returns ERR_FULL
+18: [PASS] TC12: count unchanged after overflow attempt
+18: [PASS] TC13: unregister one slot returns OK
+18: [PASS] TC14: count == max-1 after one unregister
+18: [PASS] TC15: register new type succeeds after freeing one slot
+18: [PASS] TC16: count back to max
+18: [PASS] TC17: handler_b dispatched via overflow_type (new slot fill confirmed)
+18: [PASS] TC18: count == 0 after clearing all registrations
+18: 
+18: [ Unregister-all makes all events unhandled ]
+18: [PASS] TC19: handler_a called before unregister
+18: [PASS] TC20: handler_b called before unregister
+18: [PASS] TC21: count == 0 after unregister-all
+18: [PASS] TC22: handler_a NOT called after unregister-all
+18: [PASS] TC23: handler_b NOT called after unregister-all
+18: [PASS] TC24: unhandled_count +2 (both events unhandled)
+18: 
+18: [ Register/unregister churn stability ]
+18: [PASS] TC25: count == 0 after 10 register/unregister cycles
+18: [PASS] TC26: has_handler(USER) == false after churn
+18: [PASS] TC27: register after churn returns OK
+18: [PASS] TC28: handler_a dispatched correctly after churn
+18: 
+18: [ Handler error does not deregister handler ]
+18: [PASS] TC29: replace with error handler returns OK (replacement)
+18: [PASS] TC30: dispatch returns handler's error
+18: [PASS] TC31: error handler was called
+18: [PASS] TC32: has_handler(USER) still true after handler error
+18: [PASS] TC33: count still 1 after handler error
+18: [PASS] TC34: error handler fires again on second dispatch (not auto-deregistered)
+18: 
+18: [ Replacement routes to new handler, not old ]
+18: [PASS] TC35: register USER with handler_a returns OK
+18: [PASS] TC36: replace USER with handler_b returns OK
+18: [PASS] TC37: count still 1 after replacement (no new slot)
+18: [PASS] TC38: dispatch returns OK after replacement
+18: [PASS] TC39: handler_b called (new handler)
+18: [PASS] TC40: handler_a NOT called (old handler replaced)
+18: 
+18: [ Re-register after unregister ]
+18: [PASS] TC41: unregister USER returns OK
+18: [PASS] TC42: has_handler(USER) == false after unregister
+18: [PASS] TC43: re-register USER with handler_a returns OK
+18: [PASS] TC44: dispatch routes to handler_a after re-register
+18: [PASS] TC45: handler_b NOT called after re-register
+18: 
+18: [ Snapshot coherence through lifecycle ]
+18: [PASS] TC46: snapshot returns OK
+18: [PASS] TC47: snapshot.registered_handler_count matches getter
+18: [PASS] TC48: snapshot.unhandled_event_count matches getter
+18: [PASS] TC49: snapshot.handler_error_count matches getter
+18: [PASS] TC50: snapshot.dispatched_event_count matches getter
+18: [PASS] TC51: snapshot.state == READY
+18: [PASS] TC52: snapshot.pending == 0 (queue drained)
+18: 
+18: === Phase 6J-B Results: 52 passed, 0 failed ===
+18/22 Test #18: robotos_handler_lifecycle_contract ........   Passed    0.01 sec
+test 19
+      Start 19: robotos_snapshot_coherence_contract
+
+19: Test command: /mnt/d/Robot_OS/build-phase12f-host/robotos_snapshot_coherence_contract_test
+19: Working Directory: /mnt/d/Robot_OS/build-phase12f-host
+19: Test timeout computed to be: 10000000
+19: === Phase 6J-C/D: Snapshot Coherence + Peak Depth Validation ===
+19: 
+19: [ Initial state after init ]
+19: [PASS] TC01: init returns OK
+19: [PASS] TC02: snapshot returns OK
+19: [PASS] TC03: snap.state == READY
+19: [PASS] TC04: snap.pending == 0
+19: [PASS] TC05: snap.dispatched == 0
+19: [PASS] TC06: snap.dropped == 0
+19: [PASS] TC07: snap.accepted == 0
+19: [PASS] TC08: snap.rejected == 0
+19: [PASS] TC09: snap.unhandled == 0
+19: [PASS] TC10: snap.handler_error == 0
+19: [PASS] TC11: snap.registered_handler_count == 0
+19: [PASS] TC12: snap.throttled == 0
+19: [PASS] TC13: snap.backpressure_active == false
+19: [PASS] TC14: snap.throttle_active == false
+19: [PASS] TC15: snap.version != NULL
+19: [PASS] TC16: snap.tick_count == 0
+19: [PASS] TC17: snap.init_count == 1
+19: [PASS] TC18: snap.peak_queue_depth == 0 (no posts yet)
+19: [PASS] snapshot.pending matches getter
+19: [PASS] snapshot.dropped matches getter
+19: [PASS] snapshot.dispatched matches getter
+19: [PASS] snapshot.handler_error matches getter
+19: [PASS] snapshot.registered_handler_count matches getter
+19: [PASS] snapshot.unhandled matches getter
+19: [PASS] snapshot.accepted matches getter
+19: [PASS] snapshot.rejected matches getter
+19: [PASS] snapshot.throttled matches getter
+19: [PASS] snapshot.backpressure_active matches getter
+19: [PASS] snapshot.throttle_active matches getter
+19: [PASS] snapshot.peak_queue_depth matches getter
+19: 
+19: [ Post events: pending and accepted tracking ]
+19: [PASS] TC30: snapshot after 4 posts returns OK
+19: [PASS] TC31: snap.pending == 4
+19: [PASS] TC32: snap.accepted increased by 4
+19: [PASS] TC33: snap.dropped still 0
+19: [PASS] TC34: snap.backpressure_active == true (4 > budget=1)
+19: [PASS] TC35: snap.throttle_active == true (pending > budget, queue not full)
+19: [PASS] TC36: snap.peak_queue_depth == 4
+19: [PASS] snapshot.pending matches getter
+19: [PASS] snapshot.dropped matches getter
+19: [PASS] snapshot.dispatched matches getter
+19: [PASS] snapshot.handler_error matches getter
+19: [PASS] snapshot.registered_handler_count matches getter
+19: [PASS] snapshot.unhandled matches getter
+19: [PASS] snapshot.accepted matches getter
+19: [PASS] snapshot.rejected matches getter
+19: [PASS] snapshot.throttled matches getter
+19: [PASS] snapshot.backpressure_active matches getter
+19: [PASS] snapshot.throttle_active matches getter
+19: [PASS] snapshot.peak_queue_depth matches getter
+19: [PASS] TC37: snap.rejected +1 after NONE post
+19: [PASS] TC38: snap.pending unchanged after rejected post
+19: [PASS] TC39: snap.peak unchanged after rejected post
+19: 
+19: [ Budget-limited dispatch: one event per tick ]
+19: [PASS] TC40: dispatch_events(1) returns OK
+19: [PASS] TC41: snap.pending == 3 (drained 1 of 4)
+19: [PASS] TC42: snap.dispatched +1
+19: [PASS] TC43: snap.backpressure still active (3 > 1)
+19: [PASS] TC44: snap.peak unchanged at 4 (drain does not reduce peak)
+19: [PASS] snapshot.pending matches getter
+19: [PASS] snapshot.dropped matches getter
+19: [PASS] snapshot.dispatched matches getter
+19: [PASS] snapshot.handler_error matches getter
+19: [PASS] snapshot.registered_handler_count matches getter
+19: [PASS] snapshot.unhandled matches getter
+19: [PASS] snapshot.accepted matches getter
+19: [PASS] snapshot.rejected matches getter
+19: [PASS] snapshot.throttled matches getter
+19: [PASS] snapshot.backpressure_active matches getter
+19: [PASS] snapshot.throttle_active matches getter
+19: [PASS] snapshot.peak_queue_depth matches getter
+19: 
+19: [ Drain all events ]
+19: [PASS] TC45: snap.pending == 0 after drain
+19: [PASS] TC46: snap.dispatched +3 (remaining 3 events drained)
+19: [PASS] TC47: snap.backpressure_active == false after drain
+19: [PASS] TC48: snap.throttle_active == false after drain
+19: [PASS] TC49: snap.peak_queue_depth still 4 (monotonically non-decreasing)
+19: [PASS] snapshot.pending matches getter
+19: [PASS] snapshot.dropped matches getter
+19: [PASS] snapshot.dispatched matches getter
+19: [PASS] snapshot.handler_error matches getter
+19: [PASS] snapshot.registered_handler_count matches getter
+19: [PASS] snapshot.unhandled matches getter
+19: [PASS] snapshot.accepted matches getter
+19: [PASS] snapshot.rejected matches getter
+19: [PASS] snapshot.throttled matches getter
+19: [PASS] snapshot.backpressure_active matches getter
+19: [PASS] snapshot.throttle_active matches getter
+19: [PASS] snapshot.peak_queue_depth matches getter
+19: 
+19: [ Queue overflow: dropped count ]
+19: [PASS] TC50: post to full queue returns ERR_FULL
+19: [PASS] TC51: snap.dropped +1 after overflow
+19: [PASS] TC52: snap.pending == CAPACITY (queue still full)
+19: [PASS] TC53: snap.backpressure_active == true (queue full)
+19: [PASS] TC54: snap.throttle_active == false when queue full (throttle not active when full)
+19: [PASS] TC55: snap.peak_queue_depth == CAPACITY
+19: [PASS] snapshot.pending matches getter
+19: [PASS] snapshot.dropped matches getter
+19: [PASS] snapshot.dispatched matches getter
+19: [PASS] snapshot.handler_error matches getter
+19: [PASS] snapshot.registered_handler_count matches getter
+19: [PASS] snapshot.unhandled matches getter
+19: [PASS] snapshot.accepted matches getter
+19: [PASS] snapshot.rejected matches getter
+19: [PASS] snapshot.throttled matches getter
+19: [PASS] snapshot.backpressure_active matches getter
+19: [PASS] snapshot.throttle_active matches getter
+19: [PASS] snapshot.peak_queue_depth matches getter
+19: 
+19: [ Producer throttle: try_post_event under backpressure ]
+19: [PASS] TC56: try_post_event returns ERR_THROTTLED (pending 2 > budget 1)
+19: [PASS] TC57: snap.throttled +1 after ERR_THROTTLED
+19: [PASS] TC58: snap.throttle_active == true
+19: [PASS] TC59: snap.backpressure_active == true
+19: [PASS] TC60: snap.pending unchanged (throttled event not enqueued)
+19: [PASS] snapshot.pending matches getter
+19: [PASS] snapshot.dropped matches getter
+19: [PASS] snapshot.dispatched matches getter
+19: [PASS] snapshot.handler_error matches getter
+19: [PASS] snapshot.registered_handler_count matches getter
+19: [PASS] snapshot.unhandled matches getter
+19: [PASS] snapshot.accepted matches getter
+19: [PASS] snapshot.rejected matches getter
+19: [PASS] snapshot.throttled matches getter
+19: [PASS] snapshot.backpressure_active matches getter
+19: [PASS] snapshot.throttle_active matches getter
+19: [PASS] snapshot.peak_queue_depth matches getter
+19: 
+19: [ Backpressure clears after drain ]
+19: [PASS] TC61: snap.backpressure_active == false after drain
+19: [PASS] TC62: snap.throttle_active == false after drain
+19: [PASS] TC63: snap.pending == 0
+19: [PASS] snapshot.pending matches getter
+19: [PASS] snapshot.dropped matches getter
+19: [PASS] snapshot.dispatched matches getter
+19: [PASS] snapshot.handler_error matches getter
+19: [PASS] snapshot.registered_handler_count matches getter
+19: [PASS] snapshot.unhandled matches getter
+19: [PASS] snapshot.accepted matches getter
+19: [PASS] snapshot.rejected matches getter
+19: [PASS] snapshot.throttled matches getter
+19: [PASS] snapshot.backpressure_active matches getter
+19: [PASS] snapshot.throttle_active matches getter
+19: [PASS] snapshot.peak_queue_depth matches getter
+19: 
+19: [ Handler error counter ]
+19: [PASS] TC64: dispatch with error handler returns handler error
+19: [PASS] TC65: snap.handler_error_count +1
+19: [PASS] TC66: snap.dispatched_count unchanged (not incremented on error)
+19: [PASS] TC67: snap.pending -1 (event consumed from queue despite error)
+19: [PASS] snapshot.pending matches getter
+19: [PASS] snapshot.dropped matches getter
+19: [PASS] snapshot.dispatched matches getter
+19: [PASS] snapshot.handler_error matches getter
+19: [PASS] snapshot.registered_handler_count matches getter
+19: [PASS] snapshot.unhandled matches getter
+19: [PASS] snapshot.accepted matches getter
+19: [PASS] snapshot.rejected matches getter
+19: [PASS] snapshot.throttled matches getter
+19: [PASS] snapshot.backpressure_active matches getter
+19: [PASS] snapshot.throttle_active matches getter
+19: [PASS] snapshot.peak_queue_depth matches getter
+19: 
+19: [ Dispatched count vs unhandled event count ]
+19: [PASS] TC68: snap.unhandled +3 (no registered handler)
+19: [PASS] TC69: snap.dispatched +3 (unhandled events still count as dispatched)
+19: [PASS] snapshot.pending matches getter
+19: [PASS] snapshot.dropped matches getter
+19: [PASS] snapshot.dispatched matches getter
+19: [PASS] snapshot.handler_error matches getter
+19: [PASS] snapshot.registered_handler_count matches getter
+19: [PASS] snapshot.unhandled matches getter
+19: [PASS] snapshot.accepted matches getter
+19: [PASS] snapshot.rejected matches getter
+19: [PASS] snapshot.throttled matches getter
+19: [PASS] snapshot.backpressure_active matches getter
+19: [PASS] snapshot.throttle_active matches getter
+19: [PASS] snapshot.peak_queue_depth matches getter
+19: 
+19: [ Tick count and init count tracking ]
+19: [PASS] TC70: snap.tick_count == tick_before + 3
+19: [PASS] TC71: snap.tick_count matches robotos_core_tick_count()
+19: [PASS] TC72: snap.init_count == init_before + 1 after repeated init
+19: [PASS] TC73: snap.tick_count preserved after repeated init
+19: 
+19: [ Peak queue depth high-water mark (Phase 6J-D) ]
+19: [PASS] TC74: snap.peak_queue_depth >= 3 after posting 3 events
+19: [PASS] TC75: snap.peak_queue_depth >= previous peak (monotonically non-decreasing)
+19: [PASS] TC76: snap.peak_queue_depth matches getter
+19: [PASS] TC77: peak unchanged after drain (drain does not reset peak)
+19: [PASS] TC78: peak does not decrease when fewer events posted
+19: [PASS] TC79: peak getter matches snapshot after partial post
+19: [PASS] TC80: snap.peak_queue_depth == CAPACITY after filling queue
+19: [PASS] TC81: peak getter == CAPACITY
+19: [PASS] TC82: peak still CAPACITY after full drain (monotonic guarantee)
+19: 
+19: [ Final global getter coherence ]
+19: [PASS] TC83: final snapshot returns OK
+19: [PASS] snapshot.pending matches getter
+19: [PASS] snapshot.dropped matches getter
+19: [PASS] snapshot.dispatched matches getter
+19: [PASS] snapshot.handler_error matches getter
+19: [PASS] snapshot.registered_handler_count matches getter
+19: [PASS] snapshot.unhandled matches getter
+19: [PASS] snapshot.accepted matches getter
+19: [PASS] snapshot.rejected matches getter
+19: [PASS] snapshot.throttled matches getter
+19: [PASS] snapshot.backpressure_active matches getter
+19: [PASS] snapshot.throttle_active matches getter
+19: [PASS] snapshot.peak_queue_depth matches getter
+19: 
+19: === Phase 6J-C/D Results: 192 passed, 0 failed ===
+19/22 Test #19: robotos_snapshot_coherence_contract .......   Passed    0.01 sec
+test 20
+      Start 20: robotos_timer_producer_contract
+
+20: Test command: /mnt/d/Robot_OS/build-phase12f-host/robotos_timer_producer_contract_test
+20: Working Directory: /mnt/d/Robot_OS/build-phase12f-host
+20: Test timeout computed to be: 10000000
+20: === Phase 6M: Devkit Timer Producer Contract Tests ===
+20: 
+20: [ Pre-init guards ]
+20: [PASS] TC01: should_post(0) false before init
+20: [PASS] TC02: should_post(2) false before init
+20: [PASS] TC03: should_post(100) false before init
+20: [PASS] TC04: stats.attempted == 0 before init
+20: [PASS] TC05: stats.ok == 0 before init
+20: [PASS] TC06: stats.dropped == 0 before init
+20: [PASS] TC07: stats.throttled == 0 before init
+20: [PASS] TC08: on_tick before init: attempted unchanged
+20: [PASS] TC09: on_tick before init: no event queued
+20: [PASS] TC10: get_stats(NULL) does not crash and is no-op
+20: 
+20: [ Init ]
+20: [PASS] TC11: robotos_core_init returns OK
+20: [PASS] TC12: producer init returns OK
+20: [PASS] TC13: handler registered for USER+1
+20: [PASS] TC14: registered_handler_count == 1
+20: [PASS] TC15: producer init idempotent (re-init returns OK)
+20: [PASS] TC16: registered_handler_count still 1 after re-init
+20: 
+20: [ Cadence predicate ]
+20: [PASS] TC17: should_post(0)   true  (0 %% 2 == 0)
+20: [PASS] TC18: should_post(1)   false (1 %% 2 != 0)
+20: [PASS] TC19: should_post(2)   true
+20: [PASS] TC20: should_post(3)   false
+20: [PASS] TC21: should_post(100) true
+20: [PASS] TC22: should_post(101) false
+20: [PASS] TC23: should_post(UINT32_MAX) false (odd)
+20: [PASS] TC24: should_post(UINT32_MAX-1) true (even)
+20: 
+20: [ First post ]
+20: [PASS] TC25: on_tick(2): attempted == 1
+20: [PASS] TC26: on_tick(2): ok == 1
+20: [PASS] TC27: on_tick(2): dropped == 0
+20: [PASS] TC28: pending == 1 (event queued)
+20: [PASS] TC29: core accepted +1
+20: 
+20: [ Cadence skip is a strict no-op ]
+20: [PASS] TC30: attempted unchanged after odd ticks
+20: [PASS] TC31: pending unchanged after odd ticks
+20: [PASS] TC32: core accepted unchanged after odd ticks
+20: 
+20: [ Multiple posts accumulate ]
+20: [PASS] TC33: attempted == 3 after two more posts
+20: [PASS] TC34: ok == 3 (queue not full)
+20: [PASS] TC35: pending == 3 (no dispatch yet)
+20: 
+20: [ Dispatch routes correctly ]
+20: [PASS] TC36: dispatch_events(3) returns OK
+20: [PASS] TC37: pending == 0 after drain
+20: [PASS] TC38: dispatched_count +3
+20: [PASS] TC39: handler_error_count unchanged (marker valid)
+20: [PASS] TC40: unhandled_event_count unchanged (handler matched)
+20: 
+20: [ Queue fill from producer alone ]
+20: [PASS] TC41: attempted advanced by CAPACITY+5
+20: [PASS] TC42: ok advanced by CAPACITY (queue filled exactly to cap)
+20: [PASS] TC43: dropped == 5 (CAPACITY+5 attempts vs CAPACITY queued)
+20: [PASS] TC44: pending == CAPACITY (queue full)
+20: [PASS] TC45: throttled == 0 (post_event path, not try_post_event)
+20: [PASS] TC46: invalid == 0 (marker always valid)
+20: [PASS] TC47: producer.dropped equals core dropped delta (single producer)
+20: 
+20: [ Drain restores post-success ]
+20: [PASS] TC48: pending == 0 after drain
+20: [PASS] TC49: attempted +1 after drain
+20: [PASS] TC50: ok +1 after drain
+20: [PASS] TC51: dropped unchanged after drain post
+20: [PASS] TC52: pending == 1 again
+20: 
+20: [ Type isolation: USER does not route to producer handler ]
+20: [PASS] TC53: post USER event returns OK (admission passes)
+20: [PASS] TC54: dispatch USER event returns OK
+20: [PASS] TC55: USER event went unhandled (no handler for type=USER)
+20: [PASS] TC56: handler_error_count unchanged (no handler matched)
+20: [PASS] TC57: producer.attempted unaffected by USER traffic
+20: [PASS] TC58: producer.ok unaffected by USER traffic
+20: [PASS] TC59: producer.dropped unaffected by USER traffic
+20: 
+20: === Phase 6M Producer Results: 59 passed, 0 failed ===
+20/22 Test #20: robotos_timer_producer_contract ...........   Passed    0.01 sec
+test 21
+      Start 21: robotos_fw_fsm_contract
+
+21: Test command: /mnt/d/Robot_OS/build-phase12f-host/robotos_fw_fsm_contract_test
+21: Working Directory: /mnt/d/Robot_OS/build-phase12f-host
+21: Test timeout computed to be: 10000000
+21: === robotos_fw_fsm host contract tests (Phase 12E) ===
+21: 
+21: [ TC01: init valid config ]
+21:   PASS  init returns OK
+21:   PASS  initialized true
+21:   PASS  current_state==S_A
+21:   PASS  event_count == 0
+21:   PASS  transition_count==0
+21:   PASS  init calls entry once
+21: 
+21: [ TC02: init NULL guards ]
+21:   PASS  init(NULL, cfg) == ERR_NULL
+21:   PASS  init(fsm, NULL) == ERR_NULL
+21:   PASS  init(fsm, {.transitions=NULL}) == ERR_NULL
+21: 
+21: [ TC03: init invalid args ]
+21:   PASS  transition_count==0 -> ERR_INVALID_ARG
+21:   PASS  initial==UNINIT -> ERR_INVALID_ARG
+21: 
+21: [ TC04: dispatch uninit and NULL ]
+21:   PASS  dispatch on uninit -> ERR_INVALID_STATE
+21:   PASS  dispatch NULL fsm -> ERR_NULL
+21: 
+21: [ TC05: dispatch matched transition ]
+21:   PASS  dispatch returns OK
+21:   PASS  current_state == S_B
+21:   PASS  event_count == 1
+21:   PASS  transition_count == 1
+21:   PASS  no_transition_count == 0
+21:   PASS  guard_rejected_count == 0
+21:   PASS  last_event_id == E_AB
+21:   PASS  last_status == OK
+21: 
+21: [ TC06: eval order exit -> state -> action -> entry ]
+21:   PASS  seq == X1 a2 E2 (exit, action sees to, entry)
+21:   PASS  no order violation marker present
+21: 
+21: [ TC07: first-match FIFO ]
+21:   PASS  first row wins (state == S_B, not S_C)
+21:   PASS  transition_count == 1
+21: 
+21: [ TC08: no transition matched ]
+21:   PASS  returns OK
+21:   PASS  state unchanged (S_A)
+21:   PASS  event_count == 1
+21:   PASS  transition_count == 0
+21:   PASS  no_transition_count == 1
+21:   PASS  guard_rejected_count == 0
+21:   PASS  last_event_id == E_NOP
+21: 
+21: [ TC09: guard reject (single matching row) ]
+21:   PASS  returns OK
+21:   PASS  state unchanged (S_A)
+21:   PASS  transition_count == 0
+21:   PASS  guard_rejected_count == 1
+21:   PASS  no_transition_count == 1
+21: 
+21: [ TC10: guard_rejected/no_transition counter independence ]
+21:   PASS  guard_rejected_count == 2 (per rejection)
+21:   PASS  no_transition_count == 1 (once at end)
+21:   PASS  transition_count == 0
+21: 
+21: [ TC11: guard true commits row (not the unguarded fallback) ]
+21:   PASS  first row (guard_true) wins -> S_B
+21:   PASS  guard saw pre-transition state (S_A=1)
+21: 
+21: [ TC12: action non-OK NO rollback ]
+21:   PASS  dispatch returns action's non-OK
+21:   PASS  state IS committed (S_B; no rollback)
+21:   PASS  transition_count == 1
+21:   PASS  entry still ran
+21:   PASS  last_status == non-OK
+21:   PASS  seq order X1 f2 E2
+21: 
+21: [ TC13: reset ]
+21:   PASS  reset returns OK
+21:   PASS  state == initial (S_A)
+21:   PASS  transition_count zeroed
+21:   PASS  event_count zeroed
+21:   PASS  guard_rejected_count zeroed
+21:   PASS  no_transition_count zeroed
+21:   PASS  last_event_id zeroed
+21:   PASS  last_status == OK
+21:   PASS  reset calls exit(prev=B) then entry(initial=A)
+21:   PASS  reset(NULL) -> ERR_NULL
+21:   PASS  reset(uninit) -> ERR_INVALID_STATE
+21: 
+21: [ TC14: get_state ]
+21:   PASS  get_state == S_A
+21:   PASS  get_state == S_B after dispatch
+21:   PASS  get_state(NULL) == UNINIT
+21:   PASS  get_state(uninit) == UNINIT
+21: 
+21: [ TC15: is_in_state ]
+21:   PASS  is_in_state(fsm, S_A) == true
+21:   PASS  is_in_state(fsm, S_B) == false
+21:   PASS  is_in_state(NULL, S_A) == false
+21:   PASS  is_in_state(uninit, S_A) == false
+21: 
+21: [ TC16: get_snapshot ]
+21:   PASS  snapshot returns OK
+21:   PASS  snap.current_state == S_B
+21:   PASS  snap.transition_count == 1
+21:   PASS  snap.event_count == 1
+21:   PASS  snap.no_transition_count == 0
+21:   PASS  snap.guard_rejected_count == 0
+21:   PASS  snap.last_event_id == E_AB
+21:   PASS  snap.last_status == OK
+21:   PASS  snap.initialized == true
+21:   PASS  snapshot(NULL fsm, &out) -> ERR_NULL
+21:   PASS  snapshot(&fsm, NULL out) -> ERR_NULL
+21:   PASS  snapshot(uninit) -> ERR_INVALID_STATE
+21: 
+21: [ TC17: event_count increments per dispatch ]
+21:   PASS  event_count == 3 (3 dispatches)
+21:   PASS  transition_count == 2
+21:   PASS  no_transition_count == 1
+21: 
+21: [ TC18: payload borrowed, not cached ]
+21:   PASS  action observed the payload pointer
+21:   PASS  payload_calls == 1
+21:   PASS  snapshot has no field for payload (review-confirmed)
+21: 
+21: [ TC19: re-init policy (idempotent) ]
+21:   PASS  re-init returns OK
+21:   PASS  re-init resets state to initial
+21:   PASS  re-init zeroes transition_count
+21:   PASS  re-init zeroes event_count
+21:   PASS  re-init zeroes last_event_id
+21:   PASS  re-init still initialized
+21: 
+21: [ TC20: get_state/is_in_state/get_snapshot use critical section ]
+21:   PASS  3 enters observed (get_state, is_in_state, get_snapshot)
+21:   PASS  3 exits observed (balanced enter/exit)
+21: 
+21: === Summary: 93 passed, 0 failed ===
+21/22 Test #21: robotos_fw_fsm_contract ...................   Passed    0.01 sec
+test 22
+      Start 22: robotos_fw_event_bridge_contract
+
+22: Test command: /mnt/d/Robot_OS/build-phase12f-host/robotos_fw_event_bridge_contract_test
+22: Working Directory: /mnt/d/Robot_OS/build-phase12f-host
+22: Test timeout computed to be: 10000000
+22: === robotos_fw_event_bridge host contract tests (Phase 12F) ===
+22: 
+22: [ TC01: init valid config ]
+22:   PASS  init returns OK
+22:   PASS  initialized == true
+22:   PASS  event_count == 0
+22:   PASS  mapped_count == 0
+22:   PASS  unmapped_count == 0
+22:   PASS  last_status == OK
+22:   PASS  last_fw_event_id == 0
+22:   PASS  config pointer installed
+22: 
+22: [ TC02: init NULL guards ]
+22:   PASS  init(NULL, cfg) == ERR_NULL
+22:   PASS  init(b, NULL) == ERR_NULL
+22:   PASS  init {.rows=NULL} == ERR_NULL
+22:   PASS  init {.fsm=NULL} == ERR_NULL
+22: 
+22: [ TC03: init invalid args ]
+22:   PASS  row_count == 0 -> ERR_INVALID_ARG
+22: 
+22: [ TC04: dispatch uninit and NULL ]
+22:   PASS  dispatch(NULL) -> ERR_NULL
+22:   PASS  dispatch on uninit -> ERR_INVALID_STATE
+22: 
+22: [ TC05: mapped event drives FSM transition ]
+22:   PASS  dispatch returns OK (FSM-OK)
+22:   PASS  FSM transitioned to S_ARMED
+22:   PASS  FSM transition_count == 1
+22:   PASS  bridge event_count == 1
+22:   PASS  bridge mapped_count == 1
+22:   PASS  bridge unmapped_count == 0
+22:   PASS  last_fw_event_id == FW_EV_ARM
+22:   PASS  last_adapter_type == USER
+22:   PASS  last_adapter_arg0 == A_ARG_A
+22:   PASS  last_status == OK
+22: 
+22: [ TC06: unmapped event ignored, FSM not called ]
+22:   PASS  dispatch returns OK
+22:   PASS  FSM state unchanged (IDLE)
+22:   PASS  FSM transition_count == 0
+22:   PASS  FSM event_count == 0 (FSM not called)
+22:   PASS  bridge event_count == 1
+22:   PASS  bridge mapped_count == 0
+22:   PASS  bridge unmapped_count == 1
+22:   PASS  last_status == OK
+22:   PASS  last_fw_event_id == 0 (no mapped dispatch yet)
+22: 
+22: [ TC07: payload borrowed, passed through verbatim ]
+22:   PASS  FSM action saw the payload pointer verbatim
+22:   PASS  FSM action called exactly once
+22: 
+22: [ TC08: bridge struct has no payload-storage field ]
+22:   PASS  sizeof(bridge) <= sum of documented fields + padding
+22:   PASS  sizeof(bridge_snapshot) has no payload field by review
+22: 
+22: [ TC09: FSM non-OK status propagates through bridge ]
+22:   PASS  dispatch returns FSM's non-OK status
+22:   PASS  bridge.last_status == FSM non-OK
+22:   PASS  FSM state still committed (S_ARMED; no rollback)
+22:   PASS  bridge mapped_count == 1
+22: 
+22: [ TC10: FIFO first-match deterministic ]
+22:   PASS  first matching row wins (FW_EV_ARM, FSM -> ARMED)
+22:   PASS  FSM saw FW_EV_ARM, not FW_EV_RESET
+22:   PASS  bridge.last_fw_event_id == FW_EV_ARM
+22: 
+22: [ TC11: adapter_arg0 exact match ]
+22:   PASS  arg0=A picks FW_EV_ARM (FSM ARMED)
+22:   PASS  bridge.last_fw_event_id == FW_EV_ARM
+22:   PASS  arg0=B picks FW_EV_START (FSM ACTIVE)
+22:   PASS  bridge.last_fw_event_id == FW_EV_START
+22:   PASS  arg0=C is unmapped (no FSM call)
+22: 
+22: [ TC12: adapter_arg0 wildcard match ]
+22:   PASS  arg0=0 matches wildcard row (IDLE->ARMED)
+22:   PASS  arg0=7777 also matches wildcard row (mapped_count increments)
+22:   PASS  bridge unmapped_count == 0
+22:   PASS  bridge event_count == 2
+22: 
+22: [ TC13: FIFO order beats arg0 specificity ]
+22:   PASS  wildcard row at index 0 wins (FSM -> ARMED)
+22:   PASS  bridge.last_fw_event_id == FW_EV_ARM (wildcard row)
+22: 
+22: [ TC14: multiple mappings drive a sequence ]
+22:   PASS  USER/A -> ARMED
+22:   PASS  BUTTON/* -> ACTIVE
+22:   PASS  UART/C -> IDLE
+22:   PASS  TIMER mapped but FSM no_transition (state stays IDLE)
+22:   PASS  FSM no_transition_count == 1
+22:   PASS  bridge mapped_count == 4 (all four dispatches matched a row)
+22:   PASS  bridge unmapped_count == 0
+22:   PASS  bridge event_count == 4
+22: 
+22: [ TC15: bridge reset resets bridge, not FSM ]
+22:   PASS  pre-reset: event_count == 2
+22:   PASS  pre-reset: mapped_count == 1
+22:   PASS  pre-reset: unmapped_count == 1
+22:   PASS  pre-reset: FSM is in ARMED
+22:   PASS  reset returns OK
+22:   PASS  post-reset: event_count == 0
+22:   PASS  post-reset: mapped_count == 0
+22:   PASS  post-reset: unmapped_count==0
+22:   PASS  post-reset: last_status == OK
+22:   PASS  post-reset: last_fw_event_id==0
+22:   PASS  post-reset: last_adapter_type==0
+22:   PASS  post-reset: last_adapter_arg0==0
+22:   PASS  post-reset: bridge still initialized
+22:   PASS  post-reset: FSM still in ARMED
+22:   PASS  post-reset: FSM transition_count still 1
+22:   PASS  reset(NULL) -> ERR_NULL
+22:   PASS  reset(uninit) -> ERR_INVALID_STATE
+22: 
+22: [ TC16: snapshot coherence ]
+22:   PASS  snapshot returns OK
+22:   PASS  snap.event_count == 3
+22:   PASS  snap.mapped_count == 2
+22:   PASS  snap.unmapped_count == 1
+22:   PASS  snap.last_adapter_type == TIMER
+22:   PASS  snap.last_adapter_arg0 == 9
+22:   PASS  snap.last_fw_event_id == FW_EV_TICK
+22:   PASS  snap.last_status == OK
+22:   PASS  snap.initialized == true
+22:   PASS  snap matches bridge fields (event_count)
+22:   PASS  snap matches bridge fields (mapped_count)
+22:   PASS  snap matches bridge fields (unmapped_count)
+22:   PASS  snapshot(NULL bridge) -> ERR_NULL
+22:   PASS  snapshot(bridge, NULL) -> ERR_NULL
+22:   PASS  snapshot(uninit) -> ERR_INVALID_STATE
+22: 
+22: [ TC17: re-init policy ]
+22:   PASS  re-init returns OK
+22:   PASS  re-init zeroes event_count
+22:   PASS  re-init zeroes mapped_count
+22:   PASS  re-init zeroes unmapped_count
+22:   PASS  re-init zeroes last_fw_event_id
+22:   PASS  re-init still initialized
+22:   PASS  re-init does NOT reset FSM (still ARMED)
+22: 
+22: === Summary: 103 passed, 0 failed ===
+22/22 Test #22: robotos_fw_event_bridge_contract ..........   Passed    0.01 sec
+
+100% tests passed, 0 tests failed out of 22
+
+Total Test time (real) =   0.39 sec

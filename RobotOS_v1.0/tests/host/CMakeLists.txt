@@ -426,6 +426,29 @@ target_include_directories(robotos_fw_fsm_contract_test PRIVATE
 add_test(NAME robotos_fw_fsm_contract
          COMMAND robotos_fw_fsm_contract_test)
 
+# ---- Framework Application Event Bridge host contract test (Phase 12F) ------
+# Compiles framework/robotos_fw_event_bridge.c together with
+# framework/robotos_fw_fsm.c so the test exercises the bridge end-to-end
+# against the real FSM. Pulls in the platform critical host stub because
+# robotos_fw_fsm.c uses robotos_platform_critical_enter/exit for ISR-safe
+# state queries. No core/, devkit/, or Architecture B dependency.
+add_executable(robotos_fw_event_bridge_contract_test
+    test_robotos_fw_event_bridge.c
+    "${FRAMEWORK_DIR}/robotos_fw_event_bridge.c"
+    "${FRAMEWORK_DIR}/robotos_fw_fsm.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/robotos_platform_critical_host_stub.c"
+)
+
+target_include_directories(robotos_fw_event_bridge_contract_test PRIVATE
+    "${FRAMEWORK_DIR}"
+    "${CORE_DIR}"
+    "${PLATFORM_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+)
+
+add_test(NAME robotos_fw_event_bridge_contract
+         COMMAND robotos_fw_event_bridge_contract_test)
+
 # ---- Log persistence target --------------------------------------------------
 # Saves ctest output to a timestamped file in the version-controlled logs/
 # directory alongside this CMakeLists.txt.

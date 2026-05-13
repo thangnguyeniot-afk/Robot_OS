@@ -1,20 +1,27 @@
 # RobotOS Framework Application Bridge — Draft Spec
 
-**Status:** `DRAFT / NON-FINAL`. No implementation exists yet.
-Function names, type shapes, and behavioral guarantees are all subject
-to change until an implementation phase (Phase 12F or later) locks
-them. ABI is **NOT** stable.
-**Revision:** Phase 12F-pre (2026-05-12, `CLOSED_DOCS_ONLY`) — initial
-draft created alongside the Phase 12F-pre planning doc.
-**Next revision condition:** Phase 12F — when the bridge module
-`framework/robotos_fw_event_bridge.{h,c}` is created and host-tested,
-§5 names and signatures move from `DRAFT` to `LOCKED-AT-12F`.
+**Status:** `DRAFT / EXPERIMENTAL — IMPLEMENTED_AT_12F (HOST-TEST
+EVIDENCE)`. The §5 names and signatures listed below are now
+`LOCKED-AT-12F`: they correspond to actual declarations in
+`RobotOS_v1.0/framework/robotos_fw_event_bridge.h` and an actual
+implementation in `RobotOS_v1.0/framework/robotos_fw_event_bridge.c`,
+validated by `RobotOS_v1.0/tests/host/test_robotos_fw_event_bridge.c`
+(103/103 assertions, 17 cases). ABI is still **NOT** stable beyond
+those names — memory layout and behavioral semantics may still evolve
+in a later phase. No devkit integration. No hardware evidence.
+**Revisions:**
+- Phase 12F-pre (2026-05-12, `CLOSED_DOCS_ONLY`) — initial draft.
+- Phase 12F (2026-05-13, `CLOSED_WITH_HOST_TEST_EVIDENCE`;
+  `PHASE_12F_APPLICATION_BRIDGE_HOST_PROTOTYPE_CLOSED`) — host
+  prototype implemented; §5 names LOCKED-AT-12F.
+**Next revision condition:** Phase 12G or later — devkit integration
+mode (shadow / replacement / separate application) is decided in a
+follow-up planning gate, OR additional bridge behavior (fan-out, ISR
+support, unmapped-event diagnostic hook) is authorized.
 
-> **No `framework/robotos_fw_event_bridge.*` file exists. No bridge
-> `.c` body exists. This document describes a future API that has not
-> been implemented.** Phase 12C confirmed the Application bridge concept
-> (`APPLICATION_OWNED_EVENT_BRIDGE_CONFIRMED`); Phase 12F-pre is the
-> first concrete planning of that bridge.
+> The Phase 12F implementation exists. The bridge is **product-neutral**
+> and **host-tested only** — no devkit integration, no UART command
+> surface change, no hardware evidence.
 
 This spec is anchored to
 [`../02_PHASE_CLOSEOUTS/PHASE_12F_PRE_APPLICATION_BRIDGE_PLANNING.md`](../02_PHASE_CLOSEOUTS/PHASE_12F_PRE_APPLICATION_BRIDGE_PLANNING.md)
@@ -41,23 +48,23 @@ Framework-level `robotos_fw_event_id_t` logical events and calls
 - A promotion or replacement of `devkit_app_state`. That module
   remains devkit-local and authoritative for devkit runtime behavior.
 
-**Current decision state (Phase 12F-pre):**
+**Current decision state (Phase 12F):**
 
 | Decision | Status |
 |---|---|
 | Bridge pattern | `APPLICATION_OWNED_EVENT_BRIDGE_CONFIRMED` at Phase 12C |
 | Bridge layer | Above the Framework FSM, below any product / Application layer |
-| First implementation path | `PHASE_12F_PRE_RECOMMEND_HOST_BRIDGE_PROTOTYPE` (Phase 12F, host-only) |
-| Bridge module location | `RobotOS_v1.0/framework/robotos_fw_event_bridge.{h,c}` (proposed; locks at Phase 12F) |
-| Bridge instance ownership | Caller-owned (proposed; locks at Phase 12F) |
-| Mapping table ownership | Caller-owned static const array (proposed; locks at Phase 12F) |
-| FSM ownership | Bridge takes `robotos_fw_fsm_t *` from caller; bridge does NOT own the FSM (proposed; locks at Phase 12F) |
-| Adapter key shape | `(robotos_event_type_t, optional uint32_t arg0 match)` (proposed; locks at Phase 12F) |
-| Unmapped event behavior | Silent OK + `unmapped_count++`; FSM not called (proposed; locks at Phase 12F) |
-| Payload pass-through | Borrowed `const void *` passed through unchanged; never stored (proposed; locks at Phase 12F) |
-| Status model | Reuse `robotos_core_status_t` via `robotos_fw_status_t` alias; no new enum (proposed; locks at Phase 12F) |
-| Threading | Thread context only; no ISR (proposed; locks at Phase 12F) |
-| Forbidden coupling | No UART TX, no GPIO/PWM/I2C/SPI drivers, no `robotos_core_register_event_handler`, no Zephyr / devkit / legacy `ro_*` includes, no heap (proposed; locks at Phase 12F) |
+| First implementation path | `PHASE_12F_APPLICATION_BRIDGE_HOST_PROTOTYPE_CLOSED` (host-only; 103/103) |
+| Bridge module location | `RobotOS_v1.0/framework/robotos_fw_event_bridge.{h,c}` — **LOCKED-AT-12F** |
+| Bridge instance ownership | Caller-owned — **LOCKED-AT-12F** |
+| Mapping table ownership | Caller-owned static const array — **LOCKED-AT-12F** |
+| FSM ownership | Bridge takes `robotos_fw_fsm_t *` from caller; bridge does NOT own/init/reset the FSM — **LOCKED-AT-12F** |
+| Adapter key shape | `(uint32_t adapter_type, uint32_t adapter_arg0)` with `match_arg0` bool — **LOCKED-AT-12F** |
+| Unmapped event behavior | Silent OK + `unmapped_count++`; FSM not called — **LOCKED-AT-12F** |
+| Payload pass-through | Borrowed `const void *` passed through unchanged; never stored — **LOCKED-AT-12F** |
+| Status model | Reuse `robotos_core_status_t` via `robotos_fw_status_t` alias; no new enum — **LOCKED-AT-12F** |
+| Threading | Thread context only; no ISR — **LOCKED-AT-12F** |
+| Forbidden coupling | No UART TX, no GPIO/PWM/I2C/SPI drivers, no `robotos_core_register_event_handler`, no Zephyr / devkit / legacy `ro_*` includes, no heap — **LOCKED-AT-12F** |
 
 ---
 
@@ -186,7 +193,14 @@ from affecting FSM counters.
 
 ---
 
-## 5. Draft API Surface (DRAFT / NON-FINAL; locks at Phase 12F)
+## 5. Draft API Surface (DRAFT / `LOCKED-AT-12F` for names and signatures)
+
+**Lock status:** as of Phase 12F (`PHASE_12F_APPLICATION_BRIDGE_HOST_PROTOTYPE_CLOSED`),
+the §5 names and signatures below are `LOCKED-AT-12F` — they match the
+declarations in `framework/robotos_fw_event_bridge.h` and the
+implementation in `framework/robotos_fw_event_bridge.c`. Memory layout
+and behavioral guarantees beyond those listed are still
+`DRAFT / EXPERIMENTAL`.
 
 ### 5.1 Types
 
@@ -271,8 +285,65 @@ robotos_fw_status_t robotos_fw_event_bridge_get_snapshot(
     robotos_fw_event_bridge_snapshot_t     *out);
 ```
 
-**ABI lock condition:** these signatures become LOCKED-AT-12F when the
-Phase 12F closeout records `PHASE_12F_APPLICATION_BRIDGE_HOST_PROTOTYPE_CLOSED`.
+**ABI lock condition:** met. The Phase 12F closeout records
+`PHASE_12F_APPLICATION_BRIDGE_HOST_PROTOTYPE_CLOSED`; the signatures
+above are now `LOCKED-AT-12F`.
+
+### 5.3 Implementation behavior (Phase 12F)
+
+The Phase 12F implementation documents the following behavior beyond
+the signature surface:
+
+- **Wildcard precedence:** Row order is the only precedence rule. A
+  wildcard row (`match_arg0 == false`) at index `i` shadows any
+  exact-match row at index `j > i` for the same `adapter_type`. The
+  bridge applies no additional specificity tiebreak. Callers must
+  therefore order exact-match rows BEFORE wildcard rows when a
+  wildcard fallback is desired. (Asserted by host test TC13.)
+- **Status mapping:** Same value set as
+  `robotos_core_status_t`. Specifically:
+  - `ROBOTOS_CORE_OK` on a mapped dispatch whose FSM returned OK
+    (committed transition or no-transition), and on every unmapped
+    Adapter event.
+  - The FSM's non-OK status, propagated verbatim, when a mapped
+    dispatch's FSM action returns non-OK (Phase 12C no-rollback
+    policy: FSM state is still committed). (Asserted by TC09.)
+  - `ROBOTOS_CORE_ERR_NULL` from any API call whose required pointer
+    argument is NULL.
+  - `ROBOTOS_CORE_ERR_INVALID_ARG` from `init()` when
+    `config->row_count == 0`.
+  - `ROBOTOS_CORE_ERR_INVALID_STATE` from `dispatch()`, `reset()`, or
+    `get_snapshot()` when the bridge is not initialized.
+- **Reset policy:** `robotos_fw_event_bridge_reset()` zeroes
+  `event_count`, `mapped_count`, `unmapped_count`, `last_adapter_type`,
+  `last_adapter_arg0`, `last_fw_event_id`, and sets `last_status` to
+  `ROBOTOS_CORE_OK`. The bridge stays initialized. The bridge **does
+  not** call `robotos_fw_fsm_reset()`; FSM state, FSM counters, and
+  FSM `current_state` are preserved across a bridge reset. (Asserted
+  by TC15.)
+- **Re-init policy:** `robotos_fw_event_bridge_init()` is idempotent
+  — a second `init()` call against an already-initialized bridge
+  zeroes counters and re-installs the config pointer. The FSM is
+  **not** touched by re-init. (Asserted by TC17.)
+- **Counter semantics:**
+  - `event_count` increments on EVERY successful dispatch attempt
+    (mapped or unmapped). Phase 12F-pre §11 #6 proposal is now
+    locked: `event_count == mapped_count + unmapped_count`.
+  - `mapped_count` increments only when a row matched and the FSM
+    was called.
+  - `unmapped_count` increments only when no row matched.
+  - `last_fw_event_id` records only the most recent MAPPED
+    dispatch's Framework event ID; it stays at 0 if no mapped
+    dispatch has occurred yet.
+  - `last_adapter_type` / `last_adapter_arg0` record EVERY
+    dispatch's Adapter key (mapped or unmapped).
+- **Threading:** Thread context only. The bridge takes no critical
+  section internally (the FSM still takes its own for ISR-safe state
+  queries). ISR-context dispatch is **not** in scope for Phase 12F.
+- **No payload retention:** The bridge struct has no payload-storage
+  field (see TC08 structural assertion). The payload is forwarded to
+  `robotos_fw_fsm_dispatch()` and then dropped on the floor by the
+  bridge.
 
 ---
 
@@ -350,7 +421,7 @@ in one of several patterns (none of which are Phase 12F scope):
 
 | Future pattern | Owner of bridge instance | Owner of FSM instance | Mapping source | Status |
 |---|---|---|---|---|
-| Host unit-test prototype (Phase 12F) | Test executable | Test executable | Static const array in test source | RECOMMENDED |
+| Host unit-test prototype (Phase 12F) | Test executable | Test executable | Static const array in test source | **IMPLEMENTED_AT_12F** (host test `test_robotos_fw_event_bridge.c`, 103/103) |
 | Devkit shadow integration (future Phase 12G-pre etc.) | New `devkit/src/devkit_fw_shadow.c` | Same file | Static const array in same file; rows reflect `robotos_event_type_t` 102/103 + UART byte values | NOT_AUTHORIZED (planning gate required) |
 | Devkit replacement integration | `devkit/src/devkit_app_state.c` rewrite | Same file | Static const array | NOT_RECOMMENDED ever without dedicated migration phase |
 | Separate Application layer | `RobotOS_v1.0/app/<product>/<file>.c` | Same file | Static const array | NOT_AUTHORIZED (Application planning required first) |
@@ -361,20 +432,18 @@ designed to be product-neutral so it can serve all four call sites.
 
 ---
 
-## 11. Open Decisions
+## 11. Open Decisions (resolved at Phase 12F where applicable)
 
-Items intentionally left open for Phase 12F (or later) to resolve:
-
-| # | Open question | Latest at |
+| # | Open question | Resolution |
 |---|---|---|
-| 1 | Whether the bridge module lives at `framework/robotos_fw_event_bridge.{h,c}` or at a different path | Phase 12F |
-| 2 | Whether the public surface in §5 is exactly four functions or fewer / more | Phase 12F (Phase 12F-pre proposes four) |
-| 3 | Whether `robotos_fw_event_bridge_t` exposes its fields publicly (like the FSM struct does) or keeps them opaque | Phase 12F (Phase 12F-pre proposes public, consistent with FSM) |
-| 4 | Whether `arg0` is sufficient as a sub-discriminator, or whether `arg1` (or a hash function pointer) is also needed | Phase 12F |
-| 5 | Whether a bridge can hold a list of FSMs (fan-out) | Phase 12G or later (no use case yet; Phase 12F-pre proposes single FSM) |
-| 6 | Whether the bridge's `event_count` should be the count of *attempted* dispatches or *mapped* dispatches | Phase 12F (Phase 12F-pre proposes attempted; mapped is recorded separately as `mapped_count`) |
-| 7 | Whether the bridge should expose a hook to log unmapped events for diagnostic purposes | Phase 12G or later |
-| 8 | Whether the bridge needs critical-section protection on its counters (similar to the FSM's ISR-safe getters) | Phase 12F (Phase 12F-pre proposes thread-context only: no ISR access, no critical section needed) |
+| 1 | Bridge module path | **RESOLVED at 12F:** `framework/robotos_fw_event_bridge.{h,c}`. |
+| 2 | Public surface size | **RESOLVED at 12F:** exactly four functions — `init`, `dispatch`, `reset`, `get_snapshot`. |
+| 3 | Struct visibility | **RESOLVED at 12F:** public fields (consistent with `robotos_fw_fsm_t`), documented as opaque-by-convention. |
+| 4 | `arg0` sufficiency vs. `arg1` / hash | **RESOLVED at 12F (for Phase 12F scope):** `arg0` is sufficient for the host prototype. `arg1` / function-pointer matching deferred to a later phase if a real use case appears. |
+| 5 | Fan-out (one bridge -> multiple FSMs) | **DEFERRED:** Phase 12F locks single-FSM `config->fsm`. Fan-out is a Phase 12G or later question if a use case appears. |
+| 6 | `event_count` semantics | **RESOLVED at 12F:** counts every dispatch attempt. `event_count == mapped_count + unmapped_count` is invariant. |
+| 7 | Unmapped-event diagnostic hook | **DEFERRED:** no hook in Phase 12F. Callers that need this can read `unmapped_count` and `last_adapter_*` from a snapshot. Phase 12G or later may add a callback. |
+| 8 | Critical-section protection on bridge counters | **RESOLVED at 12F:** thread-context only; no critical section taken by the bridge. ISR access is out of scope for Phase 12F. A future phase that adds ISR support would revisit this. |
 
 ---
 
@@ -382,11 +451,12 @@ Items intentionally left open for Phase 12F (or later) to resolve:
 
 This spec is revised when:
 
-1. **Phase 12F opens (host bridge prototype):** Header
+1. **Phase 12F (host bridge prototype) — DONE at 2026-05-13.** Header
    `robotos_fw_event_bridge.h` and source `robotos_fw_event_bridge.c`
-   are created. §5 names move from `DRAFT` to `LOCKED-AT-12F`. The
-   eight open decisions in §11 are resolved or explicitly deferred
-   per item. A host-test target validates the bridge contract.
+   created. §5 names locked. The eight open decisions in §11 resolved
+   or explicitly deferred per item. Host-test target
+   `robotos_fw_event_bridge_contract_test` validates 17 cases / 103
+   assertions; full host regression 22/22 PASS.
 2. **Phase 12G or later (devkit shadow or other integration):** Spec
    gains a new section describing the integration mode. §10 marks the
    chosen pattern as `IMPLEMENTED_AT_12G`.
