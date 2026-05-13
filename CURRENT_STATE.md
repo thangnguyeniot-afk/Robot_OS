@@ -9,6 +9,136 @@
 
 ## Last Closed Phase
 
+### Phase 12H — Probe Translator App Skeleton Planning (docs-only, Variant 1)
+
+- **Date:** 2026-05-13
+- **Type:** Docs-only application-skeleton planning gate (Variant 1). **No source, runtime, test, CMake, Zephyr, board, `prj.conf`, DTS overlay, evidence log, Framework header, Framework `.c` file, devkit integration, command-set, or `devkit_app_state` change.** No file under `framework/`, `tests/`, `core/`, `platform/`, `devkit/src/`, `src/`, `include/robotos/` modified. **No `app/` or `application/` directory created. No `app/probe_translator/` directory created.**
+- **Close status:** `CLOSED_DOCS_ONLY`
+- **Decision result:** `PHASE_12H_PROBE_TRANSLATOR_SKELETON_PLANNED_DOCS_ONLY`
+- **Published baseline at open:** `origin/master = 45ac339`
+- **Closeout doc:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12H_PROBE_TRANSLATOR_SKELETON_PLANNING.md`
+- **New long-lived spec draft:** `RobotOS_v1.0/devkit/docs/03_SPECS/PROBE_TRANSLATOR_APP_SKELETON_DRAFT.md` (`DRAFT / NON-FINAL`; locks future file set, public API names, state / event / adapter-key vocabulary, transition + mapping tables, host test plan, build strategy).
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md` `<a id="phase-12h"></a>`
+
+#### Skeleton planning locked
+
+**`PHASE_12H_PROBE_TRANSLATOR_SKELETON_PLANNED_DOCS_ONLY`** — Future `RobotOS_v1.0/app/probe_translator/` skeleton is locked at planning depth. The directory remains **NOT_CREATED**. The next recommended gate is Phase 12I-pre (docs-only implementation plan) which resolves numeric values for the locked constant names and ship-or-defer decisions for the optional FAULT block and transition row 5; alternatively Phase 12I (host prototype implementation) may open if the user explicitly authorizes implementation directly.
+
+#### Future file boundary locked
+
+**Required at first implementation:**
+
+- `RobotOS_v1.0/app/probe_translator/probe_translator.h`
+- `RobotOS_v1.0/app/probe_translator/probe_translator.c`
+- `RobotOS_v1.0/app/probe_translator/README.md`
+- `RobotOS_v1.0/tests/host/test_app_probe_translator_mapping.c`
+
+**Optional:** `RobotOS_v1.0/app/probe_translator/PROBE_TRANSLATOR_SPEC.md` (only if local docs grow large).
+
+**Forbidden at first implementation:** `app/probe_translator/CMakeLists.txt`; Zephyr `prj.conf` / DTS overlay; `probe_translator_devkit.*`; `probe_translator_uart.*`; `probe_translator_main.c`; any RTT / J-Link / OpenOCD / flashing script; any Architecture B reuse.
+
+#### Public API names locked (planning-level)
+
+| API | Purpose |
+|---|---|
+| `probe_translator_init(pt, config)` | Init harness + embedded FSM + bridge in one call. |
+| `probe_translator_dispatch_adapter_event(pt, type, arg0, payload)` | Forward synthetic adapter tuple through bridge → FSM. |
+| `probe_translator_reset(pt)` | Reset bridge counters + FSM state. |
+| `probe_translator_get_snapshot(pt, out)` | Combined FSM + bridge snapshot. |
+
+Numeric values, struct layout, and ABI memory placement remain open (deferred to Phase 12I or later).
+
+#### State / event vocabulary locked (names; numeric values open)
+
+**States:** `PROBE_TRANSLATOR_STATE_IDLE / READY / ACTIVE` (required) + `PROBE_TRANSLATOR_STATE_FAULT` (optional; ship-or-defer at Phase 12I-pre).
+
+**Events:** `PROBE_TRANSLATOR_EVT_CONFIGURED / START / STOP / RESET` (required) + `PROBE_TRANSLATOR_EVT_FAULT` (optional).
+
+All names are application-local. Name overlap with `DEVKIT_APP_STATE_IDLE / ARMED / ACTIVE` is coincidental at the human-readable level only.
+
+#### Transition table locked (names; values open)
+
+Rows 0–4 required: `IDLE+CONFIGURED → READY`, `READY+START → ACTIVE`, `ACTIVE+STOP → READY`, `READY+RESET → IDLE`, `ACTIVE+RESET → IDLE`. Row 5 (`IDLE+RESET → IDLE`) and rows 6–9 (FAULT block) optional. All rows use `guard = NULL` and `action = NULL` at first implementation.
+
+#### Bridge mapping table locked (names; values open)
+
+Adapter types: `PROBE_ADAPTER_TYPE_CONFIG / _COMMAND / _FAULT?`. Adapter args: `PROBE_ADAPTER_ARG_NONE / _START / _STOP / _RESET / _ANY?`. Mapping rows 0–3 required (specific `match_arg0 == true`); row 4 (`TYPE_FAULT` wildcard) optional. Specific rows precede the wildcard row; wildcard uses a distinct `adapter_type` so it does not collide.
+
+#### Host test plan locked
+
+16 cases (TC01–TC16): init valid/invalid, four mapping happy paths (CONFIG / START / STOP / RESET), optional FAULT wildcard, unmapped event accounting, payload borrowed, snapshot counters, reset, full transition path, three grep gates (no `devkit_app_state.h` / no `a/s/r/?/x/v/L/d/T` / no Zephyr / devkit / legacy `ro_*` includes), full regression preserved (≥23/23 after new target). Future host test naming: `tests/host/test_app_probe_translator_mapping.c`.
+
+#### Build strategy preferred
+
+**Option A** — additive entry in existing `tests/host/CMakeLists.txt`. Option B (new leaf `app/probe_translator/CMakeLists.txt`) acceptable but not preferred. Option C (devkit integration) **not authorized**. Host environment = WSL Ubuntu / gcc 13.3.0 (Phase 12E / 12F baseline).
+
+#### Relationship to `devkit_app_state` (scope-guard #11 preserved)
+
+- `devkit_app_state` remains **authoritative** for the current devkit runtime. Phase 12H does **not** modify, replace, shadow, copy, or promote it.
+- `probe_translator/`, when created, **must not** include `devkit_app_state.h`, must not call any `devkit_*` function, and must not read or write `devkit_app_state` snapshots.
+- The application's `PROBE_TRANSLATOR_STATE_*` states are application-local; name overlap with `DEVKIT_APP_STATE_*` is human-readable only.
+- No `?` response change. No `a/s/r/?/x/v/L/d/T` semantic change.
+- Scope-guard #11 remains active.
+
+#### Relationship to command set
+
+- `a / s / r / ? / x / v / L / d / T` remain the **devkit / probe surface**.
+- `probe_translator/` defines no UART command.
+- Framework not exposed via UART automatically.
+- All 12 UART TX scope-guard constraints from `PHASE_9EZ_CHECKPOINT.md §H` preserved.
+
+#### Relationship to legacy Architecture B
+
+- `src/`, `include/robotos/`, and root `RobotOS_v1.0/CMakeLists.txt` remain frozen at `LEGACY_SCAFFOLD_MARKED_FROZEN_DOCS_ONLY` (Phase 12D-pre).
+- The future `probe_translator/` directory does **not** reuse `src/app/`, `include/robotos/app*`, or any other Architecture B artifact. Uses Architecture A contracts only.
+- No Architecture A ↔ Architecture B reconciliation in Phase 12H.
+
+#### What is preserved unchanged at Phase 12H
+
+- All `.c` and `.h` files in the repo — zero-diff.
+- `framework/robotos_fw_fsm.{h,c}`, `framework/robotos_fw_event_bridge.{h,c}`, `framework/README.md` — zero-diff.
+- All `CMakeLists.txt` (root, `devkit/`, `tests/`, `tests/host/`) — zero-diff.
+- All tracked test files under `tests/` — zero-diff.
+- `core/`, `platform/`, `devkit/src/`, board DTS/overlays, Zephyr workspace — zero-diff.
+- `src/`, `include/robotos/`, `include/app/` — zero-diff.
+- Architecture B legacy notices — zero-diff.
+- All evidence logs — zero-diff.
+- All prior closeout docs — not rewritten.
+- **No `app/` directory created.** `RobotOS_v1.0/app/` does not exist.
+- **No `app/probe_translator/` directory created.**
+- Framework FSM host test (Phase 12E, 93/93), bridge host test (Phase 12F, 103/103), and full host regression (Phase 12F, 22/22) remain the latest tracked evidence.
+
+#### Remaining decisions (all preserved unchanged at Phase 12H)
+
+1. ACTIVE disarm widening — `USER_DECISION_REQUIRED_ACTIVE_DISARM`
+2. Scheduler 7A/7B — `DEFER`
+3. F407 / custom board — `HOLD/DEFER`
+4. POST_FLASH_AUTOSTART root cause — `OPEN` / `MITIGATED_BY_WORKFLOW`
+5. Application / product layer — `NOT_STARTED`; first `<product>` = `probe_translator`; `app/` directory `NOT_CREATED`; `app/probe_translator/` `NOT_CREATED`; skeleton locked at Phase 12H
+6. Devkit integration of Framework FSM + bridge — `NOT_STARTED`; recommended mode = SEPARATE APPLICATION (Phase 12G-pre Mode 4)
+7. Architecture A ↔ Architecture B reconciliation — `NOT_STARTED`; out of scope
+8. Numeric values for `PROBE_TRANSLATOR_STATE_*` and `PROBE_TRANSLATOR_EVT_*` — open for Phase 12I-pre
+9. Numeric values for `PROBE_ADAPTER_TYPE_*` and `PROBE_ADAPTER_ARG_*` — open for Phase 12I-pre
+10. Whether `PROBE_TRANSLATOR_STATE_FAULT` + rows 6–9 + TC07 ship in first implementation — open for Phase 12I-pre
+11. Whether transition row 5 (`IDLE + RESET → IDLE`) ships — open for Phase 12I-pre
+12. Whether `probe_translator_t` embeds FSM + bridge by value or references by pointer — open for Phase 12I
+13. Whether `PROBE_ADAPTER_ARG_ANY` is declared in the header — open for Phase 12I
+14. Whether `probe_translator_get_snapshot` returns a combined struct or two out-params — open for Phase 12I
+15. Whether Phase 12I-pre (docs-only) opens first or Phase 12I (implementation) opens directly — user decision before next gate opens
+16. Exact CMake wiring choice (Option A preferred; Option B acceptable later; Option C not authorized) — open for the first application implementation phase
+17. Whether the first application is also a hardware-runnable Zephyr application or strictly host-only at first — open for the first application implementation phase
+18. Whether to introduce `RobotOS_v1.0/examples/` for sample integrations in addition to `app/<product>/` — open for a future docs-only phase
+19. Multi-product coordination rules — open; reachable only after at least two applications exist
+20. Bridge ABI memory-layout lock — `NOT_STARTED`; only names + signatures are `LOCKED-AT-12F`
+
+#### Next gate
+
+**Hold.** Phase 12I-pre — Probe Translator Host Prototype Implementation Plan (docs-only) may open only on **explicit user authorization** AND with the recommended scope from §R of the Phase 12H closeout. Phase 12I-pre is the preferred next gate; alternatively Phase 12I (host prototype implementation) may open if the user explicitly authorizes implementation directly. Phase 12I-pre and Phase 12I both remain `NOT_STARTED`. If the user prefers to hold instead, no next phase is required — the skeleton spec sits at planning depth indefinitely. Replacement / shadow / direct devkit integration modes remain blocked by Phase 12G-pre's enumeration.
+
+---
+
+## Prior Closed Phase
+
 ### Phase 12H-pre — First Application Candidate / Product Harness Selection (docs-only)
 
 - **Date:** 2026-05-13

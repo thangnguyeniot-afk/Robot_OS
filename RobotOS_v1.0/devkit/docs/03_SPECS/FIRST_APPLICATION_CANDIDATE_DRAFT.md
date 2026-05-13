@@ -5,12 +5,21 @@ exists.** This document describes the planning-level shape of the
 first application candidate / product harness selected by Phase
 12H-pre. No `app/probe_translator/` directory has been created, and
 no application `.c` / `.h` / `CMakeLists.txt` / README file exists.
-**Revision:** Phase 12H-pre (2026-05-13, `CLOSED_DOCS_ONLY`;
-`PHASE_12H_PRE_RECOMMEND_PROBE_TRANSLATOR_APP`) — initial draft.
-**Next revision condition:** Phase 12H (when authorized) — when the
-first probe-translator skeleton is frozen or implemented host-first,
-this spec gains the resolved file list, frozen `APP_EVT_*` numeric
-values, and host-test evidence cross-references.
+**Revision:** Phase 12H (2026-05-13, `CLOSED_DOCS_ONLY`;
+`PHASE_12H_PROBE_TRANSLATOR_SKELETON_PLANNED_DOCS_ONLY`) — added
+cross-reference to the new
+[`PROBE_TRANSLATOR_APP_SKELETON_DRAFT.md`](PROBE_TRANSLATOR_APP_SKELETON_DRAFT.md)
+skeleton spec, which locks the future file set, public API names,
+state / event vocabulary, transition table, mapping table, host
+test plan, and build strategy. `RobotOS_v1.0/app/probe_translator/`
+remains `NOT_CREATED`; sections 2–13 of this spec otherwise
+unchanged from the Phase 12H-pre initial draft
+(`PHASE_12H_PRE_RECOMMEND_PROBE_TRANSLATOR_APP`).
+**Next revision condition:** Phase 12I-pre (when authorized) — when
+numeric values for `PROBE_TRANSLATOR_*` constants are locked and
+optional pieces (FAULT block, transition row 5) are accepted or
+deferred, this spec records the resolved values and points at the
+materialized file list once Phase 12I lands.
 
 > **No application implementation exists.** The path
 > `RobotOS_v1.0/app/probe_translator/` is *reserved at planning
