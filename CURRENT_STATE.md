@@ -9,6 +9,103 @@
 
 ## Last Closed Phase
 
+### Phase 12I-pre — Probe Translator Host Prototype Implementation Plan (docs-only)
+
+- **Date:** 2026-05-13
+- **Type:** Docs-only implementation-planning gate. **No source, runtime, test, CMake, Zephyr, board, `prj.conf`, DTS overlay, evidence log, Framework header, Framework `.c` file, devkit integration, command-set, or `devkit_app_state` change.** No file under `framework/`, `tests/`, `core/`, `platform/`, `devkit/src/`, `src/`, `include/robotos/` modified. **No `app/` or `application/` directory created. No `app/probe_translator/` directory created.**
+- **Close status:** `CLOSED_DOCS_ONLY`
+- **Decision result:** `PHASE_12I_PRE_PROBE_TRANSLATOR_HOST_PROTOTYPE_PLAN_CLOSED`
+- **Published baseline at open:** `origin/master = 03edb75`
+- **Closeout doc:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12I_PRE_PROBE_TRANSLATOR_HOST_PROTOTYPE_PLAN.md`
+- **New long-lived spec draft:** `RobotOS_v1.0/devkit/docs/03_SPECS/PROBE_TRANSLATOR_HOST_PROTOTYPE_PLAN.md` (`DRAFT / NON-FINAL`; execution-ready implementation contract for Phase 12I; all numeric values, struct layouts, CMake block, test case names, and validation gates are locked).
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md` `<a id="phase-12i-pre"></a>`
+
+#### Implementation contract resolved
+
+**`PHASE_12I_PRE_PROBE_TRANSLATOR_HOST_PROTOTYPE_PLAN_CLOSED`** — All open questions from Phase 12H are resolved. Phase 12I has a complete, unambiguous implementation contract. Phase 12I may open only on **explicit user authorization**.
+
+#### Resolved decisions (all locked for Phase 12I)
+
+| Decision | Resolution |
+|---|---|
+| `PROBE_TRANSLATOR_STATE_IDLE/READY/ACTIVE` numeric values | `1u / 2u / 3u` |
+| `PROBE_TRANSLATOR_EVT_CONFIGURED/START/STOP/RESET` numeric values | `1u / 2u / 3u / 4u` |
+| `PROBE_ADAPTER_TYPE_CONFIG/COMMAND` numeric values | `1u / 2u` |
+| `PROBE_ADAPTER_ARG_NONE/START/STOP/RESET` numeric values | `0u / 1u / 2u / 3u` |
+| `PROBE_TRANSLATOR_STATE_FAULT` + FAULT block | **DEFERRED** — not declared at Phase 12I |
+| Transition row 5 (`IDLE + RESET → IDLE`) | **DEFERRED** from Phase 12I |
+| `PROBE_ADAPTER_ARG_ANY` | **OMITTED** — no wildcard row at Phase 12I |
+| `probe_translator_t` ownership | **Embed FSM + bridge by value** |
+| `probe_translator_snapshot_t` | **Combined struct** (`fsm` + `bridge` fields) |
+| Non-NULL action rows | **None** — all rows `action=NULL`; TC08 `REVIEW_VALIDATED` |
+| Build strategy | **Option A** — additive block in `tests/host/CMakeLists.txt` |
+| Host test case count | **15 cases** (TC01–TC15) |
+| Expected regression count | **23/23** PASS after Phase 12I |
+
+#### Phase 12I approved future file set
+
+**New app files (NOT created at Phase 12I-pre):**
+- `RobotOS_v1.0/app/probe_translator/probe_translator.h`
+- `RobotOS_v1.0/app/probe_translator/probe_translator.c`
+- `RobotOS_v1.0/app/probe_translator/README.md`
+
+**New host test (NOT created at Phase 12I-pre):**
+- `RobotOS_v1.0/tests/host/test_app_probe_translator_mapping.c`
+
+**Modified at Phase 12I (NOT yet applied):**
+- `RobotOS_v1.0/tests/host/CMakeLists.txt` — additive `APP_DIR` + `add_executable` + `add_test` block only.
+
+**New evidence log (NOT created at Phase 12I-pre):**
+- `RobotOS_v1.0/tests/host/logs/phase_12I_host_<date>.log`
+
+**Exact CMake block:** locked in `PROBE_TRANSLATOR_HOST_PROTOTYPE_PLAN.md §8.1`.
+
+**Exact header contract:** locked in `PROBE_TRANSLATOR_HOST_PROTOTYPE_PLAN.md §5`.
+
+**Exact source contract:** locked in `PROBE_TRANSLATOR_HOST_PROTOTYPE_PLAN.md §6`.
+
+**Exact 15-case host test contract:** locked in `PROBE_TRANSLATOR_HOST_PROTOTYPE_PLAN.md §7`.
+
+#### Phase 12I validation gates (14 required)
+
+CMake configure/build PASS; all 23 tests PASS (22 prior + 1 new); FSM / bridge / probe-translator targets each PASS; host log committed; four grep gates clean (no `devkit_app_state.h` / no `devkit_*` calls / no UART command bytes / no Zephyr-devkit-legacy includes); command set unchanged; `devkit_app_state` zero-diff; no hardware run.
+
+#### What is preserved unchanged at Phase 12I-pre
+
+- All `.c` and `.h` files in the repo — zero-diff.
+- `framework/robotos_fw_fsm.{h,c}`, `framework/robotos_fw_event_bridge.{h,c}` — zero-diff.
+- All `CMakeLists.txt` — zero-diff.
+- All tracked test files under `tests/` — zero-diff.
+- `core/`, `platform/`, `devkit/src/`, board DTS/overlays, Zephyr workspace — zero-diff.
+- `src/`, `include/robotos/` — zero-diff.
+- All evidence logs — zero-diff.
+- **No `app/` directory created.**
+- **No `app/probe_translator/` directory created.**
+- Framework FSM host test (Phase 12E, 93/93), bridge host test (Phase 12F, 103/103), and full host regression (Phase 12F, 22/22) remain the latest tracked evidence.
+
+#### Remaining decisions (all preserved unchanged at Phase 12I-pre)
+
+1. ACTIVE disarm widening — `USER_DECISION_REQUIRED_ACTIVE_DISARM`
+2. Scheduler 7A/7B — `DEFER`
+3. F407 / custom board — `HOLD/DEFER`
+4. POST_FLASH_AUTOSTART root cause — `OPEN` / `MITIGATED_BY_WORKFLOW`
+5. Application / product layer — `NOT_STARTED`; `app/` directory `NOT_CREATED`; `app/probe_translator/` `NOT_CREATED`; implementation contract locked at Phase 12I-pre
+6. `PROBE_TRANSLATOR_STATE_FAULT` + FAULT block — `DEFERRED` to a future app-behavior phase
+7. Transition row 5 (`IDLE + RESET → IDLE`) — `DEFERRED`
+8. Devkit integration of Framework FSM + bridge — `NOT_STARTED`
+9. Bridge ABI memory-layout lock — `NOT_STARTED`
+10. Whether the first application is also a hardware-runnable Zephyr application — open for future runtime-integration phase
+11. `RobotOS_v1.0/examples/` future tree — open for future docs-only phase
+12. Multi-product coordination rules — open; reachable only after a second app exists
+
+#### Next gate
+
+**Hold.** Phase 12I — Probe Translator Host Prototype may open only on **explicit user authorization** AND with the implementation contract from `PROBE_TRANSLATOR_HOST_PROTOTYPE_PLAN.md`. Phase 12I remains `NOT_STARTED`. If the user prefers to hold instead, no next phase is required — the implementation contract sits at planning depth indefinitely.
+
+---
+
+## Prior Closed Phase
+
 ### Phase 12H — Probe Translator App Skeleton Planning (docs-only, Variant 1)
 
 - **Date:** 2026-05-13

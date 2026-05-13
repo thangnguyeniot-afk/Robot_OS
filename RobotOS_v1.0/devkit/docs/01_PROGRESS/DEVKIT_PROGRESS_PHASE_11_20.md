@@ -124,6 +124,7 @@ table contains only the reserved placeholders.
 | 12G | Separate Application Mode / Application Boundary Planning (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12g) |
 | 12H-pre | First Application Candidate / Product Harness Selection (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12h-pre) |
 | 12H | Probe Translator App Skeleton Planning (docs-only, Variant 1) | CLOSED_DOCS_ONLY | [->](#phase-12h) |
+| 12I-pre | Probe Translator Host Prototype Implementation Plan (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12i-pre) |
 | 20Z | RESERVED -- future checkpoint / closeout slot | NOT_STARTED | [->](#phase-20z) |
 
 When future phases are added:
@@ -2537,16 +2538,137 @@ authorized. Host environment = WSL Ubuntu / gcc 13.3.0.
 
 **Hold or open Phase 12I-pre -- Probe Translator Host Prototype
 Implementation Plan (docs-only)** only on **explicit user
-authorization**. Phase 12I-pre is the preferred next gate; it
-resolves numeric values for `PROBE_TRANSLATOR_*` constants,
-ship-or-defer for the FAULT block + transition row 5, host-test
-file naming, and a docs-only CMake patch sketch. Alternative
-Phase 12I -- Probe Translator Host Prototype (implementation)
-acceptable only if the user explicitly authorizes implementation
-directly. The recommended scope and exit criteria are recorded in
-[`../02_PHASE_CLOSEOUTS/PHASE_12H_PROBE_TRANSLATOR_SKELETON_PLANNING.md`](../02_PHASE_CLOSEOUTS/PHASE_12H_PROBE_TRANSLATOR_SKELETON_PLANNING.md)
-§R. Phase 12I-pre and Phase 12I **remain `NOT_STARTED`** at the
-close of Phase 12H.
+authorization**. Phase 12I-pre **was opened** after this gate and
+is recorded in the entry below.
+
+---
+
+<a id="phase-12i-pre"></a>
+## Phase 12I-pre -- Probe Translator Host Prototype Implementation Plan (docs-only)
+
+**Status:** `CLOSED_DOCS_ONLY`
+**Decision:** `PHASE_12I_PRE_PROBE_TRANSLATOR_HOST_PROTOTYPE_PLAN_CLOSED`
+**Closeout:** [`../02_PHASE_CLOSEOUTS/PHASE_12I_PRE_PROBE_TRANSLATOR_HOST_PROTOTYPE_PLAN.md`](../02_PHASE_CLOSEOUTS/PHASE_12I_PRE_PROBE_TRANSLATOR_HOST_PROTOTYPE_PLAN.md)
+**New long-lived spec:** [`../03_SPECS/PROBE_TRANSLATOR_HOST_PROTOTYPE_PLAN.md`](../03_SPECS/PROBE_TRANSLATOR_HOST_PROTOTYPE_PLAN.md)
+**Date:** 2026-05-13
+
+### 12I-pre.1 Purpose
+
+Phase 12I-pre converts the Phase 12H skeleton plan into an
+execution-ready implementation contract for Phase 12I -- Probe
+Translator Host Prototype. It resolves all remaining implementation
+choices that Phase 12H intentionally left open, so Phase 12I can
+deliver in a single pass without churn.
+
+Phase 12I-pre does not create source, does not modify Framework
+code, does not modify devkit runtime, does not modify
+`devkit_app_state`, does not change command semantics, does not run
+hardware, does not create the `app/` directory, and does not open
+Phase 12I.
+
+### 12I-pre.2 Files added / modified
+
+- **New (2 docs):**
+  - `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12I_PRE_PROBE_TRANSLATOR_HOST_PROTOTYPE_PLAN.md`
+    -- decision closeout (sections A-R).
+  - `RobotOS_v1.0/devkit/docs/03_SPECS/PROBE_TRANSLATOR_HOST_PROTOTYPE_PLAN.md`
+    -- new long-lived implementation-plan spec
+    (`DRAFT / NON-FINAL`, sections 1-14).
+- **Modified:**
+  - `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md`
+    -- this entry + index row.
+  - `CURRENT_STATE.md` -- Phase 12I-pre as latest closed.
+  - `RobotOS_v1.0/devkit/docs/00_INDEX/README.md` -- Phase 12I-pre
+    closeout link + implementation-plan spec link.
+  - `RobotOS_v1.0/devkit/docs/03_SPECS/PROBE_TRANSLATOR_APP_SKELETON_DRAFT.md`
+    -- revision line + cross-reference to the new implementation-
+    plan spec; sections 1-15 otherwise unchanged.
+- **Zero-diff held:** all `.c`/`.h`, all `CMakeLists.txt`, all
+  `prj.conf`, board DTS, overlay, Zephyr config files, all
+  existing evidence logs. **No `app/` or `app/probe_translator/`
+  directory created.**
+
+### 12I-pre.3 Resolved decisions summary
+
+| Decision | Resolution |
+|---|---|
+| State numeric values | `IDLE=1u`, `READY=2u`, `ACTIVE=3u` |
+| Event numeric values | `CONFIGURED=1u`, `START=2u`, `STOP=3u`, `RESET=4u` |
+| Adapter type numeric values | `CONFIG=1u`, `COMMAND=2u` |
+| Adapter arg numeric values | `NONE=0u`, `START=1u`, `STOP=2u`, `RESET=3u` |
+| `FAULT` block | **DEFERRED** |
+| Transition row 5 (`IDLE+RESET→IDLE`) | **DEFERRED** |
+| `PROBE_ADAPTER_ARG_ANY` | **OMITTED** from Phase 12I |
+| `probe_translator_t` ownership | **Embed by value** |
+| `probe_translator_snapshot_t` | **Combined struct** (`fsm` + `bridge` fields) |
+| Non-NULL action rows | **None** — TC08 is `REVIEW_VALIDATED` |
+| Build strategy | **Option A** (additive entry in `tests/host/CMakeLists.txt`) |
+| Host test count | **15 cases** (TC01–TC15) |
+| Expected regression | **23/23** PASS after Phase 12I |
+
+### 12I-pre.4 Phase 12I approved future file set
+
+**New app files:** `app/probe_translator/probe_translator.{c,h}` +
+`README.md`. **New host test:** `tests/host/test_app_probe_translator_
+mapping.c`. **Modified:** `tests/host/CMakeLists.txt` (additive
+block only). **New log:** `tests/host/logs/phase_12I_host_<date>.log`.
+**New closeout:** `PHASE_12I_PROBE_TRANSLATOR_HOST_PROTOTYPE.md`.
+**Forbidden:** `app/probe_translator/CMakeLists.txt`; Zephyr / devkit
+/ UART / hardware / Architecture B files.
+
+### 12I-pre.5 CMake block locked
+
+Exact `add_executable` / `target_include_directories` / `add_test`
+block recorded in
+[`../03_SPECS/PROBE_TRANSLATOR_HOST_PROTOTYPE_PLAN.md`](../03_SPECS/PROBE_TRANSLATOR_HOST_PROTOTYPE_PLAN.md)
+§8.1. Uses new `APP_DIR` variable; compiles `probe_translator.c` +
+`robotos_fw_event_bridge.c` + `robotos_fw_fsm.c` + platform critical
+stub.
+
+### 12I-pre.6 Validation and exit criteria for Phase 12I
+
+14 gates (§K of closeout): CMake configure/build PASS; 23/23 tests
+PASS; FSM + bridge + probe-translator targets each PASS; log saved;
+four grep gates clean (no `devkit_app_state.h` / no `devkit_*`
+calls / no UART command bytes / no Zephyr-devkit-legacy includes);
+command set unchanged; `devkit_app_state` zero-diff; no hardware
+run.
+
+### 12I-pre.7 Boundary preservation
+
+- `devkit_app_state` remains authoritative; not modified.
+  Scope-guard #11 re-affirmed.
+- Command set `a/s/r/?/x/v/L/d/T` unchanged.
+- Architecture B frozen; future `probe_translator/` uses
+  Architecture A contracts only.
+
+### 12I-pre.8 What remains NOT_STARTED
+
+1. Application implementation -- `NOT_STARTED`.
+2. `app/` directory creation -- `NOT_CREATED`.
+3. `app/probe_translator/` directory creation -- `NOT_CREATED`.
+4. Phase 12I -- `NOT_STARTED`; requires explicit user authorization.
+5. FAULT block -- DEFERRED to a future app-behavior phase.
+6. Transition row 5 -- DEFERRED.
+7. Devkit hardware integration of Framework -- `NOT_STARTED`.
+8. Bridge ABI memory-layout lock -- `NOT_STARTED`.
+
+### 12I-pre.9 Open gates preserved unchanged
+
+- ACTIVE disarm widening -- `USER_DECISION_REQUIRED_ACTIVE_DISARM`.
+- Scheduler 7A/7B -- `DEFER`.
+- F407 / custom board -- `HOLD/DEFER`.
+- POST_FLASH_AUTOSTART -- `OPEN/MITIGATED_BY_WORKFLOW`.
+- Application / product layer -- `NOT_STARTED`.
+- Devkit integration of Framework -- `NOT_STARTED`.
+
+### 12I-pre.10 Next gate
+
+**Hold or open Phase 12I -- Probe Translator Host Prototype
+(host-first implementation)** only on **explicit user
+authorization**. The implementation contract is complete in
+[`../03_SPECS/PROBE_TRANSLATOR_HOST_PROTOTYPE_PLAN.md`](../03_SPECS/PROBE_TRANSLATOR_HOST_PROTOTYPE_PLAN.md).
+Phase 12I **remains `NOT_STARTED`** at the close of Phase 12I-pre.
 
 ---
 

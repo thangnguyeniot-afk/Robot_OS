@@ -6,14 +6,22 @@ future `RobotOS_v1.0/app/probe_translator/` harness selected by
 Phase 12H-pre and locked at Phase 12H. No `app/probe_translator/`
 directory has been created. No `.c` / `.h` / `CMakeLists.txt` /
 README file exists.
-**Revision:** Phase 12H (2026-05-13, `CLOSED_DOCS_ONLY`;
-`PHASE_12H_PROBE_TRANSLATOR_SKELETON_PLANNED_DOCS_ONLY`) — initial
-draft.
-**Next revision condition:** Phase 12I-pre (when authorized) — when
-numeric values for `PROBE_TRANSLATOR_*` constants are locked and
-optional pieces (FAULT block, row 5) are accepted or deferred, this
-spec upgrades §4–§7 from "planning-level (names locked)" to
-"pre-implementation (names + values locked)".
+**Revision:** Phase 12I-pre (2026-05-13, `CLOSED_DOCS_ONLY`;
+`PHASE_12I_PRE_PROBE_TRANSLATOR_HOST_PROTOTYPE_PLAN_CLOSED`) — added
+cross-reference to the new execution-ready implementation contract
+[`PROBE_TRANSLATOR_HOST_PROTOTYPE_PLAN.md`](PROBE_TRANSLATOR_HOST_PROTOTYPE_PLAN.md),
+which resolves: numeric values (`IDLE=1u/READY=2u/ACTIVE=3u`;
+`CONFIGURED=1u/START=2u/STOP=3u/RESET=4u`; adapter types 1/2;
+adapter args 0–3), FAULT block deferred, transition row 5 deferred,
+embed-by-value ownership, combined snapshot, `PROBE_ADAPTER_ARG_ANY`
+omitted, exact CMake block, and 15-case host test plan (TC01–TC15).
+`RobotOS_v1.0/app/probe_translator/` remains `NOT_CREATED`; sections
+1–15 of this spec otherwise unchanged from the Phase 12H initial draft.
+**Next revision condition:** Phase 12I (when authorized) — when the
+first `app/probe_translator/` source and host test are implemented,
+this spec upgrades §1 status to `IMPLEMENTED_AT_12I (HOST-TEST
+EVIDENCE)` and gains the materialized file list and evidence
+cross-references.
 
 > **No application implementation exists.** The path
 > `RobotOS_v1.0/app/probe_translator/` is *reserved at planning
