@@ -449,6 +449,30 @@ target_include_directories(robotos_fw_event_bridge_contract_test PRIVATE
 add_test(NAME robotos_fw_event_bridge_contract
          COMMAND robotos_fw_event_bridge_contract_test)
 
+# ---- Application: Probe Translator host mapping contract test (Phase 12I) ---
+# Exercises the probe_translator application harness end-to-end against the
+# real Framework FSM and event bridge. No devkit, Zephyr, or hardware
+# dependency. Architecture A only.
+set(APP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../app/probe_translator")
+add_executable(probe_translator_mapping_contract_test
+    test_app_probe_translator_mapping.c
+    "${APP_DIR}/probe_translator.c"
+    "${FRAMEWORK_DIR}/robotos_fw_event_bridge.c"
+    "${FRAMEWORK_DIR}/robotos_fw_fsm.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/robotos_platform_critical_host_stub.c"
+)
+
+target_include_directories(probe_translator_mapping_contract_test PRIVATE
+    "${APP_DIR}"
+    "${FRAMEWORK_DIR}"
+    "${CORE_DIR}"
+    "${PLATFORM_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+)
+
+add_test(NAME probe_translator_mapping_contract
+         COMMAND probe_translator_mapping_contract_test)
+
 # ---- Log persistence target --------------------------------------------------
 # Saves ctest output to a timestamped file in the version-controlled logs/
 # directory alongside this CMakeLists.txt.

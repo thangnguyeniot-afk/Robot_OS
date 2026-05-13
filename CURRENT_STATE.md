@@ -9,6 +9,79 @@
 
 ## Last Closed Phase
 
+### Phase 12I — Probe Translator Host Prototype
+
+- **Date:** 2026-05-13
+- **Type:** Host-only first-application implementation. New
+  `RobotOS_v1.0/app/probe_translator/` directory with
+  `probe_translator.{h,c}` + `README.md`; new
+  `tests/host/test_app_probe_translator_mapping.c`; additive block
+  in `tests/host/CMakeLists.txt`; new host evidence log
+  `tests/host/logs/phase_12I_host_2026-05-13.log`.
+  **No devkit runtime change. No UART command added or modified
+  (`a/s/r/?/x/v/L/d/T` unchanged). No `devkit_app_state` change. No
+  Framework code change. No Zephyr / `prj.conf` / DTS / overlay /
+  hardware change. No Architecture B reuse. No `app/probe_translator/CMakeLists.txt`.**
+- **Close status:** `CLOSED_WITH_HOST_TEST_EVIDENCE`
+- **Decision result:** `PHASE_12I_PROBE_TRANSLATOR_HOST_PROTOTYPE_IMPLEMENTED_VALIDATED`
+- **Published baseline at open:** `origin/master = afc6777`
+- **Closeout doc:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12I_PROBE_TRANSLATOR_HOST_PROTOTYPE.md`
+- **Updated long-lived spec:** `RobotOS_v1.0/devkit/docs/03_SPECS/PROBE_TRANSLATOR_HOST_PROTOTYPE_PLAN.md` upgraded to `IMPLEMENTED_AT_12I (HOST-TEST EVIDENCE)`; embedded-config deviation recorded in §6.4.
+- **Updated skeleton spec:** `RobotOS_v1.0/devkit/docs/03_SPECS/PROBE_TRANSLATOR_APP_SKELETON_DRAFT.md` upgraded to `IMPLEMENTED_AT_12I (HOST-TEST EVIDENCE)`.
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md` `<a id="phase-12i"></a>`
+
+#### Host test evidence
+
+- ctest summary: **23/23 PASS** (`100% tests passed, 0 tests failed out of 23`); WSL Ubuntu / gcc 13.3.0 / cmake 3.28.3.
+- New ctest target `probe_translator_mapping_contract`: **PASS**, **70/70** in-binary assertions (TC01–TC15; TC08/TC12/TC13/TC14/TC15 `REVIEW_VALIDATED`).
+- Prior 22 targets unchanged in source and unchanged in pass state.
+- Host log: `RobotOS_v1.0/tests/host/logs/phase_12I_host_2026-05-13.log`.
+
+#### Implementation deviation from Phase 12I-pre spec
+
+The Phase 12I-pre implementation-plan spec §6.4 showed the FSM and
+bridge config objects as **stack-local** inside `probe_translator_init`.
+The Framework FSM and bridge both store the config by pointer
+(`fsm->config = config`; `bridge->config = config`) and require the
+config to outlive the instance. Stack-locals do not — the first
+dispatch after `init` dereferences dangling memory. **Resolution:**
+`_fsm_cfg` and `_bridge_cfg` are embedded into `probe_translator_t`
+as opaque fields so their lifetime matches the harness. Public API is
+unchanged. The long-lived spec is updated to record the corrected
+pattern.
+
+#### Validation gates (all 14 from Phase 12I-pre §K)
+
+CMake configure / build PASS; 23/23 tests PASS; FSM, bridge, and
+probe-translator targets each PASS; host log saved; four grep gates
+clean (no `devkit_app_state.h` / no `devkit_*` calls / no UART command
+bytes / no Zephyr-devkit-legacy includes); command set unchanged;
+`devkit_app_state` zero-diff; no hardware run.
+
+#### Open carry-forward gates (unchanged at Phase 12I close)
+
+1. ACTIVE disarm widening — `USER_DECISION_REQUIRED_ACTIVE_DISARM`
+2. Scheduler 7A/7B — `DEFER`
+3. F407 / custom board — `HOLD/DEFER`
+4. POST_FLASH_AUTOSTART root cause — `OPEN` / `MITIGATED_BY_WORKFLOW`
+5. `PROBE_TRANSLATOR_STATE_FAULT` + FAULT block — `DEFERRED` to a future app-behavior phase
+6. Devkit integration of Framework FSM + bridge — `NOT_STARTED`
+7. Bridge ABI memory-layout lock — `NOT_STARTED`
+8. Hardware-runnable Zephyr build of `app/probe_translator/` — open for future runtime-integration phase
+9. `RobotOS_v1.0/examples/` — open for future docs-only phase
+10. Multi-product coordination rules — open; reachable only after a second app exists
+
+#### Next gate
+
+**Hold.** The first application harness is host-test-validated.
+Future phases (FAULT extension, devkit integration, hardware runtime,
+second product) may open only on **explicit user authorization**.
+Phase 12I-pre prior closed phase is retained below for traceability.
+
+---
+
+## Prior Closed Phase
+
 ### Phase 12I-pre — Probe Translator Host Prototype Implementation Plan (docs-only)
 
 - **Date:** 2026-05-13
@@ -17,7 +90,7 @@
 - **Decision result:** `PHASE_12I_PRE_PROBE_TRANSLATOR_HOST_PROTOTYPE_PLAN_CLOSED`
 - **Published baseline at open:** `origin/master = 03edb75`
 - **Closeout doc:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12I_PRE_PROBE_TRANSLATOR_HOST_PROTOTYPE_PLAN.md`
-- **New long-lived spec draft:** `RobotOS_v1.0/devkit/docs/03_SPECS/PROBE_TRANSLATOR_HOST_PROTOTYPE_PLAN.md` (`DRAFT / NON-FINAL`; execution-ready implementation contract for Phase 12I; all numeric values, struct layouts, CMake block, test case names, and validation gates are locked).
+- **New long-lived spec draft:** `RobotOS_v1.0/devkit/docs/03_SPECS/PROBE_TRANSLATOR_HOST_PROTOTYPE_PLAN.md` (execution-ready implementation contract for Phase 12I; upgraded to `IMPLEMENTED_AT_12I` at Phase 12I close).
 - **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md` `<a id="phase-12i-pre"></a>`
 
 #### Implementation contract resolved

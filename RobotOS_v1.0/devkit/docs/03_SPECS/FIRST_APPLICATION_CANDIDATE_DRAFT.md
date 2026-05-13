@@ -1,30 +1,35 @@
 # RobotOS — First Application Candidate Draft Spec
 
-**Status:** `DRAFT / NON-FINAL`. **No application implementation
-exists.** This document describes the planning-level shape of the
-first application candidate / product harness selected by Phase
-12H-pre. No `app/probe_translator/` directory has been created, and
-no application `.c` / `.h` / `CMakeLists.txt` / README file exists.
-**Revision:** Phase 12H (2026-05-13, `CLOSED_DOCS_ONLY`;
+**Status:** `IMPLEMENTED_AT_12I (HOST-TEST EVIDENCE)`. The first
+application candidate path `RobotOS_v1.0/app/probe_translator/` is
+materialized at Phase 12I with `probe_translator.{h,c}` + `README.md`
+and is host-test validated (23/23 ctest targets PASS; 70/70 in-binary
+assertions in the new `probe_translator_mapping_contract` target).
+The detailed implementation contract lives in
+[`PROBE_TRANSLATOR_HOST_PROTOTYPE_PLAN.md`](PROBE_TRANSLATOR_HOST_PROTOTYPE_PLAN.md).
+The detailed skeleton lock lives in
+[`PROBE_TRANSLATOR_APP_SKELETON_DRAFT.md`](PROBE_TRANSLATOR_APP_SKELETON_DRAFT.md).
+**Revision:** Phase 12I (2026-05-13, `CLOSED_WITH_HOST_TEST_EVIDENCE`;
+`PHASE_12I_PROBE_TRANSLATOR_HOST_PROTOTYPE_IMPLEMENTED_VALIDATED`) —
+status upgraded; cross-reference to Phase 12I evidence
+[`../02_PHASE_CLOSEOUTS/PHASE_12I_PROBE_TRANSLATOR_HOST_PROTOTYPE.md`](../02_PHASE_CLOSEOUTS/PHASE_12I_PROBE_TRANSLATOR_HOST_PROTOTYPE.md)
+and host log
+[`../../../../tests/host/logs/phase_12I_host_2026-05-13.log`](../../../../tests/host/logs/phase_12I_host_2026-05-13.log).
+Sections 2–13 otherwise unchanged.
+Phase 12H (2026-05-13, `CLOSED_DOCS_ONLY`;
 `PHASE_12H_PROBE_TRANSLATOR_SKELETON_PLANNED_DOCS_ONLY`) — added
-cross-reference to the new
-[`PROBE_TRANSLATOR_APP_SKELETON_DRAFT.md`](PROBE_TRANSLATOR_APP_SKELETON_DRAFT.md)
-skeleton spec, which locks the future file set, public API names,
-state / event vocabulary, transition table, mapping table, host
-test plan, and build strategy. `RobotOS_v1.0/app/probe_translator/`
-remains `NOT_CREATED`; sections 2–13 of this spec otherwise
-unchanged from the Phase 12H-pre initial draft
-(`PHASE_12H_PRE_RECOMMEND_PROBE_TRANSLATOR_APP`).
-**Next revision condition:** Phase 12I-pre (when authorized) — when
-numeric values for `PROBE_TRANSLATOR_*` constants are locked and
-optional pieces (FAULT block, transition row 5) are accepted or
-deferred, this spec records the resolved values and points at the
-materialized file list once Phase 12I lands.
+cross-reference to
+[`PROBE_TRANSLATOR_APP_SKELETON_DRAFT.md`](PROBE_TRANSLATOR_APP_SKELETON_DRAFT.md).
+Phase 12H-pre (2026-05-13, `CLOSED_DOCS_ONLY`;
+`PHASE_12H_PRE_RECOMMEND_PROBE_TRANSLATOR_APP`) — initial draft.
+**Next revision condition:** future app-behavior phase (FAULT block);
+second application under `app/`; future devkit-integration phase.
 
-> **No application implementation exists.** The path
-> `RobotOS_v1.0/app/probe_translator/` is *reserved at planning
-> depth*, not created. No file under this path exists. No build
-> target references this path.
+> **Phase 12I implementation exists.** The path
+> `RobotOS_v1.0/app/probe_translator/` is materialized;
+> `probe_translator.{h,c}` and `README.md` are tracked and
+> host-test-validated. Devkit / UART / Zephyr / hardware /
+> Architecture-B boundaries remain unchanged.
 
 This spec is anchored to
 [`../02_PHASE_CLOSEOUTS/PHASE_12H_PRE_FIRST_APPLICATION_CANDIDATE_SELECTION.md`](../02_PHASE_CLOSEOUTS/PHASE_12H_PRE_FIRST_APPLICATION_CANDIDATE_SELECTION.md)

@@ -1,21 +1,28 @@
 # RobotOS — Probe Translator Host Prototype Implementation Plan
 
-**Status:** `DRAFT / NON-FINAL`. **No application implementation
-exists.** This document is the execution-ready implementation contract
-for Phase 12I — Probe Translator Host Prototype. No
-`app/probe_translator/` directory has been created. No `.c` / `.h` /
-`CMakeLists.txt` / README file exists.
-**Revision:** Phase 12I-pre (2026-05-13, `CLOSED_DOCS_ONLY`;
+**Status:** `IMPLEMENTED_AT_12I (HOST-TEST EVIDENCE)`. The Phase 12I
+host prototype implementation exists at
+`RobotOS_v1.0/app/probe_translator/` and is host-test validated
+(23/23 ctest targets PASS; 70/70 assertions PASS in the new
+`probe_translator_mapping_contract` target). This document remains
+the execution-ready implementation contract for the harness and is
+extended at Phase 12I with the materialized file list and the
+single deviation from the §6 spec example.
+**Revision:** Phase 12I (2026-05-13, `CLOSED_WITH_HOST_TEST_EVIDENCE`;
+`PHASE_12I_PROBE_TRANSLATOR_HOST_PROTOTYPE_IMPLEMENTED_VALIDATED`) —
+materialized file set; embedded-config deviation recorded in §6.
+Phase 12I-pre (2026-05-13, `CLOSED_DOCS_ONLY`;
 `PHASE_12I_PRE_PROBE_TRANSLATOR_HOST_PROTOTYPE_PLAN_CLOSED`) —
 initial draft.
-**Next revision condition:** Phase 12I (when authorized) — when the
-implementation is complete and the host test passes, this spec
-upgrades to `IMPLEMENTED_AT_12I (HOST-TEST EVIDENCE)` and gains the
-materialized file list and evidence cross-references.
+**Next revision condition:** Future app-behavior phase (FAULT block);
+future Architecture-A devkit-integration phase; future hardware-
+runnable Zephyr build of `app/probe_translator/`.
 
-> **No application implementation exists.** The path
-> `RobotOS_v1.0/app/probe_translator/` is *reserved at planning
-> depth*, not created. No build target references this path.
+> **Phase 12I implementation exists.** The path
+> `RobotOS_v1.0/app/probe_translator/` is materialized with
+> `probe_translator.{h,c}` + `README.md`; the host test target
+> `probe_translator_mapping_contract` is wired via an additive block
+> in `tests/host/CMakeLists.txt` (Option A).
 
 This spec is anchored to
 [`../02_PHASE_CLOSEOUTS/PHASE_12I_PRE_PROBE_TRANSLATOR_HOST_PROTOTYPE_PLAN.md`](../02_PHASE_CLOSEOUTS/PHASE_12I_PRE_PROBE_TRANSLATOR_HOST_PROTOTYPE_PLAN.md)
@@ -62,20 +69,21 @@ returning to prior planning docs.
 
 ---
 
-## 2. Phase 12I Approved Future Files
+## 2. Phase 12I Materialized File Set
 
-| Path | Status |
+| Path | Status at Phase 12I close |
 |---|---|
-| `RobotOS_v1.0/app/probe_translator/probe_translator.h` | **Required** — public header |
-| `RobotOS_v1.0/app/probe_translator/probe_translator.c` | **Required** — implementation |
-| `RobotOS_v1.0/app/probe_translator/README.md` | **Required** — short app README |
-| `RobotOS_v1.0/tests/host/test_app_probe_translator_mapping.c` | **Required** — 15-case host test |
-| `RobotOS_v1.0/tests/host/CMakeLists.txt` | **Modified** — additive block only |
-| `RobotOS_v1.0/tests/host/logs/phase_12I_host_<date>.log` | **Required** — committed evidence log |
-| `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12I_PROBE_TRANSLATOR_HOST_PROTOTYPE.md` | **Required** — Phase 12I closeout |
+| `RobotOS_v1.0/app/probe_translator/probe_translator.h` | **MATERIALIZED** — public header. |
+| `RobotOS_v1.0/app/probe_translator/probe_translator.c` | **MATERIALIZED** — implementation. |
+| `RobotOS_v1.0/app/probe_translator/README.md` | **MATERIALIZED** — short app README. |
+| `RobotOS_v1.0/tests/host/test_app_probe_translator_mapping.c` | **MATERIALIZED** — 15-case host test (TC01–TC15; 70 runtime assertions). |
+| `RobotOS_v1.0/tests/host/CMakeLists.txt` | **MODIFIED (additive only)** — new `APP_DIR` + `add_executable` + `target_include_directories` + `add_test` block. |
+| `RobotOS_v1.0/tests/host/logs/phase_12I_host_2026-05-13.log` | **MATERIALIZED** — host evidence log (23/23 PASS). |
+| `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12I_PROBE_TRANSLATOR_HOST_PROTOTYPE.md` | **MATERIALIZED** — Phase 12I closeout. |
 
-**Forbidden at Phase 12I:** `app/probe_translator/CMakeLists.txt`;
-any Zephyr / devkit / UART / hardware / Architecture B file.
+**Forbidden at Phase 12I (still held at Phase 12I close):**
+`app/probe_translator/CMakeLists.txt`; any Zephyr / devkit / UART /
+hardware / Architecture B file.
 
 ---
 
@@ -130,8 +138,10 @@ never used as a product state. `initial_state = 0u` would cause
 
 ```c
 struct probe_translator {
-    robotos_fw_fsm_t          fsm;
-    robotos_fw_event_bridge_t bridge;
+    robotos_fw_fsm_t                 fsm;
+    robotos_fw_event_bridge_t        bridge;
+    robotos_fw_fsm_config_t          _fsm_cfg;       /* opaque; see §6.4 note */
+    robotos_fw_event_bridge_config_t _bridge_cfg;    /* opaque; see §6.4 note */
 };
 ```
 
@@ -139,6 +149,12 @@ Statically allocated by the caller. No heap. The caller is responsible
 for the lifetime of the instance and all referenced static tables. The
 struct is declared in `probe_translator.h` for static sizing; fields
 are opaque — access only through the public API.
+
+**Note (Phase 12I close):** the `_fsm_cfg` / `_bridge_cfg` fields are
+added relative to the Phase 12I-pre struct example so that the FSM and
+bridge config objects share the harness instance's lifetime. See §6.4
+for the rationale; this is a correctness fix to the Phase 12I-pre
+example, not an API change.
 
 ### 4.2 `probe_translator_config_t`
 
@@ -312,29 +328,43 @@ robotos_fw_status_t probe_translator_init(
     const probe_translator_config_t *config)
 {
     robotos_fw_status_t st;
-    robotos_fw_fsm_config_t fsm_cfg;
-    robotos_fw_event_bridge_config_t bridge_cfg;
+    void               *user_context;
 
     if (!pt) return ROBOTOS_CORE_ERR_NULL;
 
-    fsm_cfg.transitions      = k_transitions;
-    fsm_cfg.transition_count = 5u;
-    fsm_cfg.states           = k_state_defs;
-    fsm_cfg.state_count      = 3u;
-    fsm_cfg.initial_state    = PROBE_TRANSLATOR_STATE_IDLE;
-    fsm_cfg.user_context     = config ? config->user_context : NULL;
+    user_context = (config != NULL) ? config->user_context : NULL;
 
-    st = robotos_fw_fsm_init(&pt->fsm, &fsm_cfg);
+    pt->_fsm_cfg.transitions      = k_transitions;
+    pt->_fsm_cfg.transition_count = 5u;
+    pt->_fsm_cfg.states           = k_state_defs;
+    pt->_fsm_cfg.state_count      = 3u;
+    pt->_fsm_cfg.initial_state    = PROBE_TRANSLATOR_STATE_IDLE;
+    pt->_fsm_cfg.user_context     = user_context;
+
+    st = robotos_fw_fsm_init(&pt->fsm, &pt->_fsm_cfg);
     if (st != ROBOTOS_CORE_OK) return st;
 
-    bridge_cfg.rows       = k_mapping;
-    bridge_cfg.row_count  = 4u;
-    bridge_cfg.fsm        = &pt->fsm;
-    bridge_cfg.user_context = config ? config->user_context : NULL;
+    pt->_bridge_cfg.rows         = k_mapping;
+    pt->_bridge_cfg.row_count    = 4u;
+    pt->_bridge_cfg.fsm          = &pt->fsm;
+    pt->_bridge_cfg.user_context = user_context;
 
-    return robotos_fw_event_bridge_init(&pt->bridge, &bridge_cfg);
+    return robotos_fw_event_bridge_init(&pt->bridge, &pt->_bridge_cfg);
 }
 ```
+
+**Deviation note (Phase 12I close).** The Phase 12I-pre draft of this
+section showed `robotos_fw_fsm_config_t fsm_cfg;` and
+`robotos_fw_event_bridge_config_t bridge_cfg;` as **stack-local**
+variables. That pattern is incorrect: `robotos_fw_fsm_init` and
+`robotos_fw_event_bridge_init` both store the supplied config object
+**by pointer** (`fsm->config = config` / `bridge->config = config`)
+and the Framework headers document that the config must outlive the
+instance. A stack-local config goes out of scope when `init` returns,
+leaving a dangling pointer that the next dispatch dereferences. The
+Phase 12I implementation embeds `_fsm_cfg` and `_bridge_cfg` into
+`probe_translator_t` (see §4.1) so their lifetime matches the harness
+instance. Public API is unchanged.
 
 ### 6.5 `probe_translator_dispatch_adapter_event`
 
