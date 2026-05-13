@@ -9,9 +9,13 @@ phase locks them.
 **Revision:** Phase 12G-pre (2026-05-13, `CLOSED_DOCS_ONLY`) —
 initial draft created alongside the Phase 12G-pre integration-mode
 decision closeout.
-**Next revision condition:** Phase 12G (when authorized) — when the
-chosen integration mode produces a concrete planning closeout that
-selects directory shape, build separation, and event-mapping policy.
+**Next revision condition:** Phase 12G (`CLOSED_DOCS_ONLY` at
+2026-05-13; `PHASE_12G_RECOMMEND_APP_PRODUCT_PATH`) selected the
+SEPARATE APPLICATION MODE direction; the application boundary
+spec lives at
+[`FRAMEWORK_APPLICATION_BOUNDARY_DRAFT.md`](FRAMEWORK_APPLICATION_BOUNDARY_DRAFT.md).
+Further revision happens at the next implementation phase when a
+concrete application source / build wiring is created.
 
 > **No integration implementation exists.** No `devkit/src/*.c` file
 > currently `#include`s `robotos_fw_event_bridge.h` or

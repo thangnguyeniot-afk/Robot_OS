@@ -9,6 +9,115 @@
 
 ## Last Closed Phase
 
+### Phase 12G — Separate Application Mode / Application Boundary Planning (docs-only)
+
+- **Date:** 2026-05-13
+- **Type:** Docs-only architecture planning gate. **No source, runtime, test, CMake, Zephyr, board, `prj.conf`, DTS overlay, evidence log, Framework header, Framework `.c` file, devkit integration, command-set, or `devkit_app_state` change.** No file under `framework/`, `tests/`, `core/`, `platform/`, `devkit/src/`, `src/`, `include/robotos/` modified. **No `app/` or `application/` directory created.**
+- **Close status:** `CLOSED_DOCS_ONLY`
+- **Decision result:** `PHASE_12G_RECOMMEND_APP_PRODUCT_PATH`
+- **Published baseline at open:** `origin/master = 399e956`
+- **Closeout doc:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12G_SEPARATE_APPLICATION_BOUNDARY_PLANNING.md`
+- **New long-lived spec draft:** `RobotOS_v1.0/devkit/docs/03_SPECS/FRAMEWORK_APPLICATION_BOUNDARY_DRAFT.md` (`DRAFT / NON-FINAL`; no application implementation exists; spec for the future application boundary).
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md` `<a id="phase-12g"></a>`
+
+#### Application boundary selected
+
+**`PHASE_12G_RECOMMEND_APP_PRODUCT_PATH`** — Future active application code lives under `RobotOS_v1.0/app/<product>/`. The directory is **reserved at planning depth and NOT created**. The first `<product>` placeholder name is selected by a future Phase 12H-pre. Phase 12G, when authorized, should:
+
+- Reserve `RobotOS_v1.0/app/<product>/` as the future application path (sibling of `framework/`, `devkit/`, `core/`, `platform/`).
+- Define application layer responsibilities (FSM instance, mapping table, product event IDs, product command vocabulary, product policy, product-level validation).
+- Define application non-responsibilities (no core / platform / devkit / Framework internals; no `devkit_app_state` read or write; no legacy Architecture B).
+- Define event mapping policy (application owns mapping; Framework bridge stays product-neutral and `LOCKED-AT-12F`; product event IDs are application-local).
+- Define build separation strategy at planning depth (Architecture A only; separable from devkit validation build; host-first tests).
+- Define a staged validation strategy (Stage 1 = docs-only boundary plan, closed at Phase 12G; Stages 2-6 require future authorization).
+- **Not** create the `app/` directory. **Not** modify `devkit_app_state`. **Not** modify the devkit firmware. **Not** add or remove UART commands. **Not** modify Architecture B. **Not** run hardware. **Not** create application source itself.
+
+#### Candidate directory shapes evaluated
+
+| # | Option | Adjacent to | Risk | Scalable | Verdict at 12G |
+|---|---|---|---|---|---|
+| 1 | `RobotOS_v1.0/app/<product>/` | Framework siblings | Low | Yes | **RECOMMENDED** |
+| 2 | `RobotOS_v1.0/application/<product>/` | Framework siblings | Low | Yes | Rejected (ergonomics; no repo precedent) |
+| 3 | `RobotOS_v1.0/devkit/app/` | Devkit harness | High | No | Rejected (blends validation + application) |
+| 4 | `RobotOS_v1.0/framework/app/` | Framework internals | High | No | Rejected (violates Framework product-neutral boundary) |
+| 5 | `RobotOS_v1.0/examples/<scenario>/` | Top-level sibling | Low | Sample-only | Useful later; not the product / application path |
+
+Full evaluation in the closeout §D.
+
+#### App layer responsibilities (planning-level)
+
+**May own:** product / application state machine composition (`robotos_fw_fsm_t` instance + transition table + state defs + product vocabulary); mapping table (`robotos_fw_event_bridge_row_t[]`); product event IDs; product command vocabulary (separate channel, separate framing); product-specific sensor / actuator policy; product-specific build / harness integration; product-level validation scripts and docs.
+
+**Must not own:** core queue / dispatcher internals; platform backend primitives; devkit validation command semantics; Framework generic FSM / bridge algorithms; legacy Architecture B; any `devkit_app_state` read or write.
+
+#### Validation strategy (staged; Phase 12G closes Stage 1 only)
+
+| Stage | Gate | Status at Phase 12G |
+|---|---|---|
+| 1 | Docs-only application boundary plan | **CLOSED at Phase 12G** |
+| 2 | First product selection (Phase 12H-pre, docs-only) | NOT_STARTED |
+| 3 | Host-only application mapping prototype | NOT_STARTED |
+| 4 | Host regression baseline preserved (22/22 still PASS) | NOT_STARTED |
+| 5 | Optional devkit shadow (only if user overrides to Mode 2) | NOT_AUTHORIZED |
+| 6 | Hardware evidence | NOT_AUTHORIZED |
+
+#### Relationship to `devkit_app_state` (scope-guard #11 preserved)
+
+- `devkit_app_state` remains **authoritative** for the current devkit runtime. It owns `IDLE/ARMED/ACTIVE`, the `?` UART response, the `a/s/r/d/t/T` byte handlers, the button cycle, and the `ROBOTOS_APP` periodic log line.
+- **Separate Application Mode does not replace, shadow, copy, or promote `devkit_app_state`.** An application under `app/<product>/` may define a state machine with overlapping names — but it does so in its own `robotos_fw_fsm_t` instance, in its own namespace. The devkit firmware does not consume the application's state.
+- No `?` response change. No `a/s/r/?/x/v/L/d/T` semantic change.
+- Any future interaction with `devkit_app_state` (shadow runtime; replacement migration) requires a separate planning phase beyond Phase 12H.
+- Scope-guard #11 remains active.
+
+#### Relationship to command set
+
+- `a / s / r / ? / x / v / L / d / T` remain the **devkit / probe surface**. Validated through Phase 11Z.
+- **Product / application command vocabulary is not defined in Phase 12G.** If a future application grows a command interface, it does so inside `app/<product>/`, on its own channel, with its own framing.
+- Framework is not exposed via UART automatically (bridge has no UART surface; Phase 12F locked).
+- All 12 UART TX scope-guard constraints from `PHASE_9EZ_CHECKPOINT.md §H` preserved.
+
+#### Relationship to legacy Architecture B
+
+- `src/`, `include/robotos/`, and root `RobotOS_v1.0/CMakeLists.txt` remain frozen at `LEGACY_SCAFFOLD_MARKED_FROZEN_DOCS_ONLY` (Phase 12D-pre).
+- The future `app/<product>/` directory does **not** reuse `src/app/`, `include/robotos/app*`, or any other Architecture B artifact. It uses Architecture A contracts only.
+- No Architecture A ↔ Architecture B reconciliation in Phase 12G.
+
+#### What is preserved unchanged at Phase 12G
+
+- All `.c` and `.h` files in the repo — zero-diff.
+- `framework/robotos_fw_fsm.{h,c}`, `framework/robotos_fw_event_bridge.{h,c}`, `framework/README.md` — zero-diff.
+- All `CMakeLists.txt` (root, `devkit/`, `tests/`, `tests/host/`) — zero-diff.
+- All tracked test files under `tests/` — zero-diff.
+- `core/`, `platform/`, `devkit/src/`, board DTS/overlays, Zephyr workspace — zero-diff.
+- `src/`, `include/robotos/`, `include/app/` — zero-diff.
+- Architecture B legacy notices — zero-diff.
+- All evidence logs — zero-diff.
+- All prior closeout docs — not rewritten.
+- **No `app/` directory created.** `RobotOS_v1.0/app/` does not exist.
+- Framework FSM host test (Phase 12E, 93/93), bridge host test (Phase 12F, 103/103), and full host regression (Phase 12F, 22/22) remain the latest tracked evidence.
+
+#### Remaining decisions (all preserved unchanged at Phase 12G)
+
+1. ACTIVE disarm widening — `USER_DECISION_REQUIRED_ACTIVE_DISARM`
+2. Scheduler 7A/7B — `DEFER`
+3. F407 / custom board — `HOLD/DEFER`
+4. POST_FLASH_AUTOSTART root cause — `OPEN` / `MITIGATED_BY_WORKFLOW`
+5. Application / product layer — `NOT_STARTED`; boundary reserved at `RobotOS_v1.0/app/<product>/`; first `<product>` placeholder open for Phase 12H-pre
+6. Devkit integration of Framework FSM + bridge — `NOT_STARTED`; recommended mode = SEPARATE APPLICATION (Phase 12G-pre Mode 4)
+7. Architecture A ↔ Architecture B reconciliation — `NOT_STARTED`; out of scope
+8. First `<product>` placeholder name, minimal state vocabulary, minimal initial mapping table — open for Phase 12H-pre
+9. Exact CMake wiring choice (Option A: host test target in existing `tests/host/CMakeLists.txt`; Option B: new `app/<product>/CMakeLists.txt`; Option C: devkit integration not authorized) — open for the first application implementation phase
+10. Whether the first application is also a hardware-runnable Zephyr application or strictly host-only at first — open for the first application implementation phase
+11. Whether to introduce `RobotOS_v1.0/examples/` for sample integrations in addition to `app/<product>/` — open for a future docs-only phase
+12. Multi-product coordination rules — open; reachable only after at least two applications exist
+13. Bridge ABI memory-layout lock — `NOT_STARTED`; only names + signatures are `LOCKED-AT-12F`
+
+#### Next gate
+
+**Hold.** Phase 12H-pre — First Application Candidate / Product Harness Selection (docs-only) may open only on **explicit user authorization** AND with the recommended scope from §O of the Phase 12G closeout. Phase 12H-pre remains `NOT_STARTED`. If the user prefers to hold instead, no next phase is required — the application boundary spec sits at planning depth indefinitely. Replacement / shadow / direct devkit integration modes remain blocked by Phase 12G-pre's enumeration.
+
+---
+
 ### Phase 12G-pre — Devkit Integration Mode Decision (docs-only)
 
 - **Date:** 2026-05-13

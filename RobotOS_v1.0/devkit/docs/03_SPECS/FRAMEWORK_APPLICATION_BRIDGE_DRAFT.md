@@ -35,6 +35,14 @@ bridge is governed by
 No devkit integration exists; the bridge is host-test-only at this
 revision.
 
+**Application boundary (Phase 12G):** the future runtime consumer
+of this bridge is the application layer reserved at
+`RobotOS_v1.0/app/<product>/`, frozen at planning depth in
+[`FRAMEWORK_APPLICATION_BOUNDARY_DRAFT.md`](FRAMEWORK_APPLICATION_BOUNDARY_DRAFT.md)
+(`PHASE_12G_RECOMMEND_APP_PRODUCT_PATH`). The `app/` directory is
+**not created** by Phase 12G; the bridge has no Application
+consumer yet.
+
 ---
 
 ## 1. Status / Scope

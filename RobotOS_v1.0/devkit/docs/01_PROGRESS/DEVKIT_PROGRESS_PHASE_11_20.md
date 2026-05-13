@@ -121,6 +121,7 @@ table contains only the reserved placeholders.
 | 12F-pre | Application Bridge Planning (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12f-pre) |
 | 12F | Framework Application Bridge Host Prototype | CLOSED_WITH_HOST_TEST_EVIDENCE | [->](#phase-12f) |
 | 12G-pre | Devkit Integration Mode Decision (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12g-pre) |
+| 12G | Separate Application Mode / Application Boundary Planning (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12g) |
 | 20Z | RESERVED -- future checkpoint / closeout slot | NOT_STARTED | [->](#phase-20z) |
 
 When future phases are added:
@@ -2038,8 +2039,166 @@ Boundary Planning** (docs-only architecture planning) only on
 **explicit user authorization**. The recommended scope, in-scope /
 non-goal list, and exit criteria are recorded in
 [`../02_PHASE_CLOSEOUTS/PHASE_12G_PRE_DEVKIT_INTEGRATION_MODE_DECISION.md`](../02_PHASE_CLOSEOUTS/PHASE_12G_PRE_DEVKIT_INTEGRATION_MODE_DECISION.md)
-§L. Phase 12G **remains `NOT_STARTED`** at the close of Phase
-12G-pre.
+§L. Phase 12G **was opened** after this gate and is recorded in
+the next section.
+
+---
+
+<a id="phase-12g"></a>
+## Phase 12G -- Separate Application Mode / Application Boundary Planning (docs-only)
+
+**Status:** `CLOSED_DOCS_ONLY`
+**Decision:** `PHASE_12G_RECOMMEND_APP_PRODUCT_PATH`
+**Closeout:** [`../02_PHASE_CLOSEOUTS/PHASE_12G_SEPARATE_APPLICATION_BOUNDARY_PLANNING.md`](../02_PHASE_CLOSEOUTS/PHASE_12G_SEPARATE_APPLICATION_BOUNDARY_PLANNING.md)
+**New long-lived spec:** [`../03_SPECS/FRAMEWORK_APPLICATION_BOUNDARY_DRAFT.md`](../03_SPECS/FRAMEWORK_APPLICATION_BOUNDARY_DRAFT.md)
+**Date:** 2026-05-13
+
+### 12G.1 Purpose
+
+Phase 12G is the docs-only application boundary planning gate
+recommended by Phase 12G-pre. It defines where future application
+code lives, what it owns, how it consumes the Framework path, and
+the staged validation strategy that precedes any hardware run.
+Phase 12G does not create source, does not modify Framework code,
+does not modify devkit runtime, does not modify `devkit_app_state`,
+does not change command semantics, does not run hardware, and does
+not create the `app/` directory.
+
+### 12G.2 Files added / modified
+
+- **New (2 docs):**
+  - `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12G_SEPARATE_APPLICATION_BOUNDARY_PLANNING.md`
+    -- decision closeout (sections A-P).
+  - `RobotOS_v1.0/devkit/docs/03_SPECS/FRAMEWORK_APPLICATION_BOUNDARY_DRAFT.md`
+    -- new long-lived application boundary spec
+    (`DRAFT / NON-FINAL`, sections 1-12).
+- **Modified:**
+  - `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md`
+    -- this entry + index row.
+  - `CURRENT_STATE.md` -- Phase 12G as latest closed.
+  - `RobotOS_v1.0/devkit/docs/00_INDEX/README.md` -- Phase 12G
+    closeout link + application boundary spec link.
+  - `RobotOS_v1.0/devkit/docs/03_SPECS/FRAMEWORK_DEVKIT_INTEGRATION_MODE_DRAFT.md`
+    -- short cross-reference to the application boundary spec.
+  - `RobotOS_v1.0/devkit/docs/03_SPECS/FRAMEWORK_APPLICATION_BRIDGE_DRAFT.md`
+    -- short cross-reference to the application boundary spec.
+- **Zero-diff held:**
+  - All `.c` and `.h` files under `framework/`, `core/`,
+    `platform/`, `devkit/src/`, `tests/`, `src/`,
+    `include/robotos/`.
+  - All `CMakeLists.txt`.
+  - All `prj.conf`, board DTS, overlay, Zephyr config files.
+  - All existing evidence logs.
+  - **No `app/` or `application/` directory created.**
+
+### 12G.3 Candidate directory shapes evaluated
+
+Five candidate shapes evaluated in detail in the closeout §D:
+
+| # | Option | Adjacent to | Risk | Scalable | Recommendation |
+|---|---|---|---|---|---|
+| 1 | `RobotOS_v1.0/app/<product>/` | Framework siblings | Low | Yes | **RECOMMENDED** |
+| 2 | `RobotOS_v1.0/application/<product>/` | Framework siblings | Low | Yes | Rejected (ergonomics; no repo precedent) |
+| 3 | `RobotOS_v1.0/devkit/app/` | Devkit harness | High | No | Rejected (blends validation + application) |
+| 4 | `RobotOS_v1.0/framework/app/` | Framework internals | High | No | Rejected (violates Framework product-neutral boundary) |
+| 5 | `RobotOS_v1.0/examples/<scenario>/` | Top-level sibling | Low | Sample-only | Useful later; not the product / application path |
+
+### 12G.4 Decision result
+
+**`PHASE_12G_RECOMMEND_APP_PRODUCT_PATH`.** Future active
+application code lives under `RobotOS_v1.0/app/<product>/`. The
+directory is reserved at planning depth and **not created** by
+Phase 12G. The first `<product>` placeholder is selected by a
+future Phase 12H-pre.
+
+### 12G.5 App layer responsibilities (planning-level)
+
+**May own:** product / application state machine composition (FSM
+instance + transition table + state defs + product vocabulary);
+mapping table (`robotos_fw_event_bridge_row_t[]`); product event
+IDs; product command vocabulary (separate channel, separate
+framing); product-specific sensor / actuator policy; product-
+specific build / harness integration; product-level validation
+scripts and docs.
+
+**Must not own:** core queue / dispatcher internals; platform
+backend primitives; devkit validation command semantics; Framework
+generic FSM / bridge algorithms; legacy Architecture B; any
+`devkit_app_state` read or write.
+
+### 12G.6 Event mapping policy
+
+Application owns the mapping table; Framework bridge stays
+product-neutral (`LOCKED-AT-12F`); product event IDs are
+application-local; no new `ROBOTOS_EVENT_USER` subrange required;
+multiple applications can coexist with private event ID
+namespaces; mapping is host-tested before any runtime / hardware
+run.
+
+### 12G.7 Build separation strategy
+
+No build change in Phase 12G. Future `app/<product>/` builds
+attach to Architecture A only; do not touch the root legacy
+CMake; are separable from the devkit validation build; prefer
+host-first tests. Three future CMake options (Option A: host test
+target in existing `tests/host/CMakeLists.txt`; Option B: new
+`app/<product>/CMakeLists.txt`; Option C: devkit integration NOT
+authorized) decided at the relevant implementation phase, not at
+Phase 12G.
+
+### 12G.8 Validation strategy (staged; Phase 12G closes Stage 1 only)
+
+| Stage | Gate | Status |
+|---|---|---|
+| 1 | Docs-only application boundary plan | **CLOSED at Phase 12G** |
+| 2 | First product selection (Phase 12H-pre, docs-only) | NOT_STARTED |
+| 3 | Host-only application mapping prototype | NOT_STARTED |
+| 4 | Host regression baseline preserved (22/22 still PASS) | NOT_STARTED |
+| 5 | Optional devkit shadow (only if user explicitly authorizes Mode 2) | NOT_AUTHORIZED |
+| 6 | Hardware evidence (requires explicit runtime-integration phase) | NOT_AUTHORIZED |
+
+### 12G.9 Relationship to `devkit_app_state`, command set, legacy Arch B
+
+- `devkit_app_state` remains authoritative for current devkit
+  runtime. Separate Application Mode does **not** replace, shadow,
+  copy, or promote it. Scope-guard #11 re-affirmed.
+- Command set `a/s/r/?/x/v/L/d/T` unchanged. Framework is not
+  exposed via UART automatically. Future application command
+  vocabulary requires a separate product-command phase.
+- Architecture B (`src/`, `include/robotos/`) remains frozen at
+  `LEGACY_SCAFFOLD_MARKED_FROZEN_DOCS_ONLY` (Phase 12D-pre).
+  Future `app/<product>/` does not reuse Architecture B and uses
+  Architecture A contracts only.
+
+### 12G.10 What remains NOT_STARTED
+
+1. Application implementation -- `NOT_STARTED`.
+2. `app/` directory creation -- `NOT_CREATED`.
+3. First `<product>` placeholder name -- open for Phase 12H-pre.
+4. Phase 12H-pre -- `NOT_STARTED`; requires explicit user
+   authorization.
+5. Devkit hardware integration of Framework -- `NOT_STARTED`.
+6. Bridge ABI memory-layout lock -- `NOT_STARTED`.
+
+### 12G.11 Open gates preserved unchanged
+
+- ACTIVE disarm widening -- `USER_DECISION_REQUIRED_ACTIVE_DISARM`.
+- Scheduler 7A/7B -- `DEFER`.
+- F407 / custom board -- `HOLD/DEFER`.
+- POST_FLASH_AUTOSTART -- `OPEN/MITIGATED_BY_WORKFLOW`.
+- Application / product layer -- `NOT_STARTED`; recommended next
+  gate is Phase 12H-pre.
+- Devkit integration of Framework -- `NOT_STARTED`.
+
+### 12G.12 Next gate
+
+**Hold or open Phase 12H-pre -- First Application Candidate /
+Product Harness Selection** (docs-only) only on **explicit user
+authorization**. The recommended scope, in-scope / non-goal list,
+and exit criteria are recorded in
+[`../02_PHASE_CLOSEOUTS/PHASE_12G_SEPARATE_APPLICATION_BOUNDARY_PLANNING.md`](../02_PHASE_CLOSEOUTS/PHASE_12G_SEPARATE_APPLICATION_BOUNDARY_PLANNING.md)
+§O. Phase 12H-pre **remains `NOT_STARTED`** at the close of Phase
+12G.
 
 ---
 
