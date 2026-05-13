@@ -9,6 +9,86 @@
 
 ## Last Closed Phase
 
+### Phase 12G-pre — Devkit Integration Mode Decision (docs-only)
+
+- **Date:** 2026-05-13
+- **Type:** Docs-only architecture planning gate. **No source, runtime, test, CMake, Zephyr, board, `prj.conf`, DTS overlay, evidence log, Framework header, Framework `.c` file, devkit integration, command-set, or `devkit_app_state` change.** No file under `framework/`, `tests/`, `core/`, `platform/`, `devkit/src/`, `src/`, `include/robotos/` modified.
+- **Close status:** `CLOSED_DOCS_ONLY`
+- **Decision result:** `PHASE_12G_PRE_RECOMMEND_SEPARATE_APPLICATION_MODE_PLANNING`
+- **Published baseline at open:** `origin/master = 524cb8b`
+- **Closeout doc:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12G_PRE_DEVKIT_INTEGRATION_MODE_DECISION.md`
+- **New long-lived spec draft:** `RobotOS_v1.0/devkit/docs/03_SPECS/FRAMEWORK_DEVKIT_INTEGRATION_MODE_DRAFT.md` (`DRAFT / NON-FINAL`; no integration implementation exists; spec for the future integration boundary).
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md` `<a id="phase-12g-pre"></a>`
+
+#### Integration mode selected for next gate
+
+**`PHASE_12G_PRE_RECOMMEND_SEPARATE_APPLICATION_MODE_PLANNING`** — Phase 12G, when authorized, should:
+
+- Define where a future application / product harness lives (proposal anchor: `RobotOS_v1.0/app/<product>/`).
+- Choose the build separation strategy (separate Zephyr app dir vs. shared base + `CONFIG_*` selectable vs. board overlay).
+- Define the event-mapping policy between adapter event keys and Framework event IDs at the application layer.
+- Set the validation strategy (host test first; eventual hardware run on a separate firmware target).
+- **Not** modify `devkit_app_state`. **Not** modify the devkit firmware. **Not** add or remove UART commands. **Not** modify Architecture B. **Not** run hardware. **Not** create the application source itself.
+
+#### Integration modes evaluated
+
+| # | Mode | Touches `devkit_app_state` | Changes command set | Hardware required | App planning required | Verdict at 12G-pre |
+|---|---|---|---|---|---|---|
+| 1 | HOLD | No | No | No | No | Acceptable fallback |
+| 2 | SHADOW | Read-only | No | Yes | No | DEFER (fallback if Mode 4 rejected) |
+| 3 | REPLACEMENT | Yes (rewrite) | Yes | Yes | Yes (implicit) | NOT RECOMMENDED; structurally forbidden until ACTIVE disarm + Application planning resolved |
+| 4 | SEPARATE APPLICATION | No | No | Eventually | Yes (next gate is exactly this) | **RECOMMENDED** |
+| 5 | HOST-ONLY EXTENSION | No | No | No | No | Lower priority than Mode 4 |
+
+Full evaluation in the closeout §D.
+
+#### Relationship to `devkit_app_state` (scope-guard #11 preserved)
+
+- `devkit_app_state` remains **authoritative** for the devkit runtime state machine. It owns `IDLE/ARMED/ACTIVE`, the `?` UART response, `a/s/r/d/t/T` byte handling, the button cycle, and the `ROBOTOS_APP` periodic log.
+- Phase 12G-pre does **not** modify it and does not propose to modify it in the recommended mode.
+- The recommended mode (SEPARATE APPLICATION) keeps the Framework path consumed by a **future** separate application / product harness — never by the devkit firmware. `devkit_app_state` is untouched.
+- Any future mode that touches `devkit_app_state` must list: migration risk; rollback plan; hardware probes to rerun; command impact; relationship to ACTIVE disarm `USER_DECISION_REQUIRED` and POST_FLASH_AUTOSTART `OPEN`.
+- Scope-guard #11 remains active.
+
+#### Relationship to command set
+
+- `a / s / r / ? / x / v / L / d / T` remain unchanged. Validated through Phase 11Z.
+- No integration mode evaluated automatically exposes a new UART command.
+- The frozen 9-command set is devkit / probe surface, not product / application vocabulary.
+- A future application layer, if it grows a command vocabulary, defines that vocabulary in the application path — not in `devkit/src/`, not by reusing the devkit byte stream, and not by overriding the `?` response shape.
+- All 12 UART TX scope-guard constraints from `PHASE_9EZ_CHECKPOINT.md §H` preserved.
+
+#### What is preserved unchanged at Phase 12G-pre
+
+- All `.c` and `.h` files in the repo — zero-diff.
+- `framework/robotos_fw_fsm.{h,c}`, `framework/robotos_fw_event_bridge.{h,c}`, `framework/README.md` — zero-diff.
+- All `CMakeLists.txt` (root, `devkit/`, `tests/`, `tests/host/`) — zero-diff.
+- All tracked test files under `tests/` — zero-diff.
+- `core/`, `platform/`, `devkit/src/`, board DTS/overlays, Zephyr workspace — zero-diff.
+- `src/`, `include/robotos/`, `include/app/` — zero-diff.
+- Architecture B legacy notices — zero-diff.
+- All evidence logs — zero-diff.
+- All prior closeout docs — not rewritten.
+- Framework FSM host test (Phase 12E, 93/93) and bridge host test (Phase 12F, 103/103) and full host regression (Phase 12F, 22/22) remain the latest tracked evidence.
+
+#### Remaining decisions (all preserved unchanged at Phase 12G-pre)
+
+1. ACTIVE disarm widening — `USER_DECISION_REQUIRED_ACTIVE_DISARM`
+2. Scheduler 7A/7B — `DEFER`
+3. F407 / custom board — `HOLD/DEFER`
+4. POST_FLASH_AUTOSTART root cause — `OPEN` / `MITIGATED_BY_WORKFLOW`
+5. Application / product layer — `NOT_STARTED`; recommended next gate is Phase 12G — Separate Application Mode / Application Boundary Planning (docs-only)
+6. Devkit integration of Framework FSM + bridge — `NOT_STARTED`; recommended mode = SEPARATE APPLICATION (Mode 4); shadow / replacement / hold / host-extension remain fallback directions if user overrides
+7. Architecture A ↔ Architecture B reconciliation — `NOT_STARTED`; out of scope
+8. Final application directory shape, build separation strategy, event-mapping policy at the application layer — open for Phase 12G
+9. Bridge ABI memory-layout lock — `NOT_STARTED`; only names + signatures are `LOCKED-AT-12F`
+
+#### Next gate
+
+**Hold.** Phase 12G — Separate Application Mode / Application Boundary Planning (docs-only) may open only on **explicit user authorization** AND with the recommended scope from §F and §L of the Phase 12G-pre closeout. Phase 12G remains `NOT_STARTED`. If the user prefers a different mode, the fallback gates are: Phase 12G — Devkit Shadow Integration Spec (if SHADOW), or no next phase (if HOLD), or Phase 12G — Bridge / FSM Host Extension Planning (if HOST-ONLY EXTENSION). Replacement mode remains structurally forbidden until preconditions are cleared.
+
+---
+
 ### Phase 12F — Framework Application Bridge Host Prototype (host-test evidence)
 
 - **Date:** 2026-05-13

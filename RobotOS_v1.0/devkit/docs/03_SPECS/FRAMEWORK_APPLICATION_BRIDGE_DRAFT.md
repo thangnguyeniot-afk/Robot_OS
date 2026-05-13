@@ -28,6 +28,13 @@ This spec is anchored to
 and to the Phase 12C confirmation of the bridge pattern in
 [`../02_PHASE_CLOSEOUTS/PHASE_12C_FSM_EVENT_BRIDGE_STATUS_MODEL.md`](../02_PHASE_CLOSEOUTS/PHASE_12C_FSM_EVENT_BRIDGE_STATUS_MODEL.md).
 
+**Integration mode (Phase 12G-pre):** runtime consumption of this
+bridge is governed by
+[`FRAMEWORK_DEVKIT_INTEGRATION_MODE_DRAFT.md`](FRAMEWORK_DEVKIT_INTEGRATION_MODE_DRAFT.md)
+(`PHASE_12G_PRE_RECOMMEND_SEPARATE_APPLICATION_MODE_PLANNING`).
+No devkit integration exists; the bridge is host-test-only at this
+revision.
+
 ---
 
 ## 1. Status / Scope
