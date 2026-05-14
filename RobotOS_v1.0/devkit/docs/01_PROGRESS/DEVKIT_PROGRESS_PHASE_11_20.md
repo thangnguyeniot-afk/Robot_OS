@@ -131,6 +131,7 @@ table contains only the reserved placeholders.
 | 12J-Z | Probe Translator App-Layer Checkpoint / Integration Direction Guard | CLOSED_DOCS_ONLY | [->](#phase-12jz) |
 | 12K-pre | Probe Translator Zephyr Build-Only Admission Plan (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12k-pre) |
 | 12K | Probe Translator Zephyr Build-Only Admission | CLOSED_WITH_BUILD_EVIDENCE | [->](#phase-12k) |
+| 12K-Z | Probe Translator Build Admission Guard (docs-only checkpoint) | CLOSED_DOCS_ONLY | [->](#phase-12kz) |
 | 20Z | RESERVED -- future checkpoint / closeout slot | NOT_STARTED | [->](#phase-20z) |
 
 When future phases are added:
@@ -3331,6 +3332,69 @@ All gates from Phase 12K-pre unchanged. Gate "Zephyr build-only admission
 for `probe_translator`" transitions from `OPENS_AT_PHASE_12K` →
 `ADMITTED_AT_12K (BUILD-EVIDENCE)`. Devkit runtime integration remains
 `NOT_STARTED` and requires its own pre-planning gate.
+
+---
+
+<a id="phase-12kz"></a>
+
+## Phase 12K-Z -- Probe Translator Build Admission Guard
+
+**Status:** `CLOSED_DOCS_ONLY`
+**Decision:** `PHASE_12K_Z_BUILD_ADMISSION_CHECKPOINT_CLOSED`
+**Closeout:** [`../02_PHASE_CLOSEOUTS/PHASE_12KZ_BUILD_ADMISSION_CHECKPOINT.md`](../02_PHASE_CLOSEOUTS/PHASE_12KZ_BUILD_ADMISSION_CHECKPOINT.md)
+**Date:** 2026-05-14
+
+### 12K-Z.1 Purpose
+
+Phase 12K-Z is a docs-only checkpoint / build-admission guard. It locks
+Phase 12K as build-admission complete and explicitly prevents later phases
+from treating Zephyr build admission as runtime integration.
+
+### 12K-Z.2 What this checkpoint confirms
+
+- Phase 12K commit `a4b49ad` is pushed; `origin/master` is synced.
+- `probe_translator.c`, `robotos_fw_fsm.c`, and
+  `robotos_fw_event_bridge.c` are part of the devkit Zephyr build
+  graph via `devkit/CMakeLists.txt`.
+- `../framework` and `../app/probe_translator` include paths are
+  admitted to the `app` target.
+- `west build --pristine` PASS: FLASH 41,528 B (7.92%), RAM 12,352 B
+  (9.42%); host regression 23/23 PASS, 132/132 assertions PASS.
+- This is **compile/link admission only**. No runtime wiring.
+
+### 12K-Z.3 Runtime-wiring guard (explicit)
+
+- No runtime call path from `devkit_runtime` to `probe_translator`
+  has been added.
+- No `devkit_app_state` integration has been added.
+- No UART command / parser / response / shell / protocol behavior
+  has been added. Command set `a/s/r/?/x/v/L/d/T` unchanged.
+- No scheduler behavior has been modified.
+- No hardware flash / RTT / J-Link evidence is claimed.
+- No F407 / custom board work is opened.
+- No product command mapping is opened.
+- `app/probe_translator/CMakeLists.txt` and `Kconfig` not created.
+
+### 12K-Z.4 Consequence for next phase
+
+The next phase must start from: `probe_translator` is build-admitted,
+not runtime-owned by devkit. Any runtime use requires a new explicit
+phase contract. A likely next gate is Phase 12L-pre (devkit runtime
+admission planning, docs-only).
+
+### 12K-Z.5 Files changed
+
+- **New:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12KZ_BUILD_ADMISSION_CHECKPOINT.md`
+- **Doc-sync:** `CURRENT_STATE.md`, `DEVKIT_PROGRESS_PHASE_11_20.md`
+  (this entry), `00_INDEX/README.md`.
+- **Zero-diff held:** all source, header, CMake, Kconfig, `prj.conf`,
+  DTS, overlay, test, and log files.
+
+### 12K-Z.6 Open gates carried forward
+
+All gates from Phase 12K unchanged. Devkit runtime integration of
+`probe_translator` remains `NOT_STARTED` and requires its own
+pre-planning gate.
 
 ---
 

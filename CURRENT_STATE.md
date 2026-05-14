@@ -9,6 +9,26 @@
 
 ## Last Closed Phase
 
+### Phase 12K-Z — Probe Translator Build Admission Guard
+
+- **Date:** 2026-05-14
+- **Type:** Docs-only checkpoint / build-admission guard. **No source, CMake, runtime, Kconfig, `prj.conf`, DTS, overlay, test, or log change. No new build run. No runtime wiring added. No UART behavior changed. No scheduler behavior changed. No hardware validation claimed.**
+- **Close status:** `CLOSED_DOCS_ONLY`
+- **Decision result:** `PHASE_12K_Z_BUILD_ADMISSION_CHECKPOINT_CLOSED`
+- **Published baseline at open:** `origin/master = a4b49ad`
+- **Checkpoint doc:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12KZ_BUILD_ADMISSION_CHECKPOINT.md`
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md` `<a id="phase-12kz"></a>`
+
+#### Guard locked
+
+`probe_translator` is build-admitted into the devkit Zephyr image (Phase 12K). It is **not** runtime-owned by devkit. No call path from `devkit_runtime` or `devkit_app_state` to `probe_translator` exists. No UART command was added. No hardware flash or RTT evidence is claimed. The next implementation phase must not assume runtime wiring exists.
+
+**Suggested next gate:** HOLD (default) or Phase 12L-pre — Probe Translator Devkit Runtime Admission Plan (docs-only pre-planning gate; does not wire runtime by itself).
+
+---
+
+## Phase 12K Baseline Reference
+
 ### Phase 12K — Probe Translator Zephyr Build-Only Admission
 
 - **Date:** 2026-05-14
