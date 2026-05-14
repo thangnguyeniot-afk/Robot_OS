@@ -1,25 +1,24 @@
 # RobotOS — Probe Translator Zephyr Build-Only Admission Plan
 
-**Status:** `DRAFT / NON-FINAL`. **No Zephyr build admission implementation
-exists.** This document is the execution-ready implementation contract for
-**Phase 12K — Probe Translator Zephyr Build-Only Admission**, the
-Zephyr-build-context admission of `app/probe_translator/` and the
-`framework/` Architecture-A modules into the devkit Zephyr build without
-any runtime wiring.
-**Revision:** Phase 12K-pre (2026-05-14, `CLOSED_DOCS_ONLY`;
-`PHASE_12K_PRE_PROBE_TRANSLATOR_ZEPHYR_BUILD_ONLY_PLAN_CLOSED`) — initial
-contract.
-**Next revision condition:** Phase 12K (when authorized) — when build
-admission lands in `devkit/CMakeLists.txt` and the Zephyr build passes,
-this spec upgrades to
-`BUILD_ADMITTED_AT_12K (ZEPHYR-BUILD EVIDENCE)` and gains the
-materialized diff list and build evidence cross-references.
+**Status:** `BUILD_ADMITTED_AT_12K (ZEPHYR-BUILD EVIDENCE)`.
+This document is the execution-ready implementation contract for
+**Phase 12K — Probe Translator Zephyr Build-Only Admission**.
+**Revision:** Phase 12K (2026-05-14, `CLOSED_WITH_BUILD_EVIDENCE`;
+`PHASE_12K_PROBE_TRANSLATOR_ZEPHYR_BUILD_ONLY_ADMITTED_VALIDATED`) —
+Zephyr build admission landed via additive change to
+`devkit/CMakeLists.txt`; `west build --pristine` PASS for
+`stm32f411e_disco` rev D (FLASH 41,528 B / 7.92%, RAM 12,352 B / 9.42%);
+host regression 23/23 PASS; transcript at
+`devkit/logs/phase_12K_build_2026-05-14.txt`.
+**Previous revision:** Phase 12K-pre (2026-05-14, `CLOSED_DOCS_ONLY`).
 
-> **No Zephyr build admission exists yet.** `devkit/CMakeLists.txt`
-> does not list `framework/robotos_fw_fsm.c`,
-> `framework/robotos_fw_event_bridge.c`, or
-> `app/probe_translator/probe_translator.c` as sources. No build
-> target includes these files in the Zephyr context at Phase 12K-pre.
+> **Zephyr build admission landed at Phase 12K.** `devkit/CMakeLists.txt`
+> now lists `framework/robotos_fw_fsm.c`,
+> `framework/robotos_fw_event_bridge.c`, and
+> `app/probe_translator/probe_translator.c` as sources, with
+> `../framework` and `../app/probe_translator` on the include path. No
+> runtime wiring, no `devkit_app_state` change, no UART command change,
+> no `prj.conf` / DTS / overlay / Kconfig change.
 
 This spec is anchored to
 [`../02_PHASE_CLOSEOUTS/PHASE_12K_PRE_PROBE_TRANSLATOR_ZEPHYR_BUILD_ONLY_PLAN.md`](../02_PHASE_CLOSEOUTS/PHASE_12K_PRE_PROBE_TRANSLATOR_ZEPHYR_BUILD_ONLY_PLAN.md)

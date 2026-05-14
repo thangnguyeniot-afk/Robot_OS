@@ -130,6 +130,7 @@ table contains only the reserved placeholders.
 | 12J | Probe Translator FAULT Block Implementation | CLOSED_WITH_HOST_TEST_EVIDENCE | [->](#phase-12j) |
 | 12J-Z | Probe Translator App-Layer Checkpoint / Integration Direction Guard | CLOSED_DOCS_ONLY | [->](#phase-12jz) |
 | 12K-pre | Probe Translator Zephyr Build-Only Admission Plan (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12k-pre) |
+| 12K | Probe Translator Zephyr Build-Only Admission | CLOSED_WITH_BUILD_EVIDENCE | [->](#phase-12k) |
 | 20Z | RESERVED -- future checkpoint / closeout slot | NOT_STARTED | [->](#phase-20z) |
 
 When future phases are added:
@@ -3232,6 +3233,104 @@ devkit Zephyr build topology (`devkit/CMakeLists.txt` project
 All gates from Phase 12J-Z unchanged. Gate "Zephyr build-only admission
 for `probe_translator`" transitions from `NOT_STARTED` →
 `OPENS_AT_PHASE_12K` (contract locked).
+
+---
+
+<a id="phase-12k"></a>
+
+## Phase 12K -- Probe Translator Zephyr Build-Only Admission
+
+**Status:** `CLOSED_WITH_BUILD_EVIDENCE`
+**Decision:** `PHASE_12K_PROBE_TRANSLATOR_ZEPHYR_BUILD_ONLY_ADMITTED_VALIDATED`
+**Closeout:** [`../02_PHASE_CLOSEOUTS/PHASE_12K_PROBE_TRANSLATOR_ZEPHYR_BUILD_ONLY_ADMISSION.md`](../02_PHASE_CLOSEOUTS/PHASE_12K_PROBE_TRANSLATOR_ZEPHYR_BUILD_ONLY_ADMISSION.md)
+**Implementation contract:** [`../03_SPECS/PROBE_TRANSLATOR_ZEPHYR_BUILD_ONLY_PLAN.md`](../03_SPECS/PROBE_TRANSLATOR_ZEPHYR_BUILD_ONLY_PLAN.md)
+**Date:** 2026-05-14
+
+### 12K.1 Purpose
+
+Phase 12K admits `framework/robotos_fw_fsm.c`,
+`framework/robotos_fw_event_bridge.c`, and
+`app/probe_translator/probe_translator.c` into the existing devkit
+Zephyr build via a minimal additive change to
+`RobotOS_v1.0/devkit/CMakeLists.txt`. Build/link admission is proven;
+no runtime wiring, no devkit_app_state change, no UART command change,
+no hardware run.
+
+### 12K.2 Files changed
+
+- **Modified (additive only):**
+  - `RobotOS_v1.0/devkit/CMakeLists.txt` -- appended sources
+    (`framework/robotos_fw_fsm.c`, `framework/robotos_fw_event_bridge.c`,
+    `app/probe_translator/probe_translator.c`) and include paths
+    (`../framework`, `../app/probe_translator`) to the existing `app`
+    target.
+- **New:**
+  - `RobotOS_v1.0/devkit/logs/phase_12K_build_2026-05-14.txt` --
+    `west build` transcript (38,292 bytes).
+  - `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12K_PROBE_TRANSLATOR_ZEPHYR_BUILD_ONLY_ADMISSION.md`
+    -- this closeout.
+- **Doc-sync:**
+  - `CURRENT_STATE.md`, `DEVKIT_PROGRESS_PHASE_11_20.md` (this entry),
+    `00_INDEX/README.md`,
+    `03_SPECS/PROBE_TRANSLATOR_ZEPHYR_BUILD_ONLY_PLAN.md` (status
+    upgraded to `BUILD_ADMITTED_AT_12K`).
+- **Zero-diff held:** `devkit/prj.conf`, all DTS/overlay, all
+  `devkit/src/*` files, all `framework/*.{h,c}`, all
+  `app/probe_translator/*` (no CMakeLists/Kconfig created),
+  `core/`, `platform/`, `src/`, `include/robotos/`,
+  `tests/host/CMakeLists.txt`.
+
+### 12K.3 Build evidence
+
+| Item | Result |
+| --- | --- |
+| Command | `py -m west build --pristine=always -d build-phase12k -b stm32f411e_disco RobotOS_v1.0/devkit` |
+| Zephyr | v3.6.0 |
+| SDK / toolchain | Zephyr SDK 0.17.0; arm-zephyr-eabi-gcc 12.2.0 |
+| Board | `stm32f411e_disco` rev D |
+| Configure | PASS (44.7s) |
+| Build | PASS (164/164) |
+| Final link | `zephyr.elf` |
+| Exit code | **0** |
+| FLASH | 41,528 B (7.92% of 512 KB) |
+| RAM | 12,352 B (9.42% of 128 KB) |
+| New warnings | None beyond pre-existing baseline |
+| Transcript | `RobotOS_v1.0/devkit/logs/phase_12K_build_2026-05-14.txt` |
+
+### 12K.4 Host regression
+
+- `cmake -S RobotOS_v1.0/tests/host -B build-phase12k-host && cmake --build && ctest`
+- **23/23 ctest PASS** (`100% tests passed, 0 tests failed out of 23`)
+- `probe_translator_mapping_contract` still PASS with **132/132**
+  assertions (TC01–TC24)
+
+### 12K.5 Boundary validation
+
+- 10 dependency / boundary grep gates PASS (no Zephyr/devkit includes,
+  no UART/scheduler/CONFIG_/DTS dependency)
+- 11 forbidden-surface zero-diff checks PASS
+- `app/probe_translator/CMakeLists.txt` and `Kconfig` NOT created
+- `git diff --check` EXIT:0
+
+### 12K.6 Environment recovery method
+
+Session-local PowerShell env:
+
+```powershell
+$env:ZEPHYR_BASE = "d:\Robot_OS\zephyr"
+$env:ZEPHYR_SDK_INSTALL_DIR = "C:\zephyr-sdk-0.17.0"
+$env:PATH = "C:\zephyr-sdk-0.17.0\arm-zephyr-eabi\bin;" + $env:PATH
+```
+
+No west init, no west update, no SDK install. Toolchain and Zephyr base
+were already on disk.
+
+### 12K.7 Open gates carried forward
+
+All gates from Phase 12K-pre unchanged. Gate "Zephyr build-only admission
+for `probe_translator`" transitions from `OPENS_AT_PHASE_12K` →
+`ADMITTED_AT_12K (BUILD-EVIDENCE)`. Devkit runtime integration remains
+`NOT_STARTED` and requires its own pre-planning gate.
 
 ---
 

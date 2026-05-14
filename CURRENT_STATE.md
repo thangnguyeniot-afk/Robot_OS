@@ -9,6 +9,60 @@
 
 ## Last Closed Phase
 
+### Phase 12K — Probe Translator Zephyr Build-Only Admission
+
+- **Date:** 2026-05-14
+- **Type:** Build-only Zephyr admission. Additive change to `RobotOS_v1.0/devkit/CMakeLists.txt` admits `framework/robotos_fw_fsm.c`, `framework/robotos_fw_event_bridge.c`, and `app/probe_translator/probe_translator.c` into the existing devkit Zephyr build. **No runtime wiring. No `devkit_app_state` change. No UART command added or modified (`a/s/r/?/x/v/L/d/T` unchanged). No `prj.conf` / DTS / overlay / Kconfig change. No hardware run. No flash / RTT.**
+- **Close status:** `CLOSED_WITH_BUILD_EVIDENCE`
+- **Decision result:** `PHASE_12K_PROBE_TRANSLATOR_ZEPHYR_BUILD_ONLY_ADMITTED_VALIDATED`
+- **Published baseline at open:** `origin/master = 7a8b1f4`
+- **Closeout doc:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12K_PROBE_TRANSLATOR_ZEPHYR_BUILD_ONLY_ADMISSION.md`
+- **Updated long-lived spec:** `RobotOS_v1.0/devkit/docs/03_SPECS/PROBE_TRANSLATOR_ZEPHYR_BUILD_ONLY_PLAN.md` → `BUILD_ADMITTED_AT_12K (ZEPHYR-BUILD EVIDENCE)`
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md` `<a id="phase-12k"></a>`
+
+#### Build evidence
+
+- `west build --pristine=always -d build-phase12k -b stm32f411e_disco RobotOS_v1.0/devkit` — exit 0
+- Zephyr v3.6.0 + Zephyr SDK 0.17.0 (gcc 12.2.0); board `stm32f411e_disco` rev D
+- FLASH: **41,528 B (7.92%** of 512 KB)
+- RAM: **12,352 B (9.42%** of 128 KB)
+- No new warnings beyond pre-existing baseline
+- Transcript: `RobotOS_v1.0/devkit/logs/phase_12K_build_2026-05-14.txt` (38,292 bytes)
+
+#### Host regression rerun
+
+- `cmake -S RobotOS_v1.0/tests/host -B build-phase12k-host && cmake --build && ctest`
+- **23/23 ctest PASS** (`100% tests passed, 0 tests failed out of 23`)
+- `probe_translator_mapping_contract` still PASS with 132/132 assertions (TC01–TC24)
+
+#### Zero-diff confirmed
+
+- `prj.conf`, DTS, overlay, Kconfig — zero-diff
+- `devkit/src/*` (including `devkit_app_state`, `main.c`, `devkit_runtime.c`, UART files) — zero-diff
+- `framework/*.{h,c}` — zero-diff (compiled as-is from Phase 12J baseline)
+- `app/probe_translator/*` — zero-diff (compiled as-is from Phase 12J baseline)
+- `app/probe_translator/CMakeLists.txt` and `Kconfig` — **NOT CREATED**
+- `core/`, `platform/`, `src/`, `include/robotos/` — zero-diff
+- `tests/host/CMakeLists.txt` — zero-diff
+
+#### Open carry-forward gates (unchanged at Phase 12K close)
+
+1. ACTIVE disarm widening — `USER_DECISION_REQUIRED_ACTIVE_DISARM`
+2. Scheduler 7A/7B — `DEFER`
+3. F407 / custom board — `HOLD/DEFER`
+4. POST_FLASH_AUTOSTART root cause — `OPEN` / `MITIGATED_BY_WORKFLOW`
+5. Non-NULL action / on_entry / on_exit for FAULT — open (future app-behavior phase)
+6. Devkit runtime integration of `probe_translator` — `NOT_STARTED`
+7. Bridge ABI memory-layout lock — `NOT_STARTED`
+8. Hardware-runnable Zephyr application with `probe_translator` — `NOT_STARTED` (build-admitted at 12K; not wired)
+9. Product command mapping / UART expansion — `NOT_STARTED; USER_DECISION_REQUIRED`
+10. `RobotOS_v1.0/examples/` — `NOT_STARTED`
+11. Multi-product coordination — `NOT_STARTED`
+
+---
+
+## Prior Closed Phase
+
 ### Phase 12K-pre — Probe Translator Zephyr Build-Only Admission Plan (docs-only)
 
 - **Date:** 2026-05-14
@@ -73,7 +127,7 @@ Zephyr build topology audited. No blocking conditions found. Phase 12K has a com
 
 ---
 
-## Prior Closed Phase
+## Phase 12J-Z Closed Reference
 
 ### Phase 12J-Z — Probe Translator App-Layer Checkpoint / Integration Direction Guard
 

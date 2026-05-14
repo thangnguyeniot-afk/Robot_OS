@@ -36,3 +36,15 @@ target_sources(app PRIVATE
     ../platform/zephyr/robotos_platform_fault_zephyr.c
     ../platform/zephyr/robotos_platform_critical_zephyr.c
 )
+
+# Architecture-A Framework (Phase 12K build admission)
+target_sources(app PRIVATE
+    ../framework/robotos_fw_fsm.c
+    ../framework/robotos_fw_event_bridge.c
+    ../app/probe_translator/probe_translator.c
+)
+
+target_include_directories(app PRIVATE
+    ../framework
+    ../app/probe_translator
+)
