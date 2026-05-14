@@ -16,6 +16,16 @@ RobotOS_v1.0/devkit/build/
 # Host test build output (reproduced by cmake -S ... -B build-host-core)
 /build-host-core/
 
+# Per-phase build directories at repo root (build-phase*, build-host-core-phase*,
+# build-host-phase*, build-phase*-host, etc. — reproduced by west build / cmake)
+/build-*/
+
+# Devkit scratch / provenance — directory policy says these files are
+# untracked-by-design (see RobotOS_v1.0/devkit/docs/04_SCRATCH_OR_PROVENANCE/README.md).
+# The README itself is already tracked and must stay tracked.
+RobotOS_v1.0/devkit/docs/04_SCRATCH_OR_PROVENANCE/*
+!RobotOS_v1.0/devkit/docs/04_SCRATCH_OR_PROVENANCE/README.md
+
 # RTT binary dump (binary artifact — decoded text is saved to devkit/logs/)
 /rtt_buf.bin
 
