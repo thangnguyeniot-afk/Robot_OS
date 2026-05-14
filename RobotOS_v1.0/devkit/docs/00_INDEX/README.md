@@ -111,6 +111,17 @@ as the underlying contracts evolve.
 - [`PROBE_TRANSLATOR_APP_SKELETON_DRAFT.md`](../03_SPECS/PROBE_TRANSLATOR_APP_SKELETON_DRAFT.md) -- Probe translator app skeleton spec (`IMPLEMENTED_AT_12I (HOST-TEST EVIDENCE)`; Phase 12H origin; upgraded at Phase 12I close; `PHASE_12H_PROBE_TRANSLATOR_SKELETON_PLANNED_DOCS_ONLY`; future file set locked = `app/probe_translator/probe_translator.{c,h}` + `README.md` + `tests/host/test_app_probe_translator_mapping.c`; public API names locked = `probe_translator_init / _dispatch_adapter_event / _reset / _get_snapshot`; state vocab locked = `PROBE_TRANSLATOR_STATE_IDLE/READY/ACTIVE/FAULT?`; event vocab locked = `PROBE_TRANSLATOR_EVT_CONFIGURED/START/STOP/RESET/FAULT?`; adapter-key vocab locked = `PROBE_ADAPTER_TYPE_CONFIG/COMMAND/FAULT?` + `PROBE_ADAPTER_ARG_NONE/START/STOP/RESET/ANY?`; transition table rows 0-4 required + 5-9 optional (FAULT block + IDLE+RESET self-loop); mapping table rows 0-3 required + 4 optional (wildcard arg0 for FAULT); 16-case host test plan (TC01-TC16 incl. three grep gates against `devkit_app_state.h` / command set / Zephyr-devkit-legacy includes); preferred build = Option A; `app/probe_translator/` directory NOT created; numeric values + FAULT-block ship-or-defer + transition row 5 ship-or-defer + struct-layout-by-value-vs-pointer open for Phase 12I-pre / 12I; no implementation exists; `devkit_app_state` and command set unchanged; Architecture B frozen).
 - [`FRAMEWORK_DEVKIT_INTEGRATION_MODE_DRAFT.md`](../03_SPECS/FRAMEWORK_DEVKIT_INTEGRATION_MODE_DRAFT.md) -- Framework devkit integration-mode spec (`DRAFT / NON-FINAL`; Phase 12G-pre origin; five candidate modes -- HOLD / SHADOW / REPLACEMENT / SEPARATE APPLICATION / HOST-ONLY EXTENSION; recommended mode = SEPARATE APPLICATION; `devkit_app_state` remains authoritative; scope-guard #11 preserved; command set `a/s/r/?/x/v/L/d/T` unchanged; no integration implementation exists; Phase 12G (Separate Application Mode Planning) remains `NOT_STARTED`).
 
+## 04_GUIDES — architectural reading guides
+
+Long-form architectural guides that **explain meaning, flow, and
+process pattern** of the devkit. Guides are reading aids: they are
+**not** closeouts, **not** phase truth, **not** specs, and **not**
+authorizations. When a guide disagrees with a closeout
+(`02_PHASE_CLOSEOUTS/`) or a progress entry (`01_PROGRESS/`), the
+closeout / progress entry wins.
+
+- [`DEVKIT_PHASE_ARCHITECTURE_GUIDE.md`](../04_GUIDES/DEVKIT_PHASE_ARCHITECTURE_GUIDE.md) -- Devkit Phase Architecture Guide (`DRAFT / NON-FINAL — DOCS-ONLY`; reading guide that groups phases by family/meaning, explains the layered devkit architecture, the Phase 12 application-admission chain (12K → 12K-Z → 12L → 12L-Z → 12M → 12M-Z → 12N-pre), the `-pre` / implementation / `-Z` process pattern, the evidence ladder (host test → Zephyr build → runtime wiring → hardware flash + RTT/UART → checkpoint), the status taxonomy including `HOLD` / `DEFER` / `NOT_AUTHORIZED`, the module boundary map across `devkit/src/` / `framework/` / `app/probe_translator/` / `core/` / `platform/`, and a current open / HOLD / DEFER / pending map; does not change phase status; baseline `origin/master = 76ec2f6`).
+
 ## 04_SCRATCH_OR_PROVENANCE — non-canonical scratch
 
 **Not canonical.** Files in this directory exist for traceability or
