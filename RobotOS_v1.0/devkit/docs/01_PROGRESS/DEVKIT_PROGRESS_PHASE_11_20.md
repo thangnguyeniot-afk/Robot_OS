@@ -134,6 +134,7 @@ table contains only the reserved placeholders.
 | 12K-Z | Probe Translator Build Admission Guard (docs-only checkpoint) | CLOSED_DOCS_ONLY | [->](#phase-12kz) |
 | 12L-pre | Probe Translator Runtime Admission Plan (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12l-pre) |
 | 12L | Probe Translator Runtime Admission Adapter | CLOSED_WITH_BUILD_EVIDENCE | [->](#phase-12l) |
+| 12L-Z | Runtime Admission / Hardware-Validation Guard (docs-only checkpoint) | CLOSED_DOCS_ONLY | [->](#phase-12lz) |
 | 20Z | RESERVED -- future checkpoint / closeout slot | NOT_STARTED | [->](#phase-20z) |
 
 When future phases are added:
@@ -3552,6 +3553,70 @@ of `probe_translator`" transitions from `NOT_STARTED` →
 `RUNTIME_ADMITTED_AT_12L (ZEPHYR-BUILD EVIDENCE)`. Hardware-runnable
 proof remains `NOT_STARTED`; requires explicit user authorization for a
 separate hardware-validation phase.
+
+---
+
+<a id="phase-12lz"></a>
+
+## Phase 12L-Z -- Runtime Admission / Hardware-Validation Guard
+
+**Status:** `CLOSED_DOCS_ONLY`
+**Decision:** `PHASE_12L_Z_RUNTIME_ADMISSION_CHECKPOINT_CLOSED`
+**Closeout:** [`../02_PHASE_CLOSEOUTS/PHASE_12LZ_RUNTIME_ADMISSION_CHECKPOINT.md`](../02_PHASE_CLOSEOUTS/PHASE_12LZ_RUNTIME_ADMISSION_CHECKPOINT.md)
+**Date:** 2026-05-14
+
+### 12L-Z.1 Purpose
+
+Phase 12L-Z is a docs-only checkpoint / hardware-validation guard. It
+locks Phase 12L as runtime-admission complete at build depth and
+explicitly prevents later phases from treating build-depth runtime
+admission as hardware-proven behavior.
+
+### 12L-Z.2 What this checkpoint confirms
+
+- Phase 12L commit `31968ad` is pushed; `origin/master` is synced.
+- `devkit_probe_adapter.{c,h}` is committed; adapter owns static
+  `probe_translator_t`; init/dispatch/log_snapshot API in place.
+- `devkit_runtime_init()` calls `devkit_probe_adapter_init()` additively.
+- `devkit_app_state.c` dispatches probe events on accepted command
+  transitions additively (7 call sites).
+- `west build --pristine` PASS: FLASH 43,384 B (8.27%), RAM 12,480 B (9.52%).
+- Host regression 23/23 PASS.
+- This is **runtime-admitted at build depth only**. No hardware run.
+
+### 12L-Z.3 Hardware-validation guard (explicit)
+
+- No board flash was performed.
+- No RTT log was captured.
+- No J-Link / OpenOCD hardware run was performed.
+- No hardware behavior is proven.
+- UART public command set `a/s/r/?/x/v/L/d/T` unchanged.
+- No UART TX response change.
+- No product command mapping opened.
+- No scheduler behavior changed.
+- No F407 / custom board work opened.
+
+### 12L-Z.4 Consequence for next phase
+
+The next phase must start from: `probe_translator` is runtime-admitted
+at build depth, not hardware-proven. Any hardware validation requires a
+new explicit phase contract with preflight criteria defined first
+(likely Phase 12M-pre). Product command mapping requires a separate
+user decision.
+
+### 12L-Z.5 Files changed at Phase 12L-Z
+
+- **New:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12LZ_RUNTIME_ADMISSION_CHECKPOINT.md`
+- **Doc-sync:** `CURRENT_STATE.md`, `DEVKIT_PROGRESS_PHASE_11_20.md`
+  (this entry), `00_INDEX/README.md`.
+- **Zero-diff held:** all source, header, CMake, Kconfig, `prj.conf`,
+  DTS, overlay, test, log, and build files.
+
+### 12L-Z.6 Open gates carried forward
+
+All gates from Phase 12L unchanged. Hardware-runnable Zephyr application
+with `probe_translator` remains `NOT_STARTED`; requires Phase 12M-pre
+planning gate before any flash/RTT session.
 
 ---
 

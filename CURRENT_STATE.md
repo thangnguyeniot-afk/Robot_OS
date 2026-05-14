@@ -9,6 +9,26 @@
 
 ## Last Closed Phase
 
+### Phase 12L-Z — Runtime Admission / Hardware-Validation Guard
+
+- **Date:** 2026-05-14
+- **Type:** Docs-only checkpoint / hardware-validation guard. **No source, CMake, runtime, Kconfig, `prj.conf`, DTS, overlay, test, log, or build change. No new build run. No flash / RTT / hardware run. No UART behavior changed. No product command mapping opened.**
+- **Close status:** `CLOSED_DOCS_ONLY`
+- **Decision result:** `PHASE_12L_Z_RUNTIME_ADMISSION_CHECKPOINT_CLOSED`
+- **Published baseline at open:** `origin/master = 31968ad`
+- **Checkpoint doc:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12LZ_RUNTIME_ADMISSION_CHECKPOINT.md`
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md` `<a id="phase-12lz"></a>`
+
+#### Phase 12L-Z hardware guard
+
+`probe_translator` is runtime-admitted at build depth via `devkit_probe_adapter` (Phase 12L). It is **not hardware-proven**. No board flash was performed. No RTT log was captured. No J-Link/OpenOCD hardware run was performed. Build-depth runtime admission is not hardware evidence. The next implementation phase must not assume hardware behavior has been proven.
+
+**Suggested next gate:** HOLD (default) or Phase 12M-pre — Hardware Validation Planning (docs-only; must define expected RTT log patterns and hardware test criteria before any flash/RTT session is authorized).
+
+---
+
+## Phase 12L Implementation Baseline
+
 ### Phase 12L — Probe Translator Runtime Admission Adapter
 
 - **Date:** 2026-05-14
