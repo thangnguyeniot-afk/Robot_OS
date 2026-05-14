@@ -129,6 +129,7 @@ table contains only the reserved placeholders.
 | 12J-pre | Probe Translator FAULT Block Plan (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12j-pre) |
 | 12J | Probe Translator FAULT Block Implementation | CLOSED_WITH_HOST_TEST_EVIDENCE | [->](#phase-12j) |
 | 12J-Z | Probe Translator App-Layer Checkpoint / Integration Direction Guard | CLOSED_DOCS_ONLY | [->](#phase-12jz) |
+| 12K-pre | Probe Translator Zephyr Build-Only Admission Plan (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12k-pre) |
 | 20Z | RESERVED -- future checkpoint / closeout slot | NOT_STARTED | [->](#phase-20z) |
 
 When future phases are added:
@@ -3162,6 +3163,75 @@ wiring devkit runtime, UART, or hardware).
 
 All gates from Phase 12J unchanged. Addition: Zephyr build-only admission
 for `probe_translator` explicitly named as `NOT_STARTED`.
+
+---
+
+<a id="phase-12k-pre"></a>
+
+## Phase 12K-pre -- Probe Translator Zephyr Build-Only Admission Plan (docs-only)
+
+**Status:** `CLOSED_DOCS_ONLY`
+**Decision:** `PHASE_12K_PRE_PROBE_TRANSLATOR_ZEPHYR_BUILD_ONLY_PLAN_CLOSED`
+**Closeout:** [`../02_PHASE_CLOSEOUTS/PHASE_12K_PRE_PROBE_TRANSLATOR_ZEPHYR_BUILD_ONLY_PLAN.md`](../02_PHASE_CLOSEOUTS/PHASE_12K_PRE_PROBE_TRANSLATOR_ZEPHYR_BUILD_ONLY_PLAN.md)
+**New long-lived spec:** [`../03_SPECS/PROBE_TRANSLATOR_ZEPHYR_BUILD_ONLY_PLAN.md`](../03_SPECS/PROBE_TRANSLATOR_ZEPHYR_BUILD_ONLY_PLAN.md)
+**Date:** 2026-05-14
+
+### 12K-pre.1 Purpose
+
+Phase 12K-pre defines the execution-ready contract for Phase 12K —
+Probe Translator Zephyr Build-Only Admission. It audits the existing
+devkit Zephyr build topology (`devkit/CMakeLists.txt` project
+`robotos_devkit`) and confirms:
+
+- `framework/` and `app/probe_translator/` are absent from the devkit build
+- `probe_translator.h` has no Zephyr, devkit, or hardware dependencies
+- the platform critical section boundary is already satisfied
+- no `prj.conf`, DTS, overlay, or Kconfig change is required
+- Option A (additive entry in `devkit/CMakeLists.txt`) is the safest
+  and simplest admission strategy
+
+### 12K-pre.2 Files added / modified
+
+- **New (2 docs):**
+  - `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12K_PRE_PROBE_TRANSLATOR_ZEPHYR_BUILD_ONLY_PLAN.md`
+    -- planning closeout (sections A-E; topology audit; contract).
+  - `RobotOS_v1.0/devkit/docs/03_SPECS/PROBE_TRANSLATOR_ZEPHYR_BUILD_ONLY_PLAN.md`
+    -- long-lived spec (§1–§10; CMake diff; dependency audit; validation
+    gates; evidence policy; closeout criteria; risk/rollback).
+- **Updated:**
+  - `CURRENT_STATE.md` -- Phase 12K-pre as latest closed.
+  - `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md`
+    -- this entry + index row.
+  - `RobotOS_v1.0/devkit/docs/00_INDEX/README.md` -- Phase 12K-pre links.
+- **Zero-diff held:** all `.c`/`.h`, all `CMakeLists.txt`, `devkit/prj.conf`,
+  all DTS/overlay, all `framework/`, `core/`, `platform/`, `devkit/src/`,
+  `src/`, `include/robotos/`, `app/probe_translator/`, `tests/`.
+
+### 12K-pre.3 Key decisions locked
+
+| Decision | Resolution |
+| --- | --- |
+| CMake strategy | **Option A** — additive entry in `devkit/CMakeLists.txt` |
+| `app/probe_translator/CMakeLists.txt` | **FORBIDDEN at Phase 12K** |
+| `prj.conf` change | **NONE** — zero-diff |
+| DTS / overlay change | **NONE** — zero-diff |
+| Platform critical section | **Already satisfied** in devkit build |
+| Hardware run | **NONE** — build-only evidence only |
+| West build command | `west build --pristine=always -d build-phase12k -b stm32f411e_disco RobotOS_v1.0/devkit` |
+
+### 12K-pre.4 Phase 12K approved future file set
+
+- **Modified (additive only):** `devkit/CMakeLists.txt`
+- **New:** `devkit/logs/phase_12K_build_<date>.txt`; Phase 12K closeout doc
+- **Zero-diff:** `devkit/prj.conf`, DTS, `devkit/src/`, `framework/*.{h,c}`,
+  `core/`, `platform/`, `app/probe_translator/probe_translator.{h,c}`,
+  `tests/host/CMakeLists.txt`
+
+### 12K-pre.5 Open gates carried forward
+
+All gates from Phase 12J-Z unchanged. Gate "Zephyr build-only admission
+for `probe_translator`" transitions from `NOT_STARTED` →
+`OPENS_AT_PHASE_12K` (contract locked).
 
 ---
 

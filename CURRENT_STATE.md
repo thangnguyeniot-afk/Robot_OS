@@ -9,6 +9,72 @@
 
 ## Last Closed Phase
 
+### Phase 12K-pre — Probe Translator Zephyr Build-Only Admission Plan (docs-only)
+
+- **Date:** 2026-05-14
+- **Type:** Docs-only implementation-planning gate. **No source, runtime, CMake, Kconfig, `prj.conf`, DTS overlay, test, Framework, devkit, command-set, or `devkit_app_state` change.** No Zephyr build run.
+- **Close status:** `CLOSED_DOCS_ONLY`
+- **Decision result:** `PHASE_12K_PRE_PROBE_TRANSLATOR_ZEPHYR_BUILD_ONLY_PLAN_CLOSED`
+- **Published baseline at open:** `origin/master = e935dd1`
+- **Closeout doc:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12K_PRE_PROBE_TRANSLATOR_ZEPHYR_BUILD_ONLY_PLAN.md`
+- **New long-lived spec:** `RobotOS_v1.0/devkit/docs/03_SPECS/PROBE_TRANSLATOR_ZEPHYR_BUILD_ONLY_PLAN.md` (`DRAFT / NON-FINAL`; execution-ready contract for Phase 12K build admission)
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md` `<a id="phase-12k-pre"></a>`
+
+#### Implementation contract resolved
+
+`PHASE_12K_PRE_PROBE_TRANSLATOR_ZEPHYR_BUILD_ONLY_PLAN_CLOSED`
+
+Zephyr build topology audited. No blocking conditions found. Phase 12K has a complete, unambiguous additive CMake contract.
+
+#### Resolved decisions (locked for Phase 12K)
+
+| Decision | Resolution |
+| --- | --- |
+| CMake strategy | **Option A** — additive entry in `devkit/CMakeLists.txt` |
+| New files required | `devkit/CMakeLists.txt` (additive); evidence log; closeout |
+| `app/probe_translator/CMakeLists.txt` | **FORBIDDEN at Phase 12K** (not needed; deferred) |
+| `app/probe_translator/Kconfig` | **FORBIDDEN** (no Kconfig dependency) |
+| `prj.conf` change | **NONE** — zero-diff at Phase 12K |
+| DTS / overlay change | **NONE** — zero-diff at Phase 12K |
+| Platform critical section | **Already satisfied** by existing devkit build |
+| Framework in devkit Zephyr build | **ABSENT** before Phase 12K |
+| Devkit runtime wiring | **NONE** — build-only |
+| UART command change | **NONE** — `a/s/r/?/x/v/L/d/T` frozen |
+| Hardware run | **NONE** — no flash, no RTT |
+| West build command | `west build --pristine=always -d build-phase12k -b stm32f411e_disco RobotOS_v1.0/devkit` |
+
+#### Phase 12K approved future file set
+
+**Modified existing (additive only):**
+
+- `RobotOS_v1.0/devkit/CMakeLists.txt` — add framework + probe_translator sources and include paths
+
+**New:**
+
+- `RobotOS_v1.0/devkit/logs/phase_12K_build_<date>.txt` — Zephyr build evidence log
+- `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12K_PROBE_TRANSLATOR_ZEPHYR_BUILD_ONLY.md` — closeout
+
+**Zero-diff held at Phase 12K:** `devkit/prj.conf`, all DTS/overlay, `devkit/src/`, `framework/*.h`, `framework/*.c`, `core/`, `platform/`, `app/probe_translator/probe_translator.{h,c}`, `tests/host/CMakeLists.txt`.
+
+#### Open carry-forward gates (unchanged at Phase 12K-pre)
+
+1. ACTIVE disarm widening — `USER_DECISION_REQUIRED_ACTIVE_DISARM`
+2. Scheduler 7A/7B — `DEFER`
+3. F407 / custom board — `HOLD/DEFER`
+4. POST_FLASH_AUTOSTART root cause — `OPEN` / `MITIGATED_BY_WORKFLOW`
+5. Non-NULL action / on_entry / on_exit for FAULT — open (future app-behavior phase)
+6. Devkit runtime integration of `probe_translator` — `NOT_STARTED`
+7. Bridge ABI memory-layout lock — `NOT_STARTED`
+8. Zephyr build-only admission for `app/probe_translator/` — `NOT_STARTED → opens at Phase 12K`
+9. Hardware-runnable Zephyr build of `app/probe_translator/` — `NOT_STARTED`
+10. Product command mapping — `NOT_STARTED; USER_DECISION_REQUIRED`
+11. `RobotOS_v1.0/examples/` — `NOT_STARTED`
+12. Multi-product coordination — `NOT_STARTED`
+
+---
+
+## Prior Closed Phase
+
 ### Phase 12J-Z — Probe Translator App-Layer Checkpoint / Integration Direction Guard
 
 - **Date:** 2026-05-14
@@ -48,7 +114,7 @@ No devkit/Zephyr/UART/hardware integration.
 
 ---
 
-## Prior Closed Phase
+## Phase 12J Closed Reference
 
 ### Phase 12J — Probe Translator FAULT Block Implementation
 
@@ -115,7 +181,7 @@ No devkit/Zephyr/UART/hardware integration.
 - **New long-lived spec:** `RobotOS_v1.0/devkit/docs/03_SPECS/PROBE_TRANSLATOR_FAULT_BLOCK_PLAN.md` (`DRAFT / NON-FINAL`; execution-ready implementation contract for Phase 12J; all numeric values, transition rows, mapping row, state-def addition, count bumps, and 9 new test cases TC16-TC24 locked).
 - **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md` `<a id="phase-12j-pre"></a>`
 
-#### Implementation contract resolved
+#### Phase 12J-pre contract resolved
 
 **`PHASE_12J_PRE_PROBE_TRANSLATOR_FAULT_BLOCK_PLAN_CLOSED`** — All Phase 12I-deferred FAULT decisions are resolved. Phase 12J has a complete, unambiguous additive contract.
 
