@@ -449,9 +449,14 @@ the boundaries that must not move silently.**
 
 **Boundaries that must not be crossed accidentally:**
 
-- `devkit/src/*` must not include `framework/*.h` directly except via the dedicated adapter (`devkit_probe_adapter`).
+- `devkit/src/*` must not include `framework/*.h` directly. In current code (verified against the Phase 12M baseline at `76ec2f6`), no devkit source includes framework headers at all; framework types reach the devkit only transitively, via `probe_translator.h` → `robotos_fw_fsm.h` / `robotos_fw_event_bridge.h`, inside `devkit_probe_adapter.c`.
+- `devkit/src/*` direct `#include` of `app/probe_translator/probe_translator.h` is currently limited to two files, both for narrow purposes:
+  - `devkit_probe_adapter.c` — the **single runtime entry point** (calls `probe_translator_init / _dispatch_adapter_event / _get_snapshot` against the module-static `probe_translator_t`).
+  - `devkit_app_state.c` — **constants only** (uses the `PROBE_ADAPTER_TYPE_*` and `PROBE_ADAPTER_ARG_*` macros to call `devkit_probe_adapter_dispatch()`; verified to call **no** `probe_translator_*` function directly).
+
+  Any third devkit file that includes `probe_translator.h`, or any call to a `probe_translator_*` function from outside `devkit_probe_adapter.c`, is a boundary regression and must be caught at review.
 - `framework/*.h` must not include `app/probe_translator/*.h`.
-- `app/probe_translator/*.h` must not include devkit / Zephyr / legacy headers.
+- `app/probe_translator/*.h` must not include devkit / Zephyr / legacy headers. (`probe_translator.h` itself states this boundary in its file header comment.)
 - `core/` must not include platform-specific or Zephyr-specific headers.
 - UART TX response shapes must not change without a phase that explicitly proposes the change against the frozen Phase 9E baseline.
 
