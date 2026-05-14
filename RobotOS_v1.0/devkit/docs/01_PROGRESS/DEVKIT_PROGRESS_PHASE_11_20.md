@@ -132,6 +132,7 @@ table contains only the reserved placeholders.
 | 12K-pre | Probe Translator Zephyr Build-Only Admission Plan (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12k-pre) |
 | 12K | Probe Translator Zephyr Build-Only Admission | CLOSED_WITH_BUILD_EVIDENCE | [->](#phase-12k) |
 | 12K-Z | Probe Translator Build Admission Guard (docs-only checkpoint) | CLOSED_DOCS_ONLY | [->](#phase-12kz) |
+| 12L-pre | Probe Translator Runtime Admission Plan (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12l-pre) |
 | 20Z | RESERVED -- future checkpoint / closeout slot | NOT_STARTED | [->](#phase-20z) |
 
 When future phases are added:
@@ -3395,6 +3396,70 @@ admission planning, docs-only).
 All gates from Phase 12K unchanged. Devkit runtime integration of
 `probe_translator` remains `NOT_STARTED` and requires its own
 pre-planning gate.
+
+---
+
+<a id="phase-12l-pre"></a>
+
+## Phase 12L-pre -- Probe Translator Runtime Admission Plan (docs-only)
+
+**Status:** `CLOSED_DOCS_ONLY`
+**Decision:** `PHASE_12L_PRE_PROBE_TRANSLATOR_RUNTIME_ADMISSION_PLAN_CLOSED`
+**Closeout:** [`../02_PHASE_CLOSEOUTS/PHASE_12L_PRE_PROBE_TRANSLATOR_RUNTIME_ADMISSION_PLAN.md`](../02_PHASE_CLOSEOUTS/PHASE_12L_PRE_PROBE_TRANSLATOR_RUNTIME_ADMISSION_PLAN.md)
+**Implementation contract:** [`../03_SPECS/PROBE_TRANSLATOR_RUNTIME_ADMISSION_PLAN.md`](../03_SPECS/PROBE_TRANSLATOR_RUNTIME_ADMISSION_PLAN.md)
+**Date:** 2026-05-14
+
+### 12L-pre.1 Purpose
+
+Phase 12L-pre is a docs-only runtime admission planning gate. It audits
+the devkit runtime call paths, evaluates candidate entry points for
+probe_translator runtime wiring, selects the recommended implementation
+contract, and defines the Phase 12L file boundary. No implementation.
+
+### 12L-pre.2 Audit findings
+
+- `probe_translator` is build-admitted (Phase 12K) but not called by
+  devkit runtime.
+- Call sites for wiring: `devkit_app_state_on_uart_byte()` (UART handler,
+  thread context) and `devkit_app_state_on_button()` (button handler,
+  thread context). Both are thread-context only — satisfy the Framework
+  API contract (no ISR call).
+- Five candidate entry points evaluated; Candidate B (new
+  `devkit_probe_adapter` module) selected as recommended.
+
+### 12L-pre.3 Recommended Phase 12L contract
+
+- **New module:** `devkit/src/devkit_probe_adapter.{c,h}` — devkit-local
+  adapter; owns static `probe_translator_t`; exposes `_init`, `_dispatch`,
+  `_log_snapshot`.
+- **Wired from:** `devkit_runtime_init()` (init + periodic log) and
+  `devkit_app_state.c` ('a'/'s'/'r'/'d' + button transitions).
+- **Command mapping:**
+  - `'a'` → `(PROBE_ADAPTER_TYPE_CONFIG, PROBE_ADAPTER_ARG_NONE)` → probe: IDLE→READY
+  - `'s'` → `(PROBE_ADAPTER_TYPE_COMMAND, PROBE_ADAPTER_ARG_START)` → probe: READY→ACTIVE
+  - `'r'`/`'d'` → `(PROBE_ADAPTER_TYPE_COMMAND, PROBE_ADAPTER_ARG_RESET)` → probe: any→IDLE
+  - button: same mapping per cycle position
+
+### 12L-pre.4 Boundaries held
+
+- No new UART commands. `a/s/r/?/x/v/L/d/T` frozen.
+- No UART TX response change. `devkit_uart_producer.*` zero-diff.
+- No scheduler change. No hardware run.
+- `prj.conf`, DTS/overlay, `framework/`, `app/probe_translator/probe_translator.*` — zero-diff.
+- `app/probe_translator/CMakeLists.txt` and `Kconfig` — not created.
+
+### 12L-pre.5 Files changed at Phase 12L-pre
+
+- **New:** `PHASE_12L_PRE_PROBE_TRANSLATOR_RUNTIME_ADMISSION_PLAN.md`,
+  `PROBE_TRANSLATOR_RUNTIME_ADMISSION_PLAN.md`
+- **Doc-sync:** `CURRENT_STATE.md`, `DEVKIT_PROGRESS_PHASE_11_20.md`
+  (this entry), `00_INDEX/README.md`.
+
+### 12L-pre.6 Next gate
+
+Phase 12L — Probe Translator Runtime Admission (implementation).
+Requires explicit user authorization. Implementation contract is
+complete; no blocking open decisions at implementation depth.
 
 ---
 

@@ -9,6 +9,41 @@
 
 ## Last Closed Phase
 
+### Phase 12L-pre — Probe Translator Runtime Admission Plan
+
+- **Date:** 2026-05-14
+- **Type:** Docs-only runtime admission planning gate. **No source, CMake, runtime, Kconfig, `prj.conf`, DTS, overlay, test, or log change. No implementation. No new build run. No hardware validation claimed.**
+- **Close status:** `CLOSED_DOCS_ONLY`
+- **Decision result:** `PHASE_12L_PRE_PROBE_TRANSLATOR_RUNTIME_ADMISSION_PLAN_CLOSED`
+- **Published baseline at open:** `origin/master = 58e532f`
+- **Closeout doc:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12L_PRE_PROBE_TRANSLATOR_RUNTIME_ADMISSION_PLAN.md`
+- **New long-lived spec:** `RobotOS_v1.0/devkit/docs/03_SPECS/PROBE_TRANSLATOR_RUNTIME_ADMISSION_PLAN.md` (`DRAFT / NON-FINAL`; execution-ready contract for Phase 12L runtime admission)
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md` `<a id="phase-12l-pre"></a>`
+
+#### Runtime admission contract locked
+
+Phase 12L is planned to create `devkit_probe_adapter.{c,h}` as a new devkit-local module that:
+
+- Owns a static `probe_translator_t` instance.
+- Is initialized from `devkit_runtime_init()`.
+- Is driven by `devkit_app_state_on_uart_byte()` and `devkit_app_state_on_button()` at 'a'/'s'/'r'/'d' and button transitions.
+- Logs periodic snapshots via `devkit_probe_adapter_log_snapshot()`.
+
+**Command mapping (locked at Phase 12L-pre):**
+
+- `'a'` (arm) → `(PROBE_ADAPTER_TYPE_CONFIG, PROBE_ADAPTER_ARG_NONE)` → probe: IDLE→READY
+- `'s'` (activate) → `(PROBE_ADAPTER_TYPE_COMMAND, PROBE_ADAPTER_ARG_START)` → probe: READY→ACTIVE
+- `'r'` / `'d'` (reset/disarm) → `(PROBE_ADAPTER_TYPE_COMMAND, PROBE_ADAPTER_ARG_RESET)` → probe: any→IDLE
+- button cycles same mapping: IDLE→ARMED→ACTIVE→IDLE maps to CONFIGURED/START/RESET
+
+No new UART commands. No UART TX response change. No scheduler change. No hardware run required.
+
+**Next gate:** Phase 12L implementation — requires explicit user authorization.
+
+---
+
+## Phase 12K-Z Checkpoint Reference
+
 ### Phase 12K-Z — Probe Translator Build Admission Guard
 
 - **Date:** 2026-05-14
