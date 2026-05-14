@@ -133,6 +133,7 @@ table contains only the reserved placeholders.
 | 12K | Probe Translator Zephyr Build-Only Admission | CLOSED_WITH_BUILD_EVIDENCE | [->](#phase-12k) |
 | 12K-Z | Probe Translator Build Admission Guard (docs-only checkpoint) | CLOSED_DOCS_ONLY | [->](#phase-12kz) |
 | 12L-pre | Probe Translator Runtime Admission Plan (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12l-pre) |
+| 12L | Probe Translator Runtime Admission Adapter | CLOSED_WITH_BUILD_EVIDENCE | [->](#phase-12l) |
 | 20Z | RESERVED -- future checkpoint / closeout slot | NOT_STARTED | [->](#phase-20z) |
 
 When future phases are added:
@@ -3460,6 +3461,97 @@ contract, and defines the Phase 12L file boundary. No implementation.
 Phase 12L — Probe Translator Runtime Admission (implementation).
 Requires explicit user authorization. Implementation contract is
 complete; no blocking open decisions at implementation depth.
+
+---
+
+<a id="phase-12l"></a>
+
+## Phase 12L -- Probe Translator Runtime Admission Adapter
+
+**Status:** `CLOSED_WITH_BUILD_EVIDENCE`
+**Decision:** `PHASE_12L_PROBE_TRANSLATOR_RUNTIME_ADMISSION_ADAPTER_IMPLEMENTED_VALIDATED`
+**Closeout:** [`../02_PHASE_CLOSEOUTS/PHASE_12L_PROBE_TRANSLATOR_RUNTIME_ADMISSION_ADAPTER.md`](../02_PHASE_CLOSEOUTS/PHASE_12L_PROBE_TRANSLATOR_RUNTIME_ADMISSION_ADAPTER.md)
+**Implementation contract:** [`../03_SPECS/PROBE_TRANSLATOR_RUNTIME_ADMISSION_PLAN.md`](../03_SPECS/PROBE_TRANSLATOR_RUNTIME_ADMISSION_PLAN.md)
+**Date:** 2026-05-14
+
+### 12L.1 Purpose
+
+Phase 12L implemented the runtime admission contract locked at Phase
+12L-pre. A new devkit-local adapter
+`RobotOS_v1.0/devkit/src/devkit_probe_adapter.{c,h}` owns the single
+static `probe_translator_t` instance and is driven by `devkit_app_state`
+accepted command/state transitions ('a'/'s'/'r'/'d' + button cycle).
+No UART command set change. No UART TX response change. No
+`prj.conf`/DTS/overlay/Kconfig change. No framework/probe_translator/core/platform
+change. No hardware run.
+
+### 12L.2 Files changed
+
+- **New:**
+  - `RobotOS_v1.0/devkit/src/devkit_probe_adapter.h` (3-function public API)
+  - `RobotOS_v1.0/devkit/src/devkit_probe_adapter.c` (static `probe_translator_t` instance)
+  - `RobotOS_v1.0/devkit/logs/phase_12L_build_2026-05-14.txt` (west build transcript; UTF-16 LE; 39,788 bytes)
+  - `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12L_PROBE_TRANSLATOR_RUNTIME_ADMISSION_ADAPTER.md` (this closeout)
+- **Modified (additive only):**
+  - `RobotOS_v1.0/devkit/CMakeLists.txt` — added `src/devkit_probe_adapter.c` to existing `target_sources`
+  - `RobotOS_v1.0/devkit/src/devkit_runtime.c` — added include + `_init()` after `devkit_app_state_init()` + baseline + periodic `_log_snapshot()` calls
+  - `RobotOS_v1.0/devkit/src/devkit_app_state.c` — added includes (`stdbool.h`, `devkit_probe_adapter.h`, `probe_translator.h`) and 7 additive `_dispatch()` call sites (4 UART: 'a'/'s'/'r'/'d'; 3 button: IDLE→ARMED, ARMED→ACTIVE, ACTIVE→IDLE)
+- **Doc-sync:** `CURRENT_STATE.md`, `DEVKIT_PROGRESS_PHASE_11_20.md` (this entry), `00_INDEX/README.md`, `PROBE_TRANSLATOR_RUNTIME_ADMISSION_PLAN.md` (status upgraded to `IMPLEMENTED_AT_12L`).
+- **Zero-diff held:** `devkit/prj.conf`, all DTS/overlay, `devkit_uart_producer.{c,h}`, `devkit_app_state.h`, all other `devkit/src/*`, all `framework/*.{h,c}`, all `app/probe_translator/*` (no CMakeLists/Kconfig created), `core/`, `platform/`, `tests/host/CMakeLists.txt`, all `tests/host/*.c`.
+
+### 12L.3 Build evidence
+
+| Item | Result |
+| --- | --- |
+| Command | `py -m west build --pristine=always -d build-phase12l -b stm32f411e_disco RobotOS_v1.0/devkit` |
+| Zephyr | v3.6.0 |
+| SDK / toolchain | Zephyr SDK 0.17.0; arm-zephyr-eabi-gcc 12.2.0 |
+| Board | `stm32f411e_disco` rev D |
+| Configure | PASS |
+| Build | PASS (165/165) |
+| Final link | `zephyr.elf` |
+| Exit code | **0** |
+| FLASH | **43,384 B (8.27%)** — delta +1,856 B vs Phase 12K |
+| RAM | **12,480 B (9.52%)** — delta +128 B vs Phase 12K |
+| New warnings | None beyond pre-existing baseline |
+| Transcript | `RobotOS_v1.0/devkit/logs/phase_12L_build_2026-05-14.txt` |
+
+### 12L.4 Host regression
+
+- `cmake -S RobotOS_v1.0/tests/host -B build-phase12l-host && cmake --build && ctest`
+- **23/23 ctest PASS** (`100% tests passed, 0 tests failed out of 23`)
+- `probe_translator_mapping_contract` still PASS
+
+### 12L.5 Adapter API and command mapping
+
+Public surface (devkit_probe_adapter.h):
+
+- `robotos_core_status_t devkit_probe_adapter_init(void);`
+- `robotos_core_status_t devkit_probe_adapter_dispatch(uint32_t adapter_type, uint32_t adapter_arg0);`
+- `void devkit_probe_adapter_log_snapshot(void);`
+
+Command mapping (devkit-local; not a public UART semantic change):
+
+- `'a'` / button IDLE→ARMED → `(TYPE_CONFIG, ARG_NONE)`
+- `'s'` / button ARMED→ACTIVE → `(TYPE_COMMAND, ARG_START)`
+- `'r'` / button ACTIVE→IDLE → `(TYPE_COMMAND, ARG_RESET)`
+- `'d'` ARMED→IDLE only → `(TYPE_COMMAND, ARG_RESET)`
+- `'v'` / `'l'` / `'t'` / `'?'` / already-in-state no-ops: no dispatch
+
+### 12L.6 Boundary validation
+
+- All 12 dependency / boundary grep gates PASS (no Zephyr include in adapter `.h`; no heap; no scheduler/uart/gpio dependency; no `register_event_handler` call)
+- All 13 spec validation gates PASS (Zephyr build, host regression, zero-diff on forbidden surfaces, `git diff --check` EXIT:0)
+- `app/probe_translator/CMakeLists.txt` and `Kconfig` NOT created
+- UART surface frozen (`devkit_uart_producer.*` zero-diff)
+
+### 12L.7 Open gates carried forward
+
+All gates from Phase 12L-pre unchanged. Gate "Devkit runtime integration
+of `probe_translator`" transitions from `NOT_STARTED` →
+`RUNTIME_ADMITTED_AT_12L (ZEPHYR-BUILD EVIDENCE)`. Hardware-runnable
+proof remains `NOT_STARTED`; requires explicit user authorization for a
+separate hardware-validation phase.
 
 ---
 

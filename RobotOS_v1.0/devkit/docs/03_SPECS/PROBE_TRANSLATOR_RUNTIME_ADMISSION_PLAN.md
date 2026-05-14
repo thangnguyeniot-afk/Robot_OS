@@ -1,12 +1,20 @@
 # RobotOS — Probe Translator Runtime Admission Plan
 
-**Status:** `DRAFT / NON-FINAL`
-**Spec type:** Long-lived implementation contract for Phase 12L runtime
+**Status:** `IMPLEMENTED_AT_12L (ZEPHYR-BUILD EVIDENCE)`
+**Spec type:** Long-lived implementation contract for runtime
 admission of `probe_translator` into the devkit runtime.
-**Revision:** Phase 12L-pre (2026-05-14, `CLOSED_DOCS_ONLY`;
-`PHASE_12L_PRE_PROBE_TRANSLATOR_RUNTIME_ADMISSION_PLAN_CLOSED`)
+**Revision:** Phase 12L (2026-05-14, `CLOSED_WITH_BUILD_EVIDENCE`;
+`PHASE_12L_PROBE_TRANSLATOR_RUNTIME_ADMISSION_ADAPTER_IMPLEMENTED_VALIDATED`) —
+runtime admission landed via new devkit-local adapter
+`devkit/src/devkit_probe_adapter.{c,h}`; `west build --pristine` PASS for
+`stm32f411e_disco` rev D (FLASH 43,384 B / 8.27%, RAM 12,480 B / 9.52%);
+host regression 23/23 PASS; transcript at
+`devkit/logs/phase_12L_build_2026-05-14.txt`.
+**Previous revision:** Phase 12L-pre (2026-05-14, `CLOSED_DOCS_ONLY`).
 **Planning closeout anchor:**
 [`../02_PHASE_CLOSEOUTS/PHASE_12L_PRE_PROBE_TRANSLATOR_RUNTIME_ADMISSION_PLAN.md`](../02_PHASE_CLOSEOUTS/PHASE_12L_PRE_PROBE_TRANSLATOR_RUNTIME_ADMISSION_PLAN.md)
+**Implementation closeout anchor:**
+[`../02_PHASE_CLOSEOUTS/PHASE_12L_PROBE_TRANSLATOR_RUNTIME_ADMISSION_ADAPTER.md`](../02_PHASE_CLOSEOUTS/PHASE_12L_PROBE_TRANSLATOR_RUNTIME_ADMISSION_ADAPTER.md)
 **Prior build-admission spec:**
 [`PROBE_TRANSLATOR_ZEPHYR_BUILD_ONLY_PLAN.md`](PROBE_TRANSLATOR_ZEPHYR_BUILD_ONLY_PLAN.md)
 

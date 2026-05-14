@@ -9,6 +9,81 @@
 
 ## Last Closed Phase
 
+### Phase 12L — Probe Translator Runtime Admission Adapter
+
+- **Date:** 2026-05-14
+- **Type:** Runtime admission implementation. New devkit-local adapter `RobotOS_v1.0/devkit/src/devkit_probe_adapter.{c,h}` owns the static `probe_translator_t` instance and is driven by `devkit_app_state` accepted command/state transitions ('a'/'s'/'r'/'d' and button cycle). **No UART command set change. No UART TX response change (`devkit_uart_producer.*` zero-diff). No `prj.conf` / DTS / overlay / Kconfig change. No framework / probe_translator / core / platform change. No new `robotos_core_register_event_handler` call. No hardware run.**
+- **Close status:** `CLOSED_WITH_BUILD_EVIDENCE`
+- **Decision result:** `PHASE_12L_PROBE_TRANSLATOR_RUNTIME_ADMISSION_ADAPTER_IMPLEMENTED_VALIDATED`
+- **Published baseline at open:** `origin/master = 7fd04bf`
+- **Closeout doc:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12L_PROBE_TRANSLATOR_RUNTIME_ADMISSION_ADAPTER.md`
+- **Updated long-lived spec:** `RobotOS_v1.0/devkit/docs/03_SPECS/PROBE_TRANSLATOR_RUNTIME_ADMISSION_PLAN.md` → `IMPLEMENTED_AT_12L (ZEPHYR-BUILD EVIDENCE)`
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md` `<a id="phase-12l"></a>`
+
+#### Phase 12L build evidence
+
+- `py -m west build --pristine=always -d build-phase12l -b stm32f411e_disco RobotOS_v1.0/devkit` — exit 0
+- Zephyr v3.6.0 + Zephyr SDK 0.17.0 (gcc 12.2.0); board `stm32f411e_disco` rev D
+- FLASH: **43,384 B (8.27%** of 512 KB; **+1,856 B** vs Phase 12K)
+- RAM: **12,480 B (9.52%** of 128 KB; **+128 B** vs Phase 12K)
+- No new warnings beyond pre-existing baseline
+- Transcript: `RobotOS_v1.0/devkit/logs/phase_12L_build_2026-05-14.txt` (UTF-16 LE; 39,788 bytes)
+
+#### Phase 12L host regression rerun
+
+- `cmake -S RobotOS_v1.0/tests/host -B build-phase12l-host && cmake --build && ctest`
+- **23/23 ctest PASS** (`100% tests passed, 0 tests failed out of 23`)
+- `probe_translator_mapping_contract` still PASS (no new host test required)
+
+#### Phase 12L adapter API (locked)
+
+```c
+robotos_core_status_t devkit_probe_adapter_init(void);
+robotos_core_status_t devkit_probe_adapter_dispatch(uint32_t adapter_type, uint32_t adapter_arg0);
+void                  devkit_probe_adapter_log_snapshot(void);
+```
+
+Single module-static `probe_translator_t s_probe_translator`. Header is `<stdint.h>` + `robotos_core.h` only — no `probe_translator.h` or framework include in header. `.c` is the only translation unit that includes `probe_translator.h`.
+
+#### Phase 12L command mapping implemented
+
+- `'a'` / button IDLE→ARMED → `(TYPE_CONFIG, ARG_NONE)` → probe IDLE→READY
+- `'s'` / button ARMED→ACTIVE → `(TYPE_COMMAND, ARG_START)` → probe READY→ACTIVE
+- `'r'` / button ACTIVE→IDLE → `(TYPE_COMMAND, ARG_RESET)` → probe any→IDLE
+- `'d'` (ARMED→IDLE only) → `(TYPE_COMMAND, ARG_RESET)` → probe any→IDLE
+- `'v'`, `'l'`, `'t'`, `'?'`, default, and already-in-state no-ops: **no probe dispatch**
+
+#### Phase 12L zero-diff confirmed
+
+- `prj.conf`, DTS, overlay, Kconfig — zero-diff
+- `devkit_uart_producer.{c,h}` — **zero-diff** (UART surface frozen)
+- `devkit_app_state.h` — zero-diff (public API unchanged)
+- `framework/*.{h,c}` — zero-diff
+- `app/probe_translator/*` — zero-diff
+- `app/probe_translator/CMakeLists.txt` and `Kconfig` — **NOT CREATED**
+- `core/`, `platform/`, `src/`, `include/robotos/` — zero-diff
+- `tests/host/CMakeLists.txt` — zero-diff
+- `tests/host/*.c` — zero-diff
+
+#### Phase 12L open carry-forward gates
+
+1. ACTIVE disarm widening — `USER_DECISION_REQUIRED_ACTIVE_DISARM`
+2. Scheduler 7A/7B — `DEFER`
+3. F407 / custom board — `HOLD/DEFER`
+4. POST_FLASH_AUTOSTART root cause — `OPEN` / `MITIGATED_BY_WORKFLOW`
+5. Non-NULL action / on_entry / on_exit for FAULT — open (future app-behavior phase)
+6. FAULT adapter event sourcing (hardware fault signal) — `NOT_STARTED`
+7. UART TX response for probe_translator snapshot — `NOT_STARTED; USER_DECISION_REQUIRED`
+8. Bridge ABI memory-layout lock — `NOT_STARTED`
+9. Hardware-runnable Zephyr application with `probe_translator` — `NOT_STARTED` (runtime-admitted at 12L; not hardware-proven)
+10. Product command mapping / UART expansion — `NOT_STARTED; USER_DECISION_REQUIRED`
+11. `RobotOS_v1.0/examples/` — `NOT_STARTED`
+12. Multi-product coordination — `NOT_STARTED`
+
+---
+
+## Phase 12L-pre Reference
+
 ### Phase 12L-pre — Probe Translator Runtime Admission Plan
 
 - **Date:** 2026-05-14

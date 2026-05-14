@@ -59,6 +59,7 @@
 #include "devkit_button_producer.h"
 #include "devkit_fault.h"
 #include "devkit_observability.h"
+#include "devkit_probe_adapter.h"
 #include "devkit_status_led.h"
 #include "devkit_timer_producer.h"
 #include "devkit_uart_producer.h"
@@ -209,6 +210,19 @@ int devkit_runtime_init(void)
 	 * producers). */
 	devkit_app_state_init();
 
+	/* Phase 12L: initialize probe adapter after app state init. The adapter
+	 * owns the static probe_translator_t and is driven by devkit_app_state
+	 * command/state transitions. Failure is logged and ignored: subsequent
+	 * dispatch calls become no-ops returning ERR_INVALID_STATE; no UART or
+	 * scheduler behavior depends on this adapter. */
+	{
+		robotos_core_status_t probe_ret = devkit_probe_adapter_init();
+		if (probe_ret != ROBOTOS_CORE_OK) {
+			LOG_ERR("Phase 12L probe adapter init failed: %d",
+				(int)probe_ret);
+		}
+	}
+
 	/* Phase 9A-C: announce diagnostic gate state once at boot. Grep targets:
 	 *   "DEVKIT_DIAG phase6i_startup_burst=0|1"
 	 *   "Phase 6I startup burst disabled" (gate=0 only)
@@ -303,6 +317,8 @@ int devkit_runtime_init(void)
 	devkit_uart_producer_log_stats();
 	/* Phase 9C: emit one baseline app state line after init */
 	devkit_app_state_log_snapshot();
+	/* Phase 12L: emit one baseline probe adapter snapshot after init */
+	devkit_probe_adapter_log_snapshot();
 
 	return 0;
 }
@@ -340,6 +356,8 @@ void devkit_runtime_run(void)
 			devkit_button_producer_log_stats();
 			devkit_uart_producer_log_stats();
 			devkit_app_state_log_snapshot();
+			/* Phase 12L: probe adapter snapshot alongside app state */
+			devkit_probe_adapter_log_snapshot();
 		}
 
 #if DEVKIT_PHASE6I_STARTUP_BURST_ENABLED

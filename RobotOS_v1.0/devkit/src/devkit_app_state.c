@@ -15,6 +15,11 @@
 
 #include "devkit_app_state.h"
 
+#include <stdbool.h>
+
+#include "devkit_probe_adapter.h"
+#include "probe_translator.h"
+
 #include <zephyr/logging/log.h>
 
 LOG_MODULE_REGISTER(devkit_app, LOG_LEVEL_INF);
@@ -98,13 +103,40 @@ void devkit_app_state_on_button(uint32_t seq)
 	/* s_last_byte is preserved (button has no byte payload) */
 
 	devkit_app_state_t next;
+	uint32_t           probe_type = 0u;
+	uint32_t           probe_arg0 = 0u;
+	bool               probe_dispatch = false;
+
 	switch (s_state) {
-	case DEVKIT_APP_STATE_IDLE:   next = DEVKIT_APP_STATE_ARMED;  break;
-	case DEVKIT_APP_STATE_ARMED:  next = DEVKIT_APP_STATE_ACTIVE; break;
-	case DEVKIT_APP_STATE_ACTIVE: next = DEVKIT_APP_STATE_IDLE;   break;
-	default:                      next = DEVKIT_APP_STATE_IDLE;   break;
+	case DEVKIT_APP_STATE_IDLE:
+		next = DEVKIT_APP_STATE_ARMED;
+		probe_type     = PROBE_ADAPTER_TYPE_CONFIG;
+		probe_arg0     = PROBE_ADAPTER_ARG_NONE;
+		probe_dispatch = true;
+		break;
+	case DEVKIT_APP_STATE_ARMED:
+		next = DEVKIT_APP_STATE_ACTIVE;
+		probe_type     = PROBE_ADAPTER_TYPE_COMMAND;
+		probe_arg0     = PROBE_ADAPTER_ARG_START;
+		probe_dispatch = true;
+		break;
+	case DEVKIT_APP_STATE_ACTIVE:
+		next = DEVKIT_APP_STATE_IDLE;
+		probe_type     = PROBE_ADAPTER_TYPE_COMMAND;
+		probe_arg0     = PROBE_ADAPTER_ARG_RESET;
+		probe_dispatch = true;
+		break;
+	default:
+		next = DEVKIT_APP_STATE_IDLE;
+		break;
 	}
 	transition(next, DEVKIT_APP_SRC_BTN, seq, 0u);
+
+	/* Phase 12L: devkit-local probe dispatch on accepted state transition.
+	 * Internal evidence only -- no UART behavior change. */
+	if (probe_dispatch) {
+		(void)devkit_probe_adapter_dispatch(probe_type, probe_arg0);
+	}
 }
 
 void devkit_app_state_on_uart_byte(uint8_t byte, uint32_t handler_count)
@@ -124,6 +156,10 @@ void devkit_app_state_on_uart_byte(uint8_t byte, uint32_t handler_count)
 		if (s_state != DEVKIT_APP_STATE_ARMED) {
 			transition(DEVKIT_APP_STATE_ARMED, DEVKIT_APP_SRC_UART,
 				   handler_count, byte);
+			/* Phase 12L: devkit-local probe dispatch (internal). */
+			(void)devkit_probe_adapter_dispatch(
+				PROBE_ADAPTER_TYPE_CONFIG,
+				PROBE_ADAPTER_ARG_NONE);
 		} else {
 			LOG_INF("Phase 9C app: 'a' ignored (already ARMED)");
 			s_ignored_count++;
@@ -133,6 +169,10 @@ void devkit_app_state_on_uart_byte(uint8_t byte, uint32_t handler_count)
 		if (s_state != DEVKIT_APP_STATE_ACTIVE) {
 			transition(DEVKIT_APP_STATE_ACTIVE, DEVKIT_APP_SRC_UART,
 				   handler_count, byte);
+			/* Phase 12L: devkit-local probe dispatch (internal). */
+			(void)devkit_probe_adapter_dispatch(
+				PROBE_ADAPTER_TYPE_COMMAND,
+				PROBE_ADAPTER_ARG_START);
 		} else {
 			LOG_INF("Phase 9C app: 's' ignored (already ACTIVE)");
 			s_ignored_count++;
@@ -142,6 +182,10 @@ void devkit_app_state_on_uart_byte(uint8_t byte, uint32_t handler_count)
 		if (s_state != DEVKIT_APP_STATE_IDLE) {
 			transition(DEVKIT_APP_STATE_IDLE, DEVKIT_APP_SRC_UART,
 				   handler_count, byte);
+			/* Phase 12L: devkit-local probe dispatch (internal). */
+			(void)devkit_probe_adapter_dispatch(
+				PROBE_ADAPTER_TYPE_COMMAND,
+				PROBE_ADAPTER_ARG_RESET);
 		} else {
 			LOG_INF("Phase 9C app: 'r' ignored (already IDLE)");
 			s_ignored_count++;
@@ -187,6 +231,10 @@ void devkit_app_state_on_uart_byte(uint8_t byte, uint32_t handler_count)
 		if (s_state == DEVKIT_APP_STATE_ARMED) {
 			transition(DEVKIT_APP_STATE_IDLE, DEVKIT_APP_SRC_UART,
 				   handler_count, byte);
+			/* Phase 12L: devkit-local probe dispatch (internal). */
+			(void)devkit_probe_adapter_dispatch(
+				PROBE_ADAPTER_TYPE_COMMAND,
+				PROBE_ADAPTER_ARG_RESET);
 		} else {
 			LOG_INF("Phase 10B-d disarm no-op: state=%s",
 				state_name(s_state));
