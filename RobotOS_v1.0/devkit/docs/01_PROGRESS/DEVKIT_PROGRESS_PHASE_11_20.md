@@ -128,6 +128,7 @@ table contains only the reserved placeholders.
 | 12I | Probe Translator Host Prototype | CLOSED_WITH_HOST_TEST_EVIDENCE | [->](#phase-12i) |
 | 12J-pre | Probe Translator FAULT Block Plan (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12j-pre) |
 | 12J | Probe Translator FAULT Block Implementation | CLOSED_WITH_HOST_TEST_EVIDENCE | [->](#phase-12j) |
+| 12J-Z | Probe Translator App-Layer Checkpoint / Integration Direction Guard | CLOSED_DOCS_ONLY | [->](#phase-12jz) |
 | 20Z | RESERVED -- future checkpoint / closeout slot | NOT_STARTED | [->](#phase-20z) |
 
 When future phases are added:
@@ -3094,6 +3095,73 @@ Only RESET exits FAULT. Wildcard uses existing Phase 12F `match_arg0=false`.
 8. Hardware-runnable Zephyr build -- `NOT_STARTED`.
 9. `examples/` -- `NOT_STARTED`.
 10. Multi-product coordination -- `NOT_STARTED`.
+
+---
+
+<a id="phase-12jz"></a>
+
+## Phase 12J-Z -- Probe Translator App-Layer Checkpoint / Integration Direction Guard
+
+**Status:** `CLOSED_DOCS_ONLY`
+**Decision:** `PHASE_12J_Z_APP_LAYER_CHECKPOINT_CLOSED`
+**Checkpoint:** [`../02_PHASE_CLOSEOUTS/PHASE_12JZ_CHECKPOINT.md`](../02_PHASE_CLOSEOUTS/PHASE_12JZ_CHECKPOINT.md)
+**Date:** 2026-05-14
+
+### 12J-Z.1 Purpose
+
+Phase 12J-Z is a docs-only checkpoint that locks the Phase 12J
+application-layer behavior baseline and classifies the next possible
+integration gates. It prevents blind opening of integration phases before
+a deliberate architectural decision is made.
+
+`APP_LAYER_BEHAVIOR_COMPLETE_AT_HOST_DEPTH` — `probe_translator` has 4
+state defs, 10 transition rows, 5 mapping rows, TC01–TC24 (132/132
+assertions PASS), 23/23 ctest PASS. No devkit/Zephyr/UART/hardware
+integration.
+
+### 12J-Z.2 Files changed
+
+- **New:**
+  - `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12JZ_CHECKPOINT.md`
+    -- checkpoint doc (sections A-I; candidate matrix; direction guard).
+- **Updated:**
+  - `CURRENT_STATE.md` -- Phase 12J-Z as latest closed; Phase 12J demoted.
+  - `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md`
+    -- this entry + index row.
+  - `RobotOS_v1.0/devkit/docs/00_INDEX/README.md` -- checkpoint link.
+- **Zero-diff held:** all `.c`/`.h`, all `CMakeLists.txt`, all `tests/`,
+  all `framework/`, `core/`, `platform/`, `devkit/src/`, `src/`,
+  `include/robotos/`, `app/probe_translator/`.
+
+### 12J-Z.3 Candidate next gate matrix summary
+
+| # | Candidate | Recommendation |
+| --- | --- | --- |
+| 1 | HOLD | HOLD_RECOMMENDED |
+| 2 | Phase 12K-pre (Zephyr build-only admission planning) | SAFE_NEXT |
+| 3 | Phase 12K (Zephyr build-only admission) | SAFE_AFTER_PRE_DOC |
+| 4 | Devkit integration planning | SAFE_AFTER_PRE_DOC |
+| 5 | Devkit runtime integration | HIGH_RISK_NEEDS_CONTRACT |
+| 6 | Bridge ABI memory-layout lock planning | SAFE_AFTER_PRE_DOC |
+| 7 | `examples/` planning | SAFE_NEXT (low priority) |
+| 8 | Second app/product planning | SAFE_AFTER_PRE_DOC |
+| 9 | Product command mapping / UART expansion | USER_DECISION_REQUIRED |
+| 10 | ACTIVE disarm widening | USER_DECISION_REQUIRED |
+| 11 | Scheduler 7A/7B | DEFER |
+| 12 | F407 / custom board | DEFER |
+| 13 | POST_FLASH_AUTOSTART | DEFER |
+
+### 12J-Z.4 Recommended next gate
+
+**HOLD** (default) or:
+**`Phase 12K-pre — Probe Translator Zephyr Build-Only Admission Plan`**
+(docs-only; contracts exact file set for Zephyr build admission without
+wiring devkit runtime, UART, or hardware).
+
+### 12J-Z.5 Open gates carried forward
+
+All gates from Phase 12J unchanged. Addition: Zephyr build-only admission
+for `probe_translator` explicitly named as `NOT_STARTED`.
 
 ---
 

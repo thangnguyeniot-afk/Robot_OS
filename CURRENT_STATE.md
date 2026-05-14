@@ -9,6 +9,47 @@
 
 ## Last Closed Phase
 
+### Phase 12J-Z — Probe Translator App-Layer Checkpoint / Integration Direction Guard
+
+- **Date:** 2026-05-14
+- **Type:** Docs-only checkpoint / integration direction guard. **No source, runtime, test, CMake, Zephyr, board, `prj.conf`, DTS overlay, evidence log, Framework header, Framework `.c` file, devkit integration, command-set, or `devkit_app_state` change.**
+- **Close status:** `CLOSED_DOCS_ONLY`
+- **Decision result:** `PHASE_12J_Z_APP_LAYER_CHECKPOINT_CLOSED`
+- **Published baseline at open:** `origin/master = 2d9f832`
+- **Checkpoint doc:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12JZ_CHECKPOINT.md`
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md` `<a id="phase-12jz"></a>`
+
+#### App-layer behavior baseline locked at `2d9f832`
+
+`APP_LAYER_BEHAVIOR_COMPLETE_AT_HOST_DEPTH` — `probe_translator` has 4 state
+defs, 10 transition rows (FAULT block + IDLE self-loop), 5 mapping rows
+(wildcard FAULT row), TC01–TC24 (132/132 assertions PASS), 23/23 ctest PASS.
+No devkit/Zephyr/UART/hardware integration.
+
+#### Recommended next gate
+
+**HOLD** (default) or:
+**`Phase 12K-pre — Probe Translator Zephyr Build-Only Admission Plan`**
+(docs-only planning; does not wire devkit runtime, UART, or hardware).
+
+#### Open carry-forward gates (unchanged at Phase 12J-Z)
+
+1. ACTIVE disarm widening — `USER_DECISION_REQUIRED_ACTIVE_DISARM`
+2. Scheduler 7A/7B — `DEFER`
+3. F407 / custom board — `HOLD/DEFER`
+4. POST_FLASH_AUTOSTART root cause — `OPEN` / `MITIGATED_BY_WORKFLOW`
+5. Non-NULL action / on_entry / on_exit for FAULT — open (future app-behavior phase)
+6. Devkit integration of `probe_translator` — `NOT_STARTED`
+7. Bridge ABI memory-layout lock — `NOT_STARTED`
+8. Zephyr build-only admission for `app/probe_translator/` — `NOT_STARTED`
+9. Hardware-runnable Zephyr build of `app/probe_translator/` — `NOT_STARTED`
+10. `RobotOS_v1.0/examples/` — `NOT_STARTED`
+11. Multi-product coordination rules — `NOT_STARTED`
+
+---
+
+## Prior Closed Phase
+
 ### Phase 12J — Probe Translator FAULT Block Implementation
 
 - **Date:** 2026-05-14
@@ -61,7 +102,7 @@
 
 ---
 
-## Prior Closed Phase
+## Phase 12J-pre Reference
 
 ### Phase 12J-pre — Probe Translator FAULT Block Plan (docs-only)
 
