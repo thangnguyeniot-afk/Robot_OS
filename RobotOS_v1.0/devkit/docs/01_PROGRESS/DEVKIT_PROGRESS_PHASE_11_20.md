@@ -138,6 +138,7 @@ table contains only the reserved placeholders.
 | 12M-pre | Probe Translator Hardware Validation Plan (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12m-pre) |
 | 12M | Probe Translator Runtime Adapter Hardware Validation | CLOSED_WITH_HARDWARE_EVIDENCE | [->](#phase-12m) |
 | 12M-Z | Hardware Validation / Product-Mapping Guard (docs-only checkpoint) | CLOSED_DOCS_ONLY | [->](#phase-12mz) |
+| 12N-pre | Product / Workload Command Admission Plan (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12n-pre) |
 | 20Z | RESERVED -- future checkpoint / closeout slot | NOT_STARTED | [->](#phase-20z) |
 
 When future phases are added:
@@ -3811,6 +3812,82 @@ default.
 All gates from Phase 12M unchanged. Product command mapping, FAULT source
 wiring, and UART TX response for probe snapshot all remain
 `NOT_STARTED; USER_DECISION_REQUIRED`.
+
+---
+
+<a id="phase-12n-pre"></a>
+
+## Phase 12N-pre -- Product / Workload Command Admission Plan (docs-only)
+
+**Status:** `CLOSED_DOCS_ONLY`
+**Decision:** `PHASE_12N_PRE_PRODUCT_WORKLOAD_COMMAND_ADMISSION_PLAN_CLOSED`
+**Closeout:** [`../02_PHASE_CLOSEOUTS/PHASE_12N_PRE_PRODUCT_WORKLOAD_COMMAND_ADMISSION_PLAN.md`](../02_PHASE_CLOSEOUTS/PHASE_12N_PRE_PRODUCT_WORKLOAD_COMMAND_ADMISSION_PLAN.md)
+**Implementation contract:** [`../03_SPECS/PRODUCT_WORKLOAD_COMMAND_ADMISSION_PLAN.md`](../03_SPECS/PRODUCT_WORKLOAD_COMMAND_ADMISSION_PLAN.md)
+**Date:** 2026-05-14
+
+### 12N-pre.1 Purpose
+
+Phase 12N-pre is a docs-only product/workload command admission
+planning gate. It inventories the current command/input surface,
+classifies each surface as devkit-evidence vs. product candidate, and
+locks the boundary rule that the existing single-byte UART command set
+is **devkit demo / evidence**, not a product/public command contract.
+
+### 12N-pre.2 Audit summary
+
+- **UART command set** `a/s/r/?/x/v/L/d/T` — all devkit demo / evidence.
+- **Button surface** — devkit demo / evidence.
+- **Phase 12L probe adapter** dispatch — internal evidence only.
+- **`ROBOTOS_PROBE` snapshot** — RTT log only; no UART TX exposure.
+- **No surface is classified as product/public command** at any phase
+  ≤ Phase 12N-pre.
+
+### 12N-pre.3 Strategy evaluation
+
+5 candidate strategies evaluated:
+
+- **Option 1 — HOLD** — VIABLE; safest default.
+- **Option 2 — Docs-only taxonomy spec** — RECOMMENDED; produced here.
+- Option 3 — Devkit-local product namespace (docs + host tests) —
+  optional second-stage.
+- Option 4 — UART public command mapping — **REJECTED** at Phase 12N
+  depth (would commit to permanent compatibility burden).
+- Option 5 — New protocol surface — **REJECTED** for Phase 12N
+  (future option; separate planning chain).
+
+### 12N-pre.4 Boundary rule (locked)
+
+- Single-byte UART command set is frozen as devkit-evidence.
+- UART TX response formats are frozen at Phase 9E/10B/11D shape.
+- Internal evidence (`ROBOTOS_PROBE` snapshot) stays RTT-only.
+- No automatic promotion from devkit-evidence to product status.
+- Product mapping requires Phase 12N-pre-2 successor planning gate.
+
+### 12N-pre.5 Files changed at Phase 12N-pre
+
+- **New:** `PHASE_12N_PRE_PRODUCT_WORKLOAD_COMMAND_ADMISSION_PLAN.md`,
+  `PRODUCT_WORKLOAD_COMMAND_ADMISSION_PLAN.md`
+- **Doc-sync:** `CURRENT_STATE.md`, `DEVKIT_PROGRESS_PHASE_11_20.md`
+  (this entry), `00_INDEX/README.md`.
+- **Zero-diff:** all source, header, CMake, Kconfig, `prj.conf`, DTS,
+  overlay, test, tool, script, and log files.
+
+### 12N-pre.6 Non-claims
+
+- No product command mapping implemented.
+- No UART behavior changed.
+- No runtime/scheduler behavior changed.
+- No new hardware validation performed.
+- No F407/custom board opened.
+- No full probe_translator matrix proven.
+- No Phase 12N implementation authorized.
+
+### 12N-pre.7 Next gate
+
+**HOLD** (default) is the recommended path. Phase 12 chain is complete;
+codebase is stable. Phase 12N implementation is **not authorized**
+without an explicit user decision and a successor planning gate
+(Phase 12N-pre-2 or equivalent).
 
 ---
 

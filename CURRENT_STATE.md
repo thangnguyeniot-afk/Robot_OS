@@ -9,6 +9,43 @@
 
 ## Last Closed Phase
 
+### Phase 12N-pre — Product / Workload Command Admission Plan
+
+- **Date:** 2026-05-14
+- **Type:** Docs-only product/workload command admission planning gate. **No source, CMake, runtime, Kconfig, `prj.conf`, DTS, overlay, test, tool, script, log, or build change. No new build run. No flash / RTT / hardware run. No UART behavior changed. No product command mapping implemented.**
+- **Close status:** `CLOSED_DOCS_ONLY`
+- **Decision result:** `PHASE_12N_PRE_PRODUCT_WORKLOAD_COMMAND_ADMISSION_PLAN_CLOSED`
+- **Published baseline at open:** `origin/master = 8c86aec`
+- **Closeout doc:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12N_PRE_PRODUCT_WORKLOAD_COMMAND_ADMISSION_PLAN.md`
+- **New long-lived spec:** `RobotOS_v1.0/devkit/docs/03_SPECS/PRODUCT_WORKLOAD_COMMAND_ADMISSION_PLAN.md` (`DRAFT / NON-FINAL — TAXONOMY ONLY`; boundary spec locking devkit-evidence vs. product/workload command categories)
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md` `<a id="phase-12n-pre"></a>`
+
+#### Boundary locked
+
+The UART command set `a/s/r/?/x/v/L/d/T` and all existing TX response formats are classified as **devkit demo / evidence** — frozen and non-productized. They are NOT a product/public command contract. Phase 12L probe adapter dispatch and Phase 12M hardware validation evidence are likewise classified as devkit-evidence, NOT product mapping.
+
+**5 candidate Phase 12N strategies evaluated:**
+
+- Option 1 — HOLD (no product command opened) — **VIABLE; safest default**
+- Option 2 — Docs-only command taxonomy spec — **RECOMMENDED; produced at Phase 12N-pre**
+- Option 3 — Devkit-local product namespace (docs + host tests) — **OPTIONAL second-stage**
+- Option 4 — UART public command mapping — **REJECTED at Phase 12N depth**
+- Option 5 — New protocol surface — **REJECTED for Phase 12N**
+
+#### Boundary rule (locked)
+
+- Single-byte UART command set is frozen as devkit-evidence.
+- UART TX response formats are frozen at Phase 9E/10B/11D shape.
+- Internal evidence (`ROBOTOS_PROBE` snapshot) stays RTT-only.
+- No automatic promotion from devkit-evidence to product status.
+- Product mapping requires Phase 12N-pre-2 successor planning gate.
+
+**Suggested next gate:** **HOLD** (default; safest). Phase 12 chain is complete; codebase is stable. Phase 12N implementation is NOT authorized without explicit user decision + Phase 12N-pre-2.
+
+---
+
+## Phase 12M-Z Checkpoint Reference
+
 ### Phase 12M-Z — Hardware Validation / Product-Mapping Guard
 
 - **Date:** 2026-05-14
