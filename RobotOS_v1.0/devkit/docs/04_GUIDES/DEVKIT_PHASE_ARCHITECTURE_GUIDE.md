@@ -481,10 +481,11 @@ acting.
 | Non-NULL action / `on_entry` / `on_exit` for FAULT | open (future app-behavior phase). | Open gate, 12K/12L closeouts. |
 | FAULT adapter event sourcing (hardware fault signal) | `NOT_STARTED`. | Open gate, 12L/12M closeouts. |
 | UART TX response for `probe_translator` snapshot | `NOT_STARTED; USER_DECISION_REQUIRED`. | Open gate, 12L/12M closeouts. |
-| Bridge ABI memory-layout lock | `NOT_STARTED`. | Open gate, 12L/12M closeouts. |
+| Bridge ABI memory-layout lock | `NOT_STARTED`. | Open gate, 12K-Z / 12L-Z / 12M-Z checkpoints. |
 | `RobotOS_v1.0/examples/` | `NOT_STARTED`. | Open gate, every Phase 12 closeout. |
 | Multi-product coordination | `NOT_STARTED`. | Open gate, every Phase 12 closeout. |
 | Full `probe_translator` matrix beyond `a s r ?` | Not proven on hardware. Only the controlled `a s r ?` sequence is hardware-validated. | Phase 12M closeout. |
+| Button-path hardware validation | `NOT_STARTED`. Phase 12M hardware validation proved the UART-driven `a/s/r/?` controlled sequence; the physical button path was not exercised on hardware. Open coverage gate, not a failed validation. | Phase 12M closeout (§L item 2, §M open item); 12M-Z and 12N-pre carry-forward. |
 | Production hardware | Not validated. Devkit board is `stm32f411e_disco` rev D only. | Phase 12M closeout. |
 | `app/probe_translator/CMakeLists.txt` and `Kconfig` | **NOT CREATED.** Forbidden at 12K. Not created at 12L. | Phase 12K-pre / 12K / 12L closeouts. |
 | Legacy `RobotOS_v1.0/src/` + `include/robotos/` | Marked frozen / non-authoritative at Phase 12D-pre. | `PHASE_12D_PRE_LEGACY_FRAMEWORK_SCAFFOLD_DISPOSITION.md` |

@@ -112,6 +112,7 @@ Phase 12M proves the `devkit_probe_adapter` runtime wiring for the controlled `a
 8. Product command mapping / UART expansion — `NOT_STARTED; USER_DECISION_REQUIRED`
 9. `RobotOS_v1.0/examples/` — `NOT_STARTED`
 10. Multi-product coordination — `NOT_STARTED`
+11. Button-path hardware validation — `NOT_STARTED`. UART-driven Phase 12M hardware path was validated; physical button-path validation remains `NOT_STARTED`.
 
 ---
 
