@@ -127,6 +127,7 @@ table contains only the reserved placeholders.
 | 12I-pre | Probe Translator Host Prototype Implementation Plan (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12i-pre) |
 | 12I | Probe Translator Host Prototype | CLOSED_WITH_HOST_TEST_EVIDENCE | [->](#phase-12i) |
 | 12J-pre | Probe Translator FAULT Block Plan (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12j-pre) |
+| 12J | Probe Translator FAULT Block Implementation | CLOSED_WITH_HOST_TEST_EVIDENCE | [->](#phase-12j) |
 | 20Z | RESERVED -- future checkpoint / closeout slot | NOT_STARTED | [->](#phase-20z) |
 
 When future phases are added:
@@ -3014,7 +3015,90 @@ Phase 12J **remains `NOT_STARTED`** at the close of Phase 12J-pre.
 
 ---
 
+<a id="phase-12j"></a>
+## Phase 12J -- Probe Translator FAULT Block Implementation
+
+**Status:** `CLOSED_WITH_HOST_TEST_EVIDENCE`
+**Decision:** `PHASE_12J_FAULT_BLOCK_IMPLEMENTED_VALIDATED`
+**Closeout:** [`../02_PHASE_CLOSEOUTS/PHASE_12J_PROBE_TRANSLATOR_FAULT_BLOCK.md`](../02_PHASE_CLOSEOUTS/PHASE_12J_PROBE_TRANSLATOR_FAULT_BLOCK.md)
+**Implementation contract:** [`../03_SPECS/PROBE_TRANSLATOR_FAULT_BLOCK_PLAN.md`](../03_SPECS/PROBE_TRANSLATOR_FAULT_BLOCK_PLAN.md) (upgraded to `IMPLEMENTED_AT_12J`)
+**Date:** 2026-05-14
+
+### 12J.1 Purpose
+
+Phase 12J implements the FAULT block extension to the `probe_translator`
+application harness exactly per the Phase 12J-pre contract. The phase is
+additive only -- no Framework, core, platform, devkit runtime, CMakeLists,
+Zephyr, or Architecture-B surface was modified.
+
+### 12J.2 Files added / modified
+
+- **Modified existing (additive only):**
+  - `RobotOS_v1.0/app/probe_translator/probe_translator.h` -- 4 constants
+    promoted from RESERVED/OMITTED comments to `#define` declarations.
+  - `RobotOS_v1.0/app/probe_translator/probe_translator.c` -- 5 new
+    transition rows (rows 5-9), 1 new state def, 1 new mapping row;
+    `transition_count` 5→10, `state_count` 3→4, `row_count` 4→5.
+  - `RobotOS_v1.0/app/probe_translator/README.md` -- Phase 12J FAULT
+    vocabulary table and behavior section.
+  - `RobotOS_v1.0/tests/host/test_app_probe_translator_mapping.c` --
+    TC16-TC24 (9 new cases, 62 new in-binary assertions).
+- **New:**
+  - `RobotOS_v1.0/tests/host/logs/phase_12J_host_2026-05-14.log` --
+    committed evidence log.
+  - `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12J_PROBE_TRANSLATOR_FAULT_BLOCK.md`
+    -- this closeout.
+- **Doc-sync:**
+  - `CURRENT_STATE.md`, `DEVKIT_PROGRESS_PHASE_11_20.md` (this entry),
+    `RobotOS_v1.0/devkit/docs/00_INDEX/README.md`,
+    `RobotOS_v1.0/devkit/docs/03_SPECS/PROBE_TRANSLATOR_FAULT_BLOCK_PLAN.md`
+    (status upgraded).
+- **Zero-diff held:** `tests/host/CMakeLists.txt`, all `framework/`,
+  `core/`, `platform/`, `devkit/src/`, `src/`, `include/robotos/`,
+  `prj.conf`, DTS, overlay, Zephyr config, prior evidence logs.
+
+### 12J.3 FAULT block summary
+
+| Symbol | Value | Status |
+| --- | --- | --- |
+| `PROBE_TRANSLATOR_STATE_FAULT` | `4u` | declared |
+| `PROBE_TRANSLATOR_EVT_FAULT` | `5u` | declared |
+| `PROBE_ADAPTER_TYPE_FAULT` | `3u` | declared |
+| `PROBE_ADAPTER_ARG_ANY` | `0xFFFFFFFFu` | declared (doc alias) |
+| transition rows | 5 → 10 | +5 rows (self-loop + FAULT block) |
+| state defs | 3 → 4 | +1 STATE_FAULT |
+| mapping rows | 4 → 5 | +1 wildcard FAULT row |
+
+FAULT is sticky for CONFIG/START/STOP (bridge maps, FSM no-transitions).
+Only RESET exits FAULT. Wildcard uses existing Phase 12F `match_arg0=false`.
+
+### 12J.4 Validation
+
+- CMake configure PASS; build PASS (gcc 13.3.0, WSL Ubuntu).
+- **23/23 ctest PASS** (`100% tests passed, 0 tests failed out of 23`).
+- `probe_translator_mapping_contract` PASS; **132/132** in-binary
+  assertions (70 Phase 12I + 62 Phase 12J; TC01-TC24).
+- All 14 Phase 12J-pre §K validation gates PASS.
+- Evidence log: `tests/host/logs/phase_12J_host_2026-05-14.log`
+  (86,459 bytes).
+
+### 12J.5 Open gates (unchanged)
+
+1. ACTIVE disarm widening -- `USER_DECISION_REQUIRED_ACTIVE_DISARM`.
+2. Scheduler 7A/7B -- `DEFER`.
+3. F407 / custom board -- `HOLD/DEFER`.
+4. POST_FLASH_AUTOSTART -- `OPEN / MITIGATED_BY_WORKFLOW`.
+5. Non-NULL FAULT actions / on_entry / on_exit -- open (future phase).
+6. Devkit integration of `probe_translator` -- `NOT_STARTED`.
+7. Bridge ABI memory-layout lock -- `NOT_STARTED`.
+8. Hardware-runnable Zephyr build -- `NOT_STARTED`.
+9. `examples/` -- `NOT_STARTED`.
+10. Multi-product coordination -- `NOT_STARTED`.
+
+---
+
 <a id="phase-20z"></a>
+
 ## Phase 20Z -- RESERVED / NOT STARTED
 
 **Status:** `NOT_STARTED`

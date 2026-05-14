@@ -9,6 +9,60 @@
 
 ## Last Closed Phase
 
+### Phase 12J — Probe Translator FAULT Block Implementation
+
+- **Date:** 2026-05-14
+- **Type:** Host-only FAULT block extension to `probe_translator`. Additive
+  changes to `app/probe_translator/probe_translator.{h,c}`,
+  `app/probe_translator/README.md`, and
+  `tests/host/test_app_probe_translator_mapping.c` only.
+  **No devkit runtime change. No UART command added or modified
+  (`a/s/r/?/x/v/L/d/T` unchanged). No `devkit_app_state` change. No
+  Framework code change. No CMakeLists.txt change. No Zephyr / `prj.conf` /
+  DTS / overlay / hardware change. No Architecture B reuse.**
+- **Close status:** `CLOSED_WITH_HOST_TEST_EVIDENCE`
+- **Decision result:** `PHASE_12J_FAULT_BLOCK_IMPLEMENTED_VALIDATED`
+- **Published baseline at open:** `origin/master = 06936c0`
+- **Closeout doc:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12J_PROBE_TRANSLATOR_FAULT_BLOCK.md`
+- **Updated long-lived spec:** `RobotOS_v1.0/devkit/docs/03_SPECS/PROBE_TRANSLATOR_FAULT_BLOCK_PLAN.md` upgraded to `IMPLEMENTED_AT_12J (HOST-TEST EVIDENCE)`.
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md` `<a id="phase-12j"></a>`
+
+#### Host test evidence
+
+- ctest summary: **23/23 PASS** (`100% tests passed, 0 tests failed out of 23`); WSL Ubuntu / gcc 13.3.0.
+- `probe_translator_mapping_contract` test: **PASS**, **132/132** in-binary assertions (TC01–TC24; 70 Phase 12I retained + 62 Phase 12J new).
+- Prior 22 targets unchanged in source and unchanged in pass state.
+- Host log: `RobotOS_v1.0/tests/host/logs/phase_12J_host_2026-05-14.log`.
+
+#### FAULT block implemented
+
+| Symbol | Value | Change |
+| --- | --- | --- |
+| `PROBE_TRANSLATOR_STATE_FAULT` | `4u` | declared (was RESERVED comment) |
+| `PROBE_TRANSLATOR_EVT_FAULT` | `5u` | declared (was RESERVED comment) |
+| `PROBE_ADAPTER_TYPE_FAULT` | `3u` | declared (was RESERVED comment) |
+| `PROBE_ADAPTER_ARG_ANY` | `0xFFFFFFFFu` | declared (was OMITTED comment) |
+| `transition_count` | `5u → 10u` | +5 rows (IDLE+RESET self-loop; 3×X+FAULT→FAULT; FAULT+RESET→IDLE) |
+| `state_count` | `3u → 4u` | +1 STATE_FAULT def |
+| `row_count` | `4u → 5u` | +1 wildcard FAULT mapping row |
+
+#### Open carry-forward gates (unchanged at Phase 12J close)
+
+1. ACTIVE disarm widening — `USER_DECISION_REQUIRED_ACTIVE_DISARM`
+2. Scheduler 7A/7B — `DEFER`
+3. F407 / custom board — `HOLD/DEFER`
+4. POST_FLASH_AUTOSTART root cause — `OPEN` / `MITIGATED_BY_WORKFLOW`
+5. Non-NULL action / on_entry / on_exit for FAULT — open for future app-behavior phase
+6. Devkit integration of `probe_translator` — `NOT_STARTED`
+7. Bridge ABI memory-layout lock — `NOT_STARTED`
+8. Hardware-runnable Zephyr build of `app/probe_translator/` — open for future runtime-integration phase
+9. `RobotOS_v1.0/examples/` — open for future docs-only phase
+10. Multi-product coordination rules — open; reachable only after a second app exists
+
+---
+
+## Prior Closed Phase
+
 ### Phase 12J-pre — Probe Translator FAULT Block Plan (docs-only)
 
 - **Date:** 2026-05-13
@@ -93,7 +147,7 @@ Mirror Phase 12I §K with delta: gate 3 covers extended `probe_translator_mappin
 
 ---
 
-## Prior Closed Phase
+## Phase 12I Closed Reference
 
 ### Phase 12I — Probe Translator Host Prototype
 
@@ -116,7 +170,7 @@ Mirror Phase 12I §K with delta: gate 3 covers extended `probe_translator_mappin
 - **Updated skeleton spec:** `RobotOS_v1.0/devkit/docs/03_SPECS/PROBE_TRANSLATOR_APP_SKELETON_DRAFT.md` upgraded to `IMPLEMENTED_AT_12I (HOST-TEST EVIDENCE)`.
 - **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md` `<a id="phase-12i"></a>`
 
-#### Host test evidence
+#### Phase 12I host test evidence
 
 - ctest summary: **23/23 PASS** (`100% tests passed, 0 tests failed out of 23`); WSL Ubuntu / gcc 13.3.0 / cmake 3.28.3.
 - New ctest target `probe_translator_mapping_contract`: **PASS**, **70/70** in-binary assertions (TC01–TC15; TC08/TC12/TC13/TC14/TC15 `REVIEW_VALIDATED`).

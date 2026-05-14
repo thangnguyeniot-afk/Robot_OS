@@ -38,7 +38,7 @@ extern "C" {
 #define PROBE_TRANSLATOR_STATE_IDLE   ((robotos_fw_state_id_t)1u)
 #define PROBE_TRANSLATOR_STATE_READY  ((robotos_fw_state_id_t)2u)
 #define PROBE_TRANSLATOR_STATE_ACTIVE ((robotos_fw_state_id_t)3u)
-/* PROBE_TRANSLATOR_STATE_FAULT = 4u — RESERVED; DEFERRED at Phase 12I. */
+#define PROBE_TRANSLATOR_STATE_FAULT  ((robotos_fw_state_id_t)4u)
 
 /* ---------------------------------------------------------------------------
  * Application-local event IDs (Phase 12I-pre §E.2)
@@ -47,20 +47,20 @@ extern "C" {
 #define PROBE_TRANSLATOR_EVT_START      ((robotos_fw_event_id_t)2u)
 #define PROBE_TRANSLATOR_EVT_STOP       ((robotos_fw_event_id_t)3u)
 #define PROBE_TRANSLATOR_EVT_RESET      ((robotos_fw_event_id_t)4u)
-/* PROBE_TRANSLATOR_EVT_FAULT = 5u — RESERVED; DEFERRED at Phase 12I. */
+#define PROBE_TRANSLATOR_EVT_FAULT  ((robotos_fw_event_id_t)5u)
 
 /* ---------------------------------------------------------------------------
  * Adapter key constants (Phase 12I-pre §E.3 / §E.4)
  * --------------------------------------------------------------------------- */
 #define PROBE_ADAPTER_TYPE_CONFIG   ((uint32_t)1u)
 #define PROBE_ADAPTER_TYPE_COMMAND  ((uint32_t)2u)
-/* PROBE_ADAPTER_TYPE_FAULT = 3u — RESERVED; DEFERRED at Phase 12I. */
+#define PROBE_ADAPTER_TYPE_FAULT  ((uint32_t)3u)
 
 #define PROBE_ADAPTER_ARG_NONE      ((uint32_t)0u)
 #define PROBE_ADAPTER_ARG_START     ((uint32_t)1u)
 #define PROBE_ADAPTER_ARG_STOP      ((uint32_t)2u)
 #define PROBE_ADAPTER_ARG_RESET     ((uint32_t)3u)
-/* PROBE_ADAPTER_ARG_ANY — OMITTED; no wildcard row at Phase 12I. */
+#define PROBE_ADAPTER_ARG_ANY  ((uint32_t)0xFFFFFFFFu)
 
 /* ---------------------------------------------------------------------------
  * Types (Phase 12I-pre §F)

@@ -296,6 +296,195 @@ int main(void)
      */
     TC("TC15 full_host_regression_preserved_REVIEW_VALIDATED",       1);
 
+    /* ---------------------------------------------------------------------- *
+     * Phase 12J — FAULT block extension (TC16..TC24)                         *
+     * ---------------------------------------------------------------------- */
+    printf("\n=== Phase 12J — FAULT block extension ===\n");
+
+    /* TC16: fault_from_idle */
+    {
+        st = probe_translator_reset(&pt);
+        TC("TC16.a reset_ok",                   st == ROBOTOS_CORE_OK);
+
+        st = probe_translator_dispatch_adapter_event(
+            &pt, PROBE_ADAPTER_TYPE_FAULT, PROBE_ADAPTER_ARG_ANY, NULL);
+        TC("TC16.b fault_dispatch_ok",          st == ROBOTOS_CORE_OK);
+
+        TC("TC16.c snapshot_ok",                snap(&pt, &s) == ROBOTOS_CORE_OK);
+        TC("TC16.d state_is_fault",             s.fsm.current_state == PROBE_TRANSLATOR_STATE_FAULT);
+        TC("TC16.e fsm_transition_count_1",     s.fsm.transition_count == 1u);
+        TC("TC16.f bridge_mapped_count_1",      s.bridge.mapped_count == 1u);
+        TC("TC16.g bridge_unmapped_count_0",    s.bridge.unmapped_count == 0u);
+        TC("TC16.h last_fw_event_fault",        s.bridge.last_fw_event_id == PROBE_TRANSLATOR_EVT_FAULT);
+    }
+
+    /* TC17: fault_from_ready */
+    {
+        st = probe_translator_reset(&pt);
+        TC("TC17.a reset_ok",                   st == ROBOTOS_CORE_OK);
+
+        (void)probe_translator_dispatch_adapter_event(
+            &pt, PROBE_ADAPTER_TYPE_CONFIG, PROBE_ADAPTER_ARG_NONE, NULL);
+        TC("TC17.b precondition_state_ready",   snap_eq_state(&pt, PROBE_TRANSLATOR_STATE_READY));
+
+        st = probe_translator_dispatch_adapter_event(
+            &pt, PROBE_ADAPTER_TYPE_FAULT, 0xDEADBEEFu, NULL);
+        TC("TC17.c fault_dispatch_ok",          st == ROBOTOS_CORE_OK);
+        TC("TC17.d state_is_fault",             snap_eq_state(&pt, PROBE_TRANSLATOR_STATE_FAULT));
+
+        TC("TC17.e snapshot_ok",                snap(&pt, &s) == ROBOTOS_CORE_OK);
+        TC("TC17.f bridge_mapped_count_2",      s.bridge.mapped_count == 2u);
+        TC("TC17.g last_adapter_arg0_deadbeef", s.bridge.last_adapter_arg0 == 0xDEADBEEFu);
+    }
+
+    /* TC18: fault_from_active */
+    {
+        st = probe_translator_reset(&pt);
+        TC("TC18.a reset_ok",                   st == ROBOTOS_CORE_OK);
+
+        (void)probe_translator_dispatch_adapter_event(
+            &pt, PROBE_ADAPTER_TYPE_CONFIG,  PROBE_ADAPTER_ARG_NONE,  NULL);
+        (void)probe_translator_dispatch_adapter_event(
+            &pt, PROBE_ADAPTER_TYPE_COMMAND, PROBE_ADAPTER_ARG_START, NULL);
+        TC("TC18.b precondition_state_active",  snap_eq_state(&pt, PROBE_TRANSLATOR_STATE_ACTIVE));
+
+        st = probe_translator_dispatch_adapter_event(
+            &pt, PROBE_ADAPTER_TYPE_FAULT, 0u, NULL);
+        TC("TC18.c fault_dispatch_ok",          st == ROBOTOS_CORE_OK);
+        TC("TC18.d state_is_fault",             snap_eq_state(&pt, PROBE_TRANSLATOR_STATE_FAULT));
+    }
+
+    /* TC19: fault_wildcard_arg0_variants */
+    {
+        st = probe_translator_reset(&pt);
+        TC("TC19.a reset_ok",                   st == ROBOTOS_CORE_OK);
+
+        /* arg0 = 0: IDLE -> FAULT */
+        (void)probe_translator_dispatch_adapter_event(
+            &pt, PROBE_ADAPTER_TYPE_FAULT, 0u, NULL);
+        TC("TC19.b state_fault_after_arg0_0",   snap_eq_state(&pt, PROBE_TRANSLATOR_STATE_FAULT));
+
+        /* arg0 = 0xFFFFFFFF: FAULT stays FAULT (no FAULT+FAULT row) */
+        (void)probe_translator_dispatch_adapter_event(
+            &pt, PROBE_ADAPTER_TYPE_FAULT, 0xFFFFFFFFu, NULL);
+        TC("TC19.c state_fault_after_arg0_ff",  snap_eq_state(&pt, PROBE_TRANSLATOR_STATE_FAULT));
+
+        /* arg0 = 42: FAULT stays FAULT */
+        (void)probe_translator_dispatch_adapter_event(
+            &pt, PROBE_ADAPTER_TYPE_FAULT, 42u, NULL);
+        TC("TC19.d state_fault_after_arg0_42",  snap_eq_state(&pt, PROBE_TRANSLATOR_STATE_FAULT));
+
+        TC("TC19.e snapshot_ok",                snap(&pt, &s) == ROBOTOS_CORE_OK);
+        TC("TC19.f bridge_mapped_count_3",      s.bridge.mapped_count == 3u);
+        TC("TC19.g bridge_unmapped_count_0",    s.bridge.unmapped_count == 0u);
+    }
+
+    /* TC20: reset_from_fault_to_idle */
+    {
+        st = probe_translator_reset(&pt);
+        TC("TC20.a reset_ok",                   st == ROBOTOS_CORE_OK);
+
+        (void)probe_translator_dispatch_adapter_event(
+            &pt, PROBE_ADAPTER_TYPE_FAULT, PROBE_ADAPTER_ARG_ANY, NULL);
+        TC("TC20.b precondition_state_fault",   snap_eq_state(&pt, PROBE_TRANSLATOR_STATE_FAULT));
+
+        st = probe_translator_dispatch_adapter_event(
+            &pt, PROBE_ADAPTER_TYPE_COMMAND, PROBE_ADAPTER_ARG_RESET, NULL);
+        TC("TC20.c reset_dispatch_ok",          st == ROBOTOS_CORE_OK);
+        TC("TC20.d state_is_idle",              snap_eq_state(&pt, PROBE_TRANSLATOR_STATE_IDLE));
+
+        TC("TC20.e snapshot_ok",                snap(&pt, &s) == ROBOTOS_CORE_OK);
+        TC("TC20.f fsm_transition_count_2",     s.fsm.transition_count == 2u);
+    }
+
+    /* TC21: fault_sticky_for_normal_events */
+    {
+        st = probe_translator_reset(&pt);
+        TC("TC21.a reset_ok",                   st == ROBOTOS_CORE_OK);
+
+        (void)probe_translator_dispatch_adapter_event(
+            &pt, PROBE_ADAPTER_TYPE_FAULT, PROBE_ADAPTER_ARG_ANY, NULL);
+        TC("TC21.b precondition_state_fault",   snap_eq_state(&pt, PROBE_TRANSLATOR_STATE_FAULT));
+
+        /* CONFIG, START, STOP from FAULT: bridge maps each; FSM has no row */
+        (void)probe_translator_dispatch_adapter_event(
+            &pt, PROBE_ADAPTER_TYPE_CONFIG,  PROBE_ADAPTER_ARG_NONE,  NULL);
+        (void)probe_translator_dispatch_adapter_event(
+            &pt, PROBE_ADAPTER_TYPE_COMMAND, PROBE_ADAPTER_ARG_START, NULL);
+        (void)probe_translator_dispatch_adapter_event(
+            &pt, PROBE_ADAPTER_TYPE_COMMAND, PROBE_ADAPTER_ARG_STOP,  NULL);
+
+        TC("TC21.c snapshot_ok",                snap(&pt, &s) == ROBOTOS_CORE_OK);
+        TC("TC21.d state_still_fault",          s.fsm.current_state == PROBE_TRANSLATOR_STATE_FAULT);
+        TC("TC21.e fsm_no_transition_count_3",  s.fsm.no_transition_count == 3u);
+        TC("TC21.f fsm_transition_count_1",     s.fsm.transition_count == 1u);
+        TC("TC21.g bridge_mapped_count_4",      s.bridge.mapped_count == 4u);
+        TC("TC21.h bridge_unmapped_count_0",    s.bridge.unmapped_count == 0u);
+    }
+
+    /* TC22: idle_reset_self_loop_admitted */
+    {
+        st = probe_translator_reset(&pt);
+        TC("TC22.a reset_ok",                   st == ROBOTOS_CORE_OK);
+
+        st = probe_translator_dispatch_adapter_event(
+            &pt, PROBE_ADAPTER_TYPE_COMMAND, PROBE_ADAPTER_ARG_RESET, NULL);
+        TC("TC22.b reset_from_idle_ok",         st == ROBOTOS_CORE_OK);
+
+        TC("TC22.c snapshot_ok",                snap(&pt, &s) == ROBOTOS_CORE_OK);
+        TC("TC22.d state_still_idle",           s.fsm.current_state == PROBE_TRANSLATOR_STATE_IDLE);
+        TC("TC22.e fsm_transition_count_1",     s.fsm.transition_count == 1u);
+    }
+
+    /* TC23: full_path_with_fault */
+    {
+        st = probe_translator_reset(&pt);
+        TC("TC23.a reset_ok",                   st == ROBOTOS_CORE_OK);
+
+        (void)probe_translator_dispatch_adapter_event(
+            &pt, PROBE_ADAPTER_TYPE_CONFIG,  PROBE_ADAPTER_ARG_NONE,  NULL);
+        TC("TC23.b state_ready",                snap_eq_state(&pt, PROBE_TRANSLATOR_STATE_READY));
+
+        (void)probe_translator_dispatch_adapter_event(
+            &pt, PROBE_ADAPTER_TYPE_COMMAND, PROBE_ADAPTER_ARG_START, NULL);
+        TC("TC23.c state_active",               snap_eq_state(&pt, PROBE_TRANSLATOR_STATE_ACTIVE));
+
+        (void)probe_translator_dispatch_adapter_event(
+            &pt, PROBE_ADAPTER_TYPE_FAULT, PROBE_ADAPTER_ARG_ANY, NULL);
+        TC("TC23.d state_fault",                snap_eq_state(&pt, PROBE_TRANSLATOR_STATE_FAULT));
+
+        (void)probe_translator_dispatch_adapter_event(
+            &pt, PROBE_ADAPTER_TYPE_COMMAND, PROBE_ADAPTER_ARG_RESET, NULL);
+        TC("TC23.e state_idle",                 snap_eq_state(&pt, PROBE_TRANSLATOR_STATE_IDLE));
+
+        TC("TC23.f snapshot_ok",                snap(&pt, &s) == ROBOTOS_CORE_OK);
+        TC("TC23.g fsm_transition_count_4",     s.fsm.transition_count == 4u);
+        TC("TC23.h bridge_mapped_count_4",      s.bridge.mapped_count == 4u);
+        TC("TC23.i bridge_unmapped_count_0",    s.bridge.unmapped_count == 0u);
+    }
+
+    /* TC24: snapshot_counts_with_fault_and_unmapped */
+    {
+        st = probe_translator_reset(&pt);
+        TC("TC24.a reset_ok",                   st == ROBOTOS_CORE_OK);
+
+        /* Unmapped type (not TYPE_FAULT, not in rows 0-3) */
+        st = probe_translator_dispatch_adapter_event(
+            &pt, 0xDEADBEEFu, 0xCAFEBABEu, NULL);
+        TC("TC24.b unmapped_dispatch_ok",       st == ROBOTOS_CORE_OK);
+
+        /* Fault dispatch: wildcard row matches */
+        st = probe_translator_dispatch_adapter_event(
+            &pt, PROBE_ADAPTER_TYPE_FAULT, 0u, NULL);
+        TC("TC24.c fault_dispatch_ok",          st == ROBOTOS_CORE_OK);
+
+        TC("TC24.d snapshot_ok",                snap(&pt, &s) == ROBOTOS_CORE_OK);
+        TC("TC24.e bridge_event_count_2",       s.bridge.event_count == 2u);
+        TC("TC24.f bridge_mapped_count_1",      s.bridge.mapped_count == 1u);
+        TC("TC24.g bridge_unmapped_count_1",    s.bridge.unmapped_count == 1u);
+        TC("TC24.h state_is_fault",             s.fsm.current_state == PROBE_TRANSLATOR_STATE_FAULT);
+    }
+
     printf("\n  %d passed, %d failed\n", g_pass, g_fail);
     return (g_fail == 0) ? 0 : 1;
 }

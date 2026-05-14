@@ -1,6 +1,6 @@
 # probe_translator — First application harness (host prototype)
 
-**Status:** Phase 12I host prototype (DRAFT / host-test evidence).
+**Status:** Phase 12J FAULT block extension (DRAFT / host-test evidence). Phase 12I baseline.
 
 `probe_translator` is the first application harness layered on top of the
 Architecture-A Framework. It exercises the locked Framework FSM
@@ -35,27 +35,51 @@ cmake --build build-phase12i-host
 ctest --test-dir build-phase12i-host --output-on-failure -V
 ```
 
-## State / event vocabulary (Phase 12I)
+## State / event vocabulary (Phase 12I + 12J)
 
-| Symbol                              | Value |
-|-------------------------------------|-------|
-| `PROBE_TRANSLATOR_STATE_IDLE`       | `1u`  |
-| `PROBE_TRANSLATOR_STATE_READY`      | `2u`  |
-| `PROBE_TRANSLATOR_STATE_ACTIVE`     | `3u`  |
-| `PROBE_TRANSLATOR_EVT_CONFIGURED`   | `1u`  |
-| `PROBE_TRANSLATOR_EVT_START`        | `2u`  |
-| `PROBE_TRANSLATOR_EVT_STOP`         | `3u`  |
-| `PROBE_TRANSLATOR_EVT_RESET`        | `4u`  |
-| `PROBE_ADAPTER_TYPE_CONFIG`         | `1u`  |
-| `PROBE_ADAPTER_TYPE_COMMAND`        | `2u`  |
-| `PROBE_ADAPTER_ARG_NONE`            | `0u`  |
-| `PROBE_ADAPTER_ARG_START`           | `1u`  |
-| `PROBE_ADAPTER_ARG_STOP`            | `2u`  |
-| `PROBE_ADAPTER_ARG_RESET`           | `3u`  |
+| Symbol                              | Value          | Phase |
+|-------------------------------------|----------------|-------|
+| `PROBE_TRANSLATOR_STATE_IDLE`       | `1u`           | 12I   |
+| `PROBE_TRANSLATOR_STATE_READY`      | `2u`           | 12I   |
+| `PROBE_TRANSLATOR_STATE_ACTIVE`     | `3u`           | 12I   |
+| `PROBE_TRANSLATOR_STATE_FAULT`      | `4u`           | 12J   |
+| `PROBE_TRANSLATOR_EVT_CONFIGURED`   | `1u`           | 12I   |
+| `PROBE_TRANSLATOR_EVT_START`        | `2u`           | 12I   |
+| `PROBE_TRANSLATOR_EVT_STOP`         | `3u`           | 12I   |
+| `PROBE_TRANSLATOR_EVT_RESET`        | `4u`           | 12I   |
+| `PROBE_TRANSLATOR_EVT_FAULT`        | `5u`           | 12J   |
+| `PROBE_ADAPTER_TYPE_CONFIG`         | `1u`           | 12I   |
+| `PROBE_ADAPTER_TYPE_COMMAND`        | `2u`           | 12I   |
+| `PROBE_ADAPTER_TYPE_FAULT`          | `3u`           | 12J   |
+| `PROBE_ADAPTER_ARG_NONE`            | `0u`           | 12I   |
+| `PROBE_ADAPTER_ARG_START`           | `1u`           | 12I   |
+| `PROBE_ADAPTER_ARG_STOP`            | `2u`           | 12I   |
+| `PROBE_ADAPTER_ARG_RESET`           | `3u`           | 12I   |
+| `PROBE_ADAPTER_ARG_ANY`             | `0xFFFFFFFFu`  | 12J   |
 
-`PROBE_TRANSLATOR_STATE_FAULT`, `PROBE_TRANSLATOR_EVT_FAULT`,
-`PROBE_ADAPTER_TYPE_FAULT`, and `PROBE_ADAPTER_ARG_ANY` are deferred to a
-future app-behavior phase.
+### Phase 12J FAULT block behavior
+
+- **FAULT state** (`STATE_FAULT = 4u`): reachable from IDLE, READY, or
+  ACTIVE via any adapter event of `TYPE_FAULT`. Once in FAULT, the only
+  exit is a `(TYPE_COMMAND, ARG_RESET)` adapter event (row 9: FAULT+RESET→IDLE).
+
+- **Wildcard FAULT mapping**: the `TYPE_FAULT` mapping row uses
+  `match_arg0 = false` (existing Phase 12F bridge feature). Any `arg0`
+  value — including `PROBE_ADAPTER_ARG_ANY = 0xFFFFFFFFu` — maps to
+  `EVT_FAULT`. `PROBE_ADAPTER_ARG_ANY` is a documentation alias only; the
+  bridge never compares against it.
+
+- **Sticky FAULT for normal events**: in FAULT state, `CONFIG`, `START`,
+  and `STOP` adapter events are mapped by the bridge (mapped_count++)
+  but the FSM has no transition row for those events from FAULT, so
+  `no_transition_count++` and state remains FAULT. Return: `OK`.
+
+- **IDLE + RESET self-loop** (row 5, Phase 12J): dispatching RESET from
+  IDLE is now a committed transition (`transition_count++`; state stays
+  IDLE). Previously this was a no-transition (Phase 12I).
+
+- **Host-only boundary**: FAULT state, event, and mapping are
+  host-prototype-validated only. No devkit, Zephyr, or hardware binding.
 
 ## Non-goals (Phase 12I)
 

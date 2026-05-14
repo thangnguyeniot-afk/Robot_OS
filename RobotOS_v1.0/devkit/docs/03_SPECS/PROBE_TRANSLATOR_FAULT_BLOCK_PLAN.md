@@ -1,26 +1,20 @@
 # RobotOS — Probe Translator FAULT Block Extension Plan
 
-**Status:** `DRAFT / NON-FINAL`. **No FAULT block implementation
-exists.** This document is the execution-ready implementation contract
-for **Phase 12J — Probe Translator FAULT Block Extension**, the
-additive extension of the Phase 12I host prototype with a FAULT state,
-FAULT event, FAULT adapter type, the optional `IDLE + RESET → IDLE`
-self-loop, and a wildcard FAULT mapping row.
-**Revision:** Phase 12J-pre (2026-05-13, `CLOSED_DOCS_ONLY`;
-`PHASE_12J_PRE_PROBE_TRANSLATOR_FAULT_BLOCK_PLAN_CLOSED`) — initial
-draft.
-**Next revision condition:** Phase 12J (when authorized) — when the
-FAULT block is added to `app/probe_translator/` and the host test
-passes, this spec upgrades to
-`IMPLEMENTED_AT_12J (HOST-TEST EVIDENCE)` and gains the materialized
-diff list and evidence cross-references.
+**Status:** `IMPLEMENTED_AT_12J (HOST-TEST EVIDENCE)`.
+This document is the execution-ready implementation contract for
+**Phase 12J — Probe Translator FAULT Block Extension**.
+**Revision:** Phase 12J (2026-05-14, `CLOSED`;
+`PHASE_12J_FAULT_BLOCK_IMPLEMENTED_VALIDATED`) — FAULT block
+implemented; all 14 validation gates PASS; 23/23 ctest PASS;
+132/132 in-binary assertions PASS.
+**Previous revision:** Phase 12J-pre (2026-05-13, `CLOSED_DOCS_ONLY`).
 
-> **No FAULT-block implementation exists.** The constants
+> **FAULT block implemented at Phase 12J.** The constants
 > `PROBE_TRANSLATOR_STATE_FAULT`, `PROBE_TRANSLATOR_EVT_FAULT`,
-> `PROBE_ADAPTER_TYPE_FAULT`, and `PROBE_ADAPTER_ARG_ANY` are
-> *reserved at planning depth* and **not declared** in
-> `app/probe_translator/probe_translator.h`. No build target yet
-> includes a FAULT transition row or FAULT mapping row.
+> `PROBE_ADAPTER_TYPE_FAULT`, and `PROBE_ADAPTER_ARG_ANY` are declared
+> in `app/probe_translator/probe_translator.h`. Transition rows 5-9
+> and mapping row 4 are in `probe_translator.c`.
+> Evidence: `tests/host/logs/phase_12J_host_2026-05-14.log`.
 
 This spec is anchored to
 [`../02_PHASE_CLOSEOUTS/PHASE_12J_PRE_PROBE_TRANSLATOR_FAULT_BLOCK_PLAN.md`](../02_PHASE_CLOSEOUTS/PHASE_12J_PRE_PROBE_TRANSLATOR_FAULT_BLOCK_PLAN.md)
