@@ -449,7 +449,7 @@ the boundaries that must not move silently.**
 
 **Boundaries that must not be crossed accidentally:**
 
-- `devkit/src/*` must not include `framework/*.h` directly. In current code (verified against the Phase 12M baseline at `76ec2f6`), no devkit source includes framework headers at all; framework types reach the devkit only transitively, via `probe_translator.h` → `robotos_fw_fsm.h` / `robotos_fw_event_bridge.h`, inside `devkit_probe_adapter.c`.
+- `devkit/src/*` must not include `framework/*.h` directly. In current code (verified against the Phase 12M baseline at `76ec2f6`), no devkit source includes framework headers at all; framework types reach the devkit only transitively, via `probe_translator.h` → `robotos_fw_fsm.h` / `robotos_fw_event_bridge.h`. Two devkit translation units pull in this transitive chain (enumerated in the next bullet), but only `devkit_probe_adapter.c` references framework symbols — `devkit_app_state.c` is exposed to the headers only because it includes `probe_translator.h` for the `PROBE_ADAPTER_*` constants and never names a framework type or function.
 - `devkit/src/*` direct `#include` of `app/probe_translator/probe_translator.h` is currently limited to two files, both for narrow purposes:
   - `devkit_probe_adapter.c` — the **single runtime entry point** (calls `probe_translator_init / _dispatch_adapter_event / _get_snapshot` against the module-static `probe_translator_t`).
   - `devkit_app_state.c` — **constants only** (uses the `PROBE_ADAPTER_TYPE_*` and `PROBE_ADAPTER_ARG_*` macros to call `devkit_probe_adapter_dispatch()`; verified to call **no** `probe_translator_*` function directly).
