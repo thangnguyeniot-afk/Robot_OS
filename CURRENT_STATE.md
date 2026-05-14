@@ -9,6 +9,60 @@
 
 ## Last Closed Phase
 
+### Phase 12N-pre-2 — Product / Public Protocol Decision Plan
+
+- **Date:** 2026-05-14
+- **Type:** Docs-only product/public protocol decision planning gate. **No source, CMake, runtime, Kconfig, `prj.conf`, DTS, overlay, test, tool, script, log, or build change. No new build run. No flash / RTT / hardware run. No UART behavior changed. No product command mapping implemented. No protocol code declared.**
+- **Close status:** `CLOSED_DOCS_ONLY`
+- **Decision result:** `PHASE_12N_PRE2_PRODUCT_PUBLIC_PROTOCOL_DECISION_PLAN_CLOSED`
+- **Published baseline at open:** `origin/master = 3cf79e4`
+- **Closeout doc:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12N_PRE2_PRODUCT_PUBLIC_PROTOCOL_DECISION_PLAN.md`
+- **New long-lived spec:** `RobotOS_v1.0/devkit/docs/03_SPECS/PRODUCT_PUBLIC_PROTOCOL_DECISION_PLAN.md` (`DRAFT / NON-FINAL — DESIGN ONLY`; conceptual design spec for **RPP — RobotOS Public Protocol**; transport-neutral command model; layered on top of Phase 12N-pre devkit-evidence boundary)
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md` `<a id="phase-12n-pre-2"></a>`
+- **User authorization:** explicit user decision — "I want to design public protocol for RobotOS" — authorizes docs/spec design only, not implementation
+
+#### Public protocol design opened (docs/spec level only)
+
+Phase 12N-pre-2 opens public-protocol design at the docs/spec level only. The provisional protocol name is **RPP — RobotOS Public Protocol**. The recommended direction is **transport-neutral command model first**, with **UART framed v0** named as the first candidate transport binding (to be locked in a future Phase 12N-pre-3). The devkit single-byte UART command set `a/s/r/?/x/v/L/d/T` is **NOT promoted** to public protocol; it remains devkit-evidence per Phase 12N-pre.
+
+**6 candidate strategies evaluated:**
+
+- Option 1 — HOLD / no public protocol yet — **VIABLE fallback only**
+- Option 2 — Promote existing UART single-byte commands — **REJECTED** (locks the weakest possible public surface)
+- Option 3 — UART framed protocol v0 — **VIABLE as first transport binding *after* Option 4**
+- Option 4 — Transport-neutral command model first — **RECOMMENDED; produced at Phase 12N-pre-2**
+- Option 5 — USB CDC / shell / future transport — **DEFERRED**
+- Option 6 — RTT/debug-only protocol — **REJECTED** for public-protocol purposes (diagnostic only)
+
+#### Draft protocol outline (conceptual; non-binding)
+
+- **Working name:** RPP — RobotOS Public Protocol
+- **Versioning:** `RPP/<MAJOR>.<MINOR>` (semver-flavored)
+- **Design version:** `RPP/0.1` — pre-product, design-only; must not appear in source
+- **First product-eligible version:** `RPP/1.0` — only after a future implementation phase ships a stable command set with hardware evidence
+- **Conceptual request frame:** `RPP/<ver> REQ <id> <namespace>.<verb> [<args>]`
+- **Conceptual response frame:** `RPP/<ver> RES <id> <status> [<payload>]`
+- **Status vocabulary:** `OK`, `ERR_UNKNOWN_COMMAND`, `ERR_INVALID_ARGS`, `ERR_STATE_NOT_ALLOWED`, `ERR_BUSY`, `ERR_HARDWARE`, `ERR_NOT_IMPLEMENTED`, `ERR_SECURITY_DENIED`, `ERR_PROTOCOL`
+- **Command categories:** `identity.*` (required at `RPP/1.0`), `status.*` (required), `lifecycle.*`, `diagnostic.*`, `probe.*` (reserved; not at `RPP/1.0`)
+- **Required minimal set for `RPP/1.0`:** `identity.version`, `status.query`
+- **What remains devkit-only:** entire single-byte UART set `a/s/r/?/x/v/L/d/T`, all frozen UART TX response formats, all `ROBOTOS_*` RTT log lines
+
+#### Boundary rule (carried forward from Phase 12N-pre; extended)
+
+- Single-byte UART command set is frozen as devkit-evidence (unchanged).
+- UART TX response formats are frozen at Phase 9E/10B/11D shape (unchanged).
+- Internal evidence (`ROBOTOS_PROBE` snapshot, all `ROBOTOS_*` log lines) stays RTT-only (unchanged).
+- No automatic promotion from devkit-evidence to product status (unchanged).
+- `RPP/0.x` is design-only; **must not appear in any tracked source / test / tool / script / log** (new).
+- `RPP/1.0` is product-eligible only after a dedicated future phase ships a stable command set with hardware evidence (new).
+- Phase 12N implementation requires (Phase 12N-pre-3 transport-binding planning) + Phase 12N-spec + explicit user authorization separate from Phase 12N-pre-2 closure (new).
+
+**Suggested next gate:** **HOLD** (default; safest). The recommended direction is captured in the spec; no further action is required to keep RobotOS consistent. If the user wants to advance one more docs-only step, open **Phase 12N-pre-3 — Transport Binding Planning** (docs-only). Phase 12N implementation is NOT authorized.
+
+---
+
+## Phase 12N-pre Reference
+
 ### Phase 12N-pre — Product / Workload Command Admission Plan
 
 - **Date:** 2026-05-14
@@ -17,30 +71,20 @@
 - **Decision result:** `PHASE_12N_PRE_PRODUCT_WORKLOAD_COMMAND_ADMISSION_PLAN_CLOSED`
 - **Published baseline at open:** `origin/master = 8c86aec`
 - **Closeout doc:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12N_PRE_PRODUCT_WORKLOAD_COMMAND_ADMISSION_PLAN.md`
-- **New long-lived spec:** `RobotOS_v1.0/devkit/docs/03_SPECS/PRODUCT_WORKLOAD_COMMAND_ADMISSION_PLAN.md` (`DRAFT / NON-FINAL — TAXONOMY ONLY`; boundary spec locking devkit-evidence vs. product/workload command categories)
+- **Long-lived spec:** `RobotOS_v1.0/devkit/docs/03_SPECS/PRODUCT_WORKLOAD_COMMAND_ADMISSION_PLAN.md` (`DRAFT / NON-FINAL — TAXONOMY ONLY`; devkit-evidence vs. product/workload boundary spec)
 - **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md` `<a id="phase-12n-pre"></a>`
 
-#### Boundary locked
+#### Boundary locked at Phase 12N-pre
 
 The UART command set `a/s/r/?/x/v/L/d/T` and all existing TX response formats are classified as **devkit demo / evidence** — frozen and non-productized. They are NOT a product/public command contract. Phase 12L probe adapter dispatch and Phase 12M hardware validation evidence are likewise classified as devkit-evidence, NOT product mapping.
 
-**5 candidate Phase 12N strategies evaluated:**
+**5 candidate Phase 12N strategies evaluated at Phase 12N-pre:**
 
 - Option 1 — HOLD (no product command opened) — **VIABLE; safest default**
 - Option 2 — Docs-only command taxonomy spec — **RECOMMENDED; produced at Phase 12N-pre**
 - Option 3 — Devkit-local product namespace (docs + host tests) — **OPTIONAL second-stage**
 - Option 4 — UART public command mapping — **REJECTED at Phase 12N depth**
 - Option 5 — New protocol surface — **REJECTED for Phase 12N**
-
-#### Boundary rule (locked)
-
-- Single-byte UART command set is frozen as devkit-evidence.
-- UART TX response formats are frozen at Phase 9E/10B/11D shape.
-- Internal evidence (`ROBOTOS_PROBE` snapshot) stays RTT-only.
-- No automatic promotion from devkit-evidence to product status.
-- Product mapping requires Phase 12N-pre-2 successor planning gate.
-
-**Suggested next gate:** **HOLD** (default; safest). Phase 12 chain is complete; codebase is stable. Phase 12N implementation is NOT authorized without explicit user decision + Phase 12N-pre-2.
 
 ---
 

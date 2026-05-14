@@ -139,6 +139,7 @@ table contains only the reserved placeholders.
 | 12M | Probe Translator Runtime Adapter Hardware Validation | CLOSED_WITH_HARDWARE_EVIDENCE | [->](#phase-12m) |
 | 12M-Z | Hardware Validation / Product-Mapping Guard (docs-only checkpoint) | CLOSED_DOCS_ONLY | [->](#phase-12mz) |
 | 12N-pre | Product / Workload Command Admission Plan (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12n-pre) |
+| 12N-pre-2 | Product / Public Protocol Decision Plan (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12n-pre-2) |
 | 20Z | RESERVED -- future checkpoint / closeout slot | NOT_STARTED | [->](#phase-20z) |
 
 When future phases are added:
@@ -3888,6 +3889,132 @@ is **devkit demo / evidence**, not a product/public command contract.
 codebase is stable. Phase 12N implementation is **not authorized**
 without an explicit user decision and a successor planning gate
 (Phase 12N-pre-2 or equivalent).
+
+---
+
+<a id="phase-12n-pre-2"></a>
+
+## Phase 12N-pre-2 -- Product / Public Protocol Decision Plan (docs-only)
+
+**Status:** `CLOSED_DOCS_ONLY`
+**Decision:** `PHASE_12N_PRE2_PRODUCT_PUBLIC_PROTOCOL_DECISION_PLAN_CLOSED`
+**Closeout:** [`../02_PHASE_CLOSEOUTS/PHASE_12N_PRE2_PRODUCT_PUBLIC_PROTOCOL_DECISION_PLAN.md`](../02_PHASE_CLOSEOUTS/PHASE_12N_PRE2_PRODUCT_PUBLIC_PROTOCOL_DECISION_PLAN.md)
+**Design spec:** [`../03_SPECS/PRODUCT_PUBLIC_PROTOCOL_DECISION_PLAN.md`](../03_SPECS/PRODUCT_PUBLIC_PROTOCOL_DECISION_PLAN.md)
+**Date:** 2026-05-14
+
+### 12N-pre-2.1 Purpose
+
+Phase 12N-pre-2 is a docs-only product/public protocol decision
+planning gate, opened in response to the explicit user decision
+"I want to design public protocol for RobotOS". It defines what
+public protocol must mean for RobotOS, evaluates six candidate
+strategies, and recommends a transport-neutral command model as the
+first design step. **No firmware, no UART semantics, no host test,
+no build, no hardware run.**
+
+### 12N-pre-2.2 Surface inventory
+
+- **UART command set** `a/s/r/?/x/v/L/d/T` -- classified as devkit
+  demo/evidence (unchanged from Phase 12N-pre); **not promoted**.
+- **Button surface** -- devkit demo/evidence (unchanged).
+- **Phase 12L probe adapter dispatch** -- internal evidence only.
+- **RTT log lines** (`ROBOTOS_PROBE`, `ROBOTOS_OBS`, `ROBOTOS_FAULT`,
+  `ROBOTOS_PROD`, `ROBOTOS_BTN`, `ROBOTOS_UART`, `ROBOTOS_APP`) --
+  internal evidence; RTT-only.
+- **Devkit-local APIs** -- not externally exposed.
+- **Host demo scripts** (Phase 9D/9E/9G/10B/11D/12M) -- devkit demo
+  harnesses; not protocol candidates.
+- **Existing `COMMAND_SET_DRAFT.md`** -- despite its title, locked
+  as devkit-evidence at Phase 12N-pre; not a public protocol.
+
+### 12N-pre-2.3 Strategy evaluation
+
+Six candidate strategies evaluated:
+
+- Option 1 -- HOLD / no public protocol yet -- **VIABLE fallback only**.
+- Option 2 -- Promote existing UART single-byte commands --
+  **REJECTED** (would lock the weakest possible public surface).
+- Option 3 -- UART framed protocol v0 -- **VIABLE as first transport
+  binding *after* Option 4**.
+- Option 4 -- Transport-neutral command model first -- **RECOMMENDED;
+  produced here**.
+- Option 5 -- USB CDC / shell / future transport -- **DEFERRED**.
+- Option 6 -- RTT/debug-only protocol -- **REJECTED** for public
+  protocol; diagnostic only.
+
+### 12N-pre-2.4 Recommended direction
+
+Adopt **Option 4 (transport-neutral command model first)**, with
+**Option 3 (UART framed v0)** named as the first authorized transport
+binding candidate. Both are recorded in the design spec; neither is
+authorized for implementation.
+
+### 12N-pre-2.5 Draft protocol outline (conceptual; non-binding)
+
+- Working name: **RPP -- RobotOS Public Protocol**.
+- Versioning: `RPP/<MAJOR>.<MINOR>` (semver-flavored).
+- Design version: `RPP/0.1` (pre-product, design-only; must not appear
+  in source).
+- First product-eligible version: `RPP/1.0` (only after a future
+  implementation phase ships a stable command set with hardware
+  evidence).
+- Request frame (conceptual): `RPP/<ver> REQ <id>
+  <namespace>.<verb> [<args>]`.
+- Response frame (conceptual): `RPP/<ver> RES <id> <status>
+  [<payload>]`.
+- Status vocabulary: `OK`, `ERR_UNKNOWN_COMMAND`, `ERR_INVALID_ARGS`,
+  `ERR_STATE_NOT_ALLOWED`, `ERR_BUSY`, `ERR_HARDWARE`,
+  `ERR_NOT_IMPLEMENTED`, `ERR_SECURITY_DENIED`, `ERR_PROTOCOL`.
+- Required minimal set for `RPP/1.0`: `identity.version`,
+  `status.query`.
+- Devkit single-byte set `a/s/r/?/x/v/L/d/T` stays devkit-evidence;
+  not promoted; coexists with a future framed channel on the same
+  physical UART (under Option 3) but as a disjoint surface.
+
+### 12N-pre-2.6 Boundary rule (carried forward; extended)
+
+- Single-byte UART command set remains frozen as devkit-evidence.
+- UART TX response formats remain frozen.
+- RTT-only evidence remains RTT-only.
+- No automatic promotion from devkit-evidence to product status.
+- `RPP/0.x` is design-only; **must not appear in any tracked source,
+  test, tool, script, or log**.
+- `RPP/1.0` is product-eligible only after a dedicated future phase
+  ships a stable command set with hardware evidence.
+- Phase 12N implementation requires Phase 12N-pre-3 + Phase 12N-spec
+  + explicit user authorization separate from Phase 12N-pre-2 closure.
+
+### 12N-pre-2.7 Files changed at Phase 12N-pre-2
+
+- **New:** `PHASE_12N_PRE2_PRODUCT_PUBLIC_PROTOCOL_DECISION_PLAN.md`,
+  `PRODUCT_PUBLIC_PROTOCOL_DECISION_PLAN.md`.
+- **Doc-sync:** `CURRENT_STATE.md`,
+  `DEVKIT_PROGRESS_PHASE_11_20.md` (this entry), `00_INDEX/README.md`.
+- **Zero-diff:** all source, header, CMake, Kconfig, `prj.conf`, DTS,
+  overlay, test, tool, script, and log files.
+
+### 12N-pre-2.8 Non-claims
+
+- No public protocol implemented; no `RPP/0.x` declared in code.
+- No UART behavior changed; no UART TX response format changed.
+- No new UART command byte; no parser, dispatcher, or transport
+  binding module created.
+- No host test added or modified; no demo / tooling script touched.
+- No build run; no flash / RTT / UART session performed.
+- No hardware validation; no F407 / custom-board opened.
+- No Phase 12N implementation authorized.
+- No Phase 12 chain status changed -- Phase 12 remains complete with
+  product boundary HOLD.
+
+### 12N-pre-2.9 Next gate
+
+**HOLD** (default) is the recommended path. The design direction is
+captured in the long-lived spec and is ready for a future planning
+gate. If the user wants to advance one more docs-only step, open
+**Phase 12N-pre-3 -- Transport Binding Planning** (docs-only).
+Phase 12N implementation is **not authorized** without
+(Phase 12N-pre-3 + Phase 12N-spec) closed and a separate explicit
+user decision.
 
 ---
 
