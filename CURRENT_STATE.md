@@ -9,6 +9,41 @@
 
 ## Last Closed Phase
 
+### Phase 12M-pre — Probe Translator Hardware Validation Plan
+
+- **Date:** 2026-05-14
+- **Type:** Docs-only hardware validation planning gate. **No source, CMake, runtime, Kconfig, `prj.conf`, DTS, overlay, test, tool, log, or build change. No flash / RTT / hardware run. No UART behavior changed. No product command mapping opened.**
+- **Close status:** `CLOSED_DOCS_ONLY`
+- **Decision result:** `PHASE_12M_PRE_PROBE_TRANSLATOR_HARDWARE_VALIDATION_PLAN_CLOSED`
+- **Published baseline at open:** `origin/master = 4b66487`
+- **Closeout doc:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12M_PRE_PROBE_TRANSLATOR_HARDWARE_VALIDATION_PLAN.md`
+- **New long-lived spec:** `RobotOS_v1.0/devkit/docs/03_SPECS/PROBE_TRANSLATOR_HARDWARE_VALIDATION_PLAN.md` (`DRAFT / NON-FINAL`; execution-ready contract for Phase 12M hardware validation)
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md` `<a id="phase-12m-pre"></a>`
+
+#### Hardware validation contract locked
+
+Phase 12M is planned to:
+
+1. Build a fresh Phase 12L firmware image (`build-phase12m`).
+2. Flash to `stm32f411e_disco` via `py -m west flash -d build-phase12m`.
+3. Capture RTT via `run_phase12m_probe_demo.ps1 -ComPort COM5` (new script, Phase 11D template).
+4. Send UART sequence `a s r ?` and verify responses + RTT probe snapshots.
+
+**Expected RTT probe progression (locked):**
+
+- Boot: `ROBOTOS_PROBE init ok`; `ROBOTOS_PROBE state=1 trans=0 events=0 no_trans=0 mapped=0 unmapped=0`
+- After `'a'`: `ROBOTOS_PROBE state=2 trans=1 events=1 no_trans=0 mapped=1 unmapped=0`
+- After `'s'`: `ROBOTOS_PROBE state=3 trans=2 events=2 no_trans=0 mapped=2 unmapped=0`
+- After `'r'`: `ROBOTOS_PROBE state=1 trans=3 events=3 no_trans=0 mapped=3 unmapped=0`
+
+No new UART commands. No UART TX response change. No source change at Phase 12M.
+
+**Suggested next gate:** Phase 12M — Probe Translator Hardware Validation (explicit user authorization required; hardware session; new demo script `run_phase12m_probe_demo.ps1` must be created).
+
+---
+
+## Phase 12L-Z Checkpoint Reference
+
 ### Phase 12L-Z — Runtime Admission / Hardware-Validation Guard
 
 - **Date:** 2026-05-14

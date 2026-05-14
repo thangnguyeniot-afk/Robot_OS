@@ -135,6 +135,7 @@ table contains only the reserved placeholders.
 | 12L-pre | Probe Translator Runtime Admission Plan (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12l-pre) |
 | 12L | Probe Translator Runtime Admission Adapter | CLOSED_WITH_BUILD_EVIDENCE | [->](#phase-12l) |
 | 12L-Z | Runtime Admission / Hardware-Validation Guard (docs-only checkpoint) | CLOSED_DOCS_ONLY | [->](#phase-12lz) |
+| 12M-pre | Probe Translator Hardware Validation Plan (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12m-pre) |
 | 20Z | RESERVED -- future checkpoint / closeout slot | NOT_STARTED | [->](#phase-20z) |
 
 When future phases are added:
@@ -3617,6 +3618,66 @@ user decision.
 All gates from Phase 12L unchanged. Hardware-runnable Zephyr application
 with `probe_translator` remains `NOT_STARTED`; requires Phase 12M-pre
 planning gate before any flash/RTT session.
+
+---
+
+<a id="phase-12m-pre"></a>
+
+## Phase 12M-pre -- Probe Translator Hardware Validation Plan (docs-only)
+
+**Status:** `CLOSED_DOCS_ONLY`
+**Decision:** `PHASE_12M_PRE_PROBE_TRANSLATOR_HARDWARE_VALIDATION_PLAN_CLOSED`
+**Closeout:** [`../02_PHASE_CLOSEOUTS/PHASE_12M_PRE_PROBE_TRANSLATOR_HARDWARE_VALIDATION_PLAN.md`](../02_PHASE_CLOSEOUTS/PHASE_12M_PRE_PROBE_TRANSLATOR_HARDWARE_VALIDATION_PLAN.md)
+**Implementation contract:** [`../03_SPECS/PROBE_TRANSLATOR_HARDWARE_VALIDATION_PLAN.md`](../03_SPECS/PROBE_TRANSLATOR_HARDWARE_VALIDATION_PLAN.md)
+**Date:** 2026-05-14
+
+### 12M-pre.1 Purpose
+
+Phase 12M-pre is a docs-only hardware validation planning gate. It
+audits the repo hardware tooling convention, defines the expected RTT
+log patterns for the Phase 12L runtime adapter on real hardware, and
+produces the execution-ready Phase 12M contract. No flash / RTT /
+hardware run.
+
+### 12M-pre.2 Tooling audit summary
+
+- **Flash:** `py -m west flash -d build-phase12m` (ST-LINK/V2-A, west OpenOCD runner)
+- **RTT:** `capture_devkit_rtt.ps1` + new `run_phase12m_probe_demo.ps1 -ComPort COM5`
+- **UART:** CP210x USB-UART adapter, PA3/PA2, 115200 8N1
+- **RTT address:** Confirm `_SEGGER_RTT` via `nm` before capture (Phase 11E: `0x20000ad0`; Phase 12M may shift by ~128 B)
+- **POST_FLASH_AUTOSTART:** mitigated by harness `reset run` sidecar
+- **New script required:** `RobotOS_v1.0/tools/runtime/run_phase12m_probe_demo.ps1` (Phase 11D template)
+
+### 12M-pre.3 Expected Phase 12M validation sequence
+
+Minimum UART sequence: `a` → `s` → `r` → `?` (600 ms spacing, 90 s total session).
+
+Expected RTT probe progression:
+
+- Boot: `ROBOTOS_PROBE init ok`; baseline `ROBOTOS_PROBE state=1 trans=0 events=0 no_trans=0 mapped=0 unmapped=0`
+- After `'a'`: `ROBOTOS_PROBE state=2 trans=1 events=1 no_trans=0 mapped=1 unmapped=0`
+- After `'s'`: `ROBOTOS_PROBE state=3 trans=2 events=2 no_trans=0 mapped=2 unmapped=0`
+- After `'r'`: `ROBOTOS_PROBE state=1 trans=3 events=3 no_trans=0 mapped=3 unmapped=0`
+
+### 12M-pre.4 Boundaries held
+
+- No UART command surface change. `a/s/r/?/x/v/L/d/T` frozen.
+- No source, CMake, Kconfig, `prj.conf`, DTS, overlay, test change.
+- No product command mapping opened.
+- No hardware session performed.
+
+### 12M-pre.5 Files changed at Phase 12M-pre
+
+- **New:** `PHASE_12M_PRE_PROBE_TRANSLATOR_HARDWARE_VALIDATION_PLAN.md`,
+  `PROBE_TRANSLATOR_HARDWARE_VALIDATION_PLAN.md`
+- **Doc-sync:** `CURRENT_STATE.md`, `DEVKIT_PROGRESS_PHASE_11_20.md`
+  (this entry), `00_INDEX/README.md`.
+
+### 12M-pre.6 Next gate
+
+Phase 12M — Probe Translator Hardware Validation (hardware session).
+Requires explicit user authorization. Execution contract is complete;
+one pre-flight item: confirm `_SEGGER_RTT` address from Phase 12M build.
 
 ---
 
