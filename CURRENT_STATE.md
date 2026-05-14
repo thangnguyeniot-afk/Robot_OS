@@ -9,6 +9,26 @@
 
 ## Last Closed Phase
 
+### Phase 12M-Z — Hardware Validation / Product-Mapping Guard
+
+- **Date:** 2026-05-14
+- **Type:** Docs-only checkpoint / product-mapping guard. **No source, CMake, runtime, Kconfig, `prj.conf`, DTS, overlay, test, tool, script, log, or build change. No new build run. No flash / RTT / hardware run. No UART behavior changed. No product command mapping opened.**
+- **Close status:** `CLOSED_DOCS_ONLY`
+- **Decision result:** `PHASE_12M_Z_HARDWARE_VALIDATION_CHECKPOINT_CLOSED`
+- **Published baseline at open:** `origin/master = 82062ff`
+- **Checkpoint doc:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12MZ_HARDWARE_VALIDATION_CHECKPOINT.md`
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md` `<a id="phase-12mz"></a>`
+
+#### Product-mapping guard
+
+Phase 12M proves the `devkit_probe_adapter` runtime wiring for the controlled `a s r ?` validation sequence on STM32F411E-DISCO. It is **not a product/public command mapping**. No UART command expansion was opened. No scheduler change was made. No product command mapping contract has been defined. Direct Phase 12N implementation is not authorized without a Phase 12N-pre planning gate.
+
+**Suggested next gate:** HOLD (default) or Phase 12N-pre — Product/Workload Command Admission Planning (docs-only; must define interface contract, expected behavior, tests, and rollback before any UART/API expansion).
+
+---
+
+## Phase 12M Hardware Validation Baseline
+
 ### Phase 12M — Probe Translator Runtime Adapter Hardware Validation
 
 - **Date:** 2026-05-14

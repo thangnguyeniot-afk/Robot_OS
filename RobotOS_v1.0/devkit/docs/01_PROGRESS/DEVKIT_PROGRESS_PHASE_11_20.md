@@ -137,6 +137,7 @@ table contains only the reserved placeholders.
 | 12L-Z | Runtime Admission / Hardware-Validation Guard (docs-only checkpoint) | CLOSED_DOCS_ONLY | [->](#phase-12lz) |
 | 12M-pre | Probe Translator Hardware Validation Plan (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12m-pre) |
 | 12M | Probe Translator Runtime Adapter Hardware Validation | CLOSED_WITH_HARDWARE_EVIDENCE | [->](#phase-12m) |
+| 12M-Z | Hardware Validation / Product-Mapping Guard (docs-only checkpoint) | CLOSED_DOCS_ONLY | [->](#phase-12mz) |
 | 20Z | RESERVED -- future checkpoint / closeout slot | NOT_STARTED | [->](#phase-20z) |
 
 When future phases are added:
@@ -3751,6 +3752,65 @@ UART transcript: `RobotOS_v1.0/devkit/logs/phase_12M_uart_2026-05-14.txt`
 Probe translator is now hardware-validated at the approved sequence depth.
 FAULT source wiring, UART TX response for probe snapshot, and product
 command mapping all remain `NOT_STARTED; USER_DECISION_REQUIRED`.
+
+---
+
+<a id="phase-12mz"></a>
+
+## Phase 12M-Z -- Hardware Validation / Product-Mapping Guard
+
+**Status:** `CLOSED_DOCS_ONLY`
+**Decision:** `PHASE_12M_Z_HARDWARE_VALIDATION_CHECKPOINT_CLOSED`
+**Closeout:** [`../02_PHASE_CLOSEOUTS/PHASE_12MZ_HARDWARE_VALIDATION_CHECKPOINT.md`](../02_PHASE_CLOSEOUTS/PHASE_12MZ_HARDWARE_VALIDATION_CHECKPOINT.md)
+**Date:** 2026-05-14
+
+### 12M-Z.1 Purpose
+
+Phase 12M-Z is a docs-only checkpoint / product-mapping guard. It locks
+Phase 12M as hardware-validation complete for the approved controlled
+sequence and explicitly prevents later phases from treating Phase 12M
+evidence as product command mapping authorization or general workload proof.
+
+### 12M-Z.2 What this checkpoint confirms
+
+- Phase 12M commit `82062ff` is pushed; `origin/master` is synced.
+- `devkit_probe_adapter` init/dispatch/snapshot proven on STM32F411E-DISCO.
+- Probe FSM IDLE→READY→ACTIVE→IDLE progression observed in RTT.
+- App-state transitions, UART TX responses, CFSR/HFSR, OBS counters all
+  match expected values for the `a s r ?` sequence.
+- This is **controlled hardware evidence for the approved sequence only**.
+  Not a product/command mapping. Not a full probe_translator matrix proof.
+
+### 12M-Z.3 Product-mapping guard (explicit)
+
+- Product command mapping is NOT opened.
+- UART public command semantics are NOT changed (`a/s/r/?/x/v/L/d/T` frozen).
+- Full probe_translator input matrix is NOT proven.
+- Scheduler behavior is NOT changed.
+- F407/custom board is NOT validated.
+- Host regression is NOT replaced.
+- Direct Phase 12N implementation is NOT authorized without Phase 12N-pre.
+
+### 12M-Z.4 Consequence for next phase
+
+The next phase must start from: probe_translator is hardware-validated for
+the controlled `a s r ?` sequence. Any product/public command mapping
+requires Phase 12N-pre (docs-only planning gate) first. HOLD is a safe
+default.
+
+### 12M-Z.5 Files changed at Phase 12M-Z
+
+- **New:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12MZ_HARDWARE_VALIDATION_CHECKPOINT.md`
+- **Doc-sync:** `CURRENT_STATE.md`, `DEVKIT_PROGRESS_PHASE_11_20.md`
+  (this entry), `00_INDEX/README.md`.
+- **Zero-diff held:** all source, header, CMake, Kconfig, `prj.conf`,
+  DTS, overlay, test, tool, script, and log files.
+
+### 12M-Z.6 Open gates carried forward
+
+All gates from Phase 12M unchanged. Product command mapping, FAULT source
+wiring, and UART TX response for probe snapshot all remain
+`NOT_STARTED; USER_DECISION_REQUIRED`.
 
 ---
 
