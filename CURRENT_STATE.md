@@ -9,6 +9,57 @@
 
 ## Last Closed Phase
 
+### Phase 12M — Probe Translator Runtime Adapter Hardware Validation
+
+- **Date:** 2026-05-14
+- **Type:** Hardware validation. Phase 12L firmware flashed; RTT + UART evidence captured on STM32F411E-DISCO. **Probe adapter IDLE→READY→ACTIVE→IDLE progression proven on hardware. No source change. No UART command set change. No UART TX response change. No product command mapping. No scheduler change.**
+- **Close status:** `CLOSED_WITH_HARDWARE_EVIDENCE`
+- **Decision result:** `PHASE_12M_PROBE_TRANSLATOR_HARDWARE_VALIDATION_PASS`
+- **Published baseline at open:** `origin/master = 306db22`
+- **Closeout doc:** `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12M_PROBE_TRANSLATOR_HARDWARE_VALIDATION.md`
+- **Updated spec:** `RobotOS_v1.0/devkit/docs/03_SPECS/PROBE_TRANSLATOR_HARDWARE_VALIDATION_PLAN.md` → `VALIDATED_AT_12M (HARDWARE EVIDENCE)`
+- **Phase log entry:** `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md` `<a id="phase-12m"></a>`
+
+#### Hardware evidence summary
+
+- Flash: `py -m west flash -d build-phase12m` PASS (49,152 bytes, ST-LINK)
+- `_SEGGER_RTT=0x20000b38` (shifted from Phase 11E `0x20000ad0` by +0x68)
+- RTT session: `run_phase12m_probe_demo.ps1 -ComPort COM5 -InterByteDelayMs 6000 -CaptureSeconds 120`
+- All 9 required patterns FOUND; CFSR=0x00000000 HFSR=0x00000000 (25×)
+- RTT log: `RobotOS_v1.0/devkit/logs/phase_12M_rtt_2026-05-14.txt` (44,341 bytes)
+
+#### Probe progression confirmed on hardware
+
+- Boot: `ROBOTOS_PROBE init ok`; `state=1 trans=0 mapped=0` ✓
+- After `'a'`: `state=2 trans=1 events=1 no_trans=0 mapped=1 unmapped=0` ✓ (IDLE→READY)
+- After `'s'`: `state=3 trans=2 events=2 no_trans=0 mapped=2 unmapped=0` ✓ (READY→ACTIVE)
+- After `'r'`: `state=1 trans=3 events=3 no_trans=0 mapped=3 unmapped=0` ✓ (ACTIVE→IDLE)
+- `dropped=0 herr=0 throttled=0 rejected=0 unhandled=0` throughout
+
+#### UART TX responses confirmed unchanged
+
+- `'a'` → `OK state=ARMED` ✓
+- `'s'` → `OK state=ACTIVE` ✓
+- `'r'` → `OK state=IDLE` ✓
+- `'?'` → `STATE state=IDLE transitions=3 button=0 uart=4 ignored=0` ✓
+
+#### Open carry-forward gates (unchanged at Phase 12M close)
+
+1. ACTIVE disarm widening — `USER_DECISION_REQUIRED_ACTIVE_DISARM`
+2. Scheduler 7A/7B — `DEFER`
+3. F407 / custom board — `HOLD/DEFER`
+4. POST_FLASH_AUTOSTART root cause — `OPEN / MITIGATED_BY_WORKFLOW`
+5. FAULT adapter event sourcing (hardware fault signal) — `NOT_STARTED`
+6. UART TX response for probe_translator snapshot — `NOT_STARTED; USER_DECISION_REQUIRED`
+7. Bridge ABI memory-layout lock — `NOT_STARTED`
+8. Product command mapping / UART expansion — `NOT_STARTED; USER_DECISION_REQUIRED`
+9. `RobotOS_v1.0/examples/` — `NOT_STARTED`
+10. Multi-product coordination — `NOT_STARTED`
+
+---
+
+## Phase 12M-pre Reference
+
 ### Phase 12M-pre — Probe Translator Hardware Validation Plan
 
 - **Date:** 2026-05-14

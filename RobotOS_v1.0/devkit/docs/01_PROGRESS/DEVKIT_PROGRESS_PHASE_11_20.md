@@ -136,6 +136,7 @@ table contains only the reserved placeholders.
 | 12L | Probe Translator Runtime Admission Adapter | CLOSED_WITH_BUILD_EVIDENCE | [->](#phase-12l) |
 | 12L-Z | Runtime Admission / Hardware-Validation Guard (docs-only checkpoint) | CLOSED_DOCS_ONLY | [->](#phase-12lz) |
 | 12M-pre | Probe Translator Hardware Validation Plan (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12m-pre) |
+| 12M | Probe Translator Runtime Adapter Hardware Validation | CLOSED_WITH_HARDWARE_EVIDENCE | [->](#phase-12m) |
 | 20Z | RESERVED -- future checkpoint / closeout slot | NOT_STARTED | [->](#phase-20z) |
 
 When future phases are added:
@@ -3678,6 +3679,78 @@ Expected RTT probe progression:
 Phase 12M — Probe Translator Hardware Validation (hardware session).
 Requires explicit user authorization. Execution contract is complete;
 one pre-flight item: confirm `_SEGGER_RTT` address from Phase 12M build.
+
+---
+
+<a id="phase-12m"></a>
+
+## Phase 12M -- Probe Translator Runtime Adapter Hardware Validation
+
+**Status:** `CLOSED_WITH_HARDWARE_EVIDENCE`
+**Decision:** `PHASE_12M_PROBE_TRANSLATOR_HARDWARE_VALIDATION_PASS`
+**Closeout:** [`../02_PHASE_CLOSEOUTS/PHASE_12M_PROBE_TRANSLATOR_HARDWARE_VALIDATION.md`](../02_PHASE_CLOSEOUTS/PHASE_12M_PROBE_TRANSLATOR_HARDWARE_VALIDATION.md)
+**Implementation contract:** [`../03_SPECS/PROBE_TRANSLATOR_HARDWARE_VALIDATION_PLAN.md`](../03_SPECS/PROBE_TRANSLATOR_HARDWARE_VALIDATION_PLAN.md)
+**Date:** 2026-05-14
+
+### 12M.1 Purpose
+
+Phase 12M proved the Phase 12L `devkit_probe_adapter` runtime wiring on
+the physical STM32F411E-DISCO board. No source change was made. UART
+sequence `a s r ?` exercised the complete probe FSM progression
+IDLE→READY→ACTIVE→IDLE with RTT evidence captured.
+
+### 12M.2 Hardware / tooling setup
+
+- Board: STM32F411E-DISCO rev D; ST-LINK/V2-A (on-board USB)
+- UART: CP210x USB-UART on COM5; PA3 RX / PA2 TX; 115200 8N1
+- Flash: `py -m west flash -d build-phase12m` PASS (49,152 bytes)
+- RTT: Phase 6O harness; sidecar `reset run`; `_SEGGER_RTT=0x20000b38`
+  (shifted from Phase 11E `0x20000ad0` by +0x68; confirmed via `nm`)
+
+### 12M.3 Demo script
+
+```powershell
+run_phase12m_probe_demo.ps1 -ComPort COM5 -InterByteDelayMs 6000 -CaptureSeconds 120
+```
+
+Sequence `a s r ?` at 6000 ms spacing (chosen to exceed the ~4.5 s
+observability period so intermediate probe states appear in RTT).
+
+### 12M.4 Hardware evidence
+
+All 9 required patterns FOUND; CFSR=0x00000000, HFSR=0x00000000 (25×):
+
+- Boot: `ROBOTOS_PROBE init ok`; `state=1 trans=0 mapped=0`
+- After 'a': `state=2 trans=1 events=1 no_trans=0 mapped=1 unmapped=0`
+- After 's': `state=3 trans=2 events=2 no_trans=0 mapped=2 unmapped=0`
+- After 'r': `state=1 trans=3 events=3 no_trans=0 mapped=3 unmapped=0`
+- App transitions: `IDLE->ARMED`, `ARMED->ACTIVE`, `ACTIVE->IDLE` all present
+- UART TX responses: `OK state=ARMED`, `OK state=ACTIVE`, `OK state=IDLE`, `STATE state=IDLE transitions=3 button=0 uart=4 ignored=0`
+- `dropped=0 herr=0 throttled=0 rejected=0 unhandled=0` throughout
+
+RTT log: `RobotOS_v1.0/devkit/logs/phase_12M_rtt_2026-05-14.txt` (44,341 bytes)
+UART transcript: `RobotOS_v1.0/devkit/logs/phase_12M_uart_2026-05-14.txt`
+
+### 12M.5 Files changed
+
+- **New:**
+  - `RobotOS_v1.0/tools/runtime/run_phase12m_probe_demo.ps1`
+  - `RobotOS_v1.0/devkit/logs/phase_12M_build_2026-05-14.txt`
+  - `RobotOS_v1.0/devkit/logs/phase_12M_flash_2026-05-14.txt`
+  - `RobotOS_v1.0/devkit/logs/phase_12M_rtt_2026-05-14.txt`
+  - `RobotOS_v1.0/devkit/logs/phase_12M_uart_2026-05-14.txt`
+  - `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12M_PROBE_TRANSLATOR_HARDWARE_VALIDATION.md`
+- **Modified:**
+  - `RobotOS_v1.0/devkit/logs/INDEX.md` (Phase 12M row added)
+  - `RobotOS_v1.0/devkit/docs/03_SPECS/PROBE_TRANSLATOR_HARDWARE_VALIDATION_PLAN.md` (status → `VALIDATED_AT_12M`)
+  - `CURRENT_STATE.md`, `DEVKIT_PROGRESS_PHASE_11_20.md`, `00_INDEX/README.md` (doc-sync)
+- **Zero-diff:** all source, CMake, Kconfig, `prj.conf`, DTS, overlay, test files
+
+### 12M.6 Open gates carried forward
+
+Probe translator is now hardware-validated at the approved sequence depth.
+FAULT source wiring, UART TX response for probe snapshot, and product
+command mapping all remain `NOT_STARTED; USER_DECISION_REQUIRED`.
 
 ---
 

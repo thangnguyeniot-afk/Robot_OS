@@ -1,0 +1,9 @@
+﻿# Phase 12M probe translator hardware validation transcript
+# Date: 2026-05-14 11:11:57  Port: COM5  Baud: 115200
+# Sequence: a s r ?
+# InterByteDelayMs: 6000  ReadTimeoutMs: 1200
+
+SEND 'a' (0x61) -> RECV: OK state=ARMED
+SEND 's' (0x73) -> RECV: OK state=ACTIVE
+SEND 'r' (0x72) -> RECV: OK state=IDLE
+SEND '?' (0x3f) -> RECV: STATE state=IDLE transitions=3 button=0 uart=4 ignored=0

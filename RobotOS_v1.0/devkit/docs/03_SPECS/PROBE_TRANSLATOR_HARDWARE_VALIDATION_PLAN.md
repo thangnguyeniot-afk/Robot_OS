@@ -1,11 +1,20 @@
 # RobotOS — Probe Translator Hardware Validation Plan
 
-**Status:** `DRAFT / NON-FINAL`
+**Status:** `VALIDATED_AT_12M (HARDWARE EVIDENCE)`
 **Spec type:** Long-lived hardware validation contract for Phase 12M.
-**Revision:** Phase 12M-pre (2026-05-14, `CLOSED_DOCS_ONLY`;
-`PHASE_12M_PRE_PROBE_TRANSLATOR_HARDWARE_VALIDATION_PLAN_CLOSED`)
+**Revision:** Phase 12M (2026-05-14, `CLOSED_WITH_HARDWARE_EVIDENCE`;
+`PHASE_12M_PROBE_TRANSLATOR_HARDWARE_VALIDATION_PASS`) —
+hardware validation landed via `run_phase12m_probe_demo.ps1 -ComPort COM5
+-InterByteDelayMs 6000 -CaptureSeconds 120`; Phase 12L firmware flashed
+to `stm32f411e_disco` rev D; all 9 RTT patterns FOUND; CFSR/HFSR all 0
+(25×); UART TX responses byte-matched; 15/15 validation gates PASS;
+`_SEGGER_RTT=0x20000b38`; RTT log `devkit/logs/phase_12M_rtt_2026-05-14.txt`
+(44,341 bytes).
+**Previous revision:** Phase 12M-pre (2026-05-14, `CLOSED_DOCS_ONLY`).
 **Planning closeout anchor:**
 [`../02_PHASE_CLOSEOUTS/PHASE_12M_PRE_PROBE_TRANSLATOR_HARDWARE_VALIDATION_PLAN.md`](../02_PHASE_CLOSEOUTS/PHASE_12M_PRE_PROBE_TRANSLATOR_HARDWARE_VALIDATION_PLAN.md)
+**Implementation closeout anchor:**
+[`../02_PHASE_CLOSEOUTS/PHASE_12M_PROBE_TRANSLATOR_HARDWARE_VALIDATION.md`](../02_PHASE_CLOSEOUTS/PHASE_12M_PROBE_TRANSLATOR_HARDWARE_VALIDATION.md)
 **Prior runtime-admission spec:**
 [`PROBE_TRANSLATOR_RUNTIME_ADMISSION_PLAN.md`](PROBE_TRANSLATOR_RUNTIME_ADMISSION_PLAN.md)
 
