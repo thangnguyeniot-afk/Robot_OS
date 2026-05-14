@@ -126,6 +126,7 @@ table contains only the reserved placeholders.
 | 12H | Probe Translator App Skeleton Planning (docs-only, Variant 1) | CLOSED_DOCS_ONLY | [->](#phase-12h) |
 | 12I-pre | Probe Translator Host Prototype Implementation Plan (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12i-pre) |
 | 12I | Probe Translator Host Prototype | CLOSED_WITH_HOST_TEST_EVIDENCE | [->](#phase-12i) |
+| 12J-pre | Probe Translator FAULT Block Plan (docs-only) | CLOSED_DOCS_ONLY | [->](#phase-12j-pre) |
 | 20Z | RESERVED -- future checkpoint / closeout slot | NOT_STARTED | [->](#phase-20z) |
 
 When future phases are added:
@@ -2854,6 +2855,162 @@ authorization**. Likely candidate gates (all `NOT_STARTED`):
   multi-product coordination planning).
 
 None of these may open without an explicit user command.
+Phase 12J-pre **was opened** after this gate and is recorded in
+the entry below.
+
+---
+
+<a id="phase-12j-pre"></a>
+## Phase 12J-pre -- Probe Translator FAULT Block Plan (docs-only)
+
+**Status:** `CLOSED_DOCS_ONLY`
+**Decision:** `PHASE_12J_PRE_PROBE_TRANSLATOR_FAULT_BLOCK_PLAN_CLOSED`
+**Closeout:** [`../02_PHASE_CLOSEOUTS/PHASE_12J_PRE_PROBE_TRANSLATOR_FAULT_BLOCK_PLAN.md`](../02_PHASE_CLOSEOUTS/PHASE_12J_PRE_PROBE_TRANSLATOR_FAULT_BLOCK_PLAN.md)
+**New long-lived spec:** [`../03_SPECS/PROBE_TRANSLATOR_FAULT_BLOCK_PLAN.md`](../03_SPECS/PROBE_TRANSLATOR_FAULT_BLOCK_PLAN.md)
+**Date:** 2026-05-13
+
+### 12J-pre.1 Purpose
+
+Phase 12J-pre converts the Phase 12I-deferred FAULT block into an
+execution-ready implementation contract for Phase 12J -- Probe
+Translator FAULT Block Extension. It commits the numeric values
+that Phase 12I held in comments only, decides ship-or-defer for
+the optional transition rows (5-9) and mapping row 4, and resolves
+sticky-FAULT behavior, all without writing source.
+
+Phase 12J-pre does not create source, does not modify Framework
+code, does not modify devkit runtime, does not modify
+`devkit_app_state`, does not change command semantics, does not run
+hardware, does not modify `app/probe_translator/probe_translator.{h,c}`,
+does not modify the host test, does not modify CMake, and does not
+open Phase 12J.
+
+### 12J-pre.2 Files added / modified
+
+- **New (2 docs):**
+  - `RobotOS_v1.0/devkit/docs/02_PHASE_CLOSEOUTS/PHASE_12J_PRE_PROBE_TRANSLATOR_FAULT_BLOCK_PLAN.md`
+    -- decision closeout (sections A-R).
+  - `RobotOS_v1.0/devkit/docs/03_SPECS/PROBE_TRANSLATOR_FAULT_BLOCK_PLAN.md`
+    -- new long-lived implementation-plan spec
+    (`DRAFT / NON-FINAL`, sections 1-17).
+- **Modified (doc-sync only):**
+  - `RobotOS_v1.0/devkit/docs/01_PROGRESS/DEVKIT_PROGRESS_PHASE_11_20.md`
+    -- this entry + index row.
+  - `CURRENT_STATE.md` -- Phase 12J-pre as latest closed.
+  - `RobotOS_v1.0/devkit/docs/00_INDEX/README.md` -- Phase 12J-pre
+    closeout link + new spec link.
+- **Zero-diff held:** all `.c`/`.h`, all `CMakeLists.txt`, all
+  `prj.conf`, board DTS, overlay, Zephyr config files, all
+  existing evidence logs, `app/probe_translator/` source/header/
+  README.
+
+### 12J-pre.3 Resolved decisions summary
+
+| Decision | Resolution |
+|---|---|
+| `STATE_FAULT` numeric value | `4u` (formalized) |
+| `EVT_FAULT` numeric value | `5u` (formalized) |
+| `ADAPTER_TYPE_FAULT` numeric value | `3u` (formalized) |
+| `ADAPTER_ARG_ANY` declaration | `((uint32_t)0xFFFFFFFFu)` -- doc alias only |
+| Transition row 5 (`IDLE + RESET → IDLE`) | **SHIPPED** at 12J |
+| Transition rows 6-9 (FAULT block) | **SHIPPED** at 12J |
+| Mapping row 4 (FAULT wildcard) | **SHIPPED** at 12J |
+| Sticky FAULT for CONFIG/START/STOP | **implicit** (no FSM row) |
+| Bridge code change | **NONE** (uses existing Phase 12F `match_arg0=false`) |
+| CMake change | **NONE** (12I block already compiles `.c`) |
+| Final transition table | 10 rows |
+| Final mapping table | 5 rows |
+| Final state-def table | 4 entries |
+| New test cases | TC16-TC24 (~30-40 assertions) on top of retained TC01-TC15 |
+| Expected regression | 23/23 PASS (no new ctest target) |
+
+### 12J-pre.4 Phase 12J approved future file set
+
+**Modified existing files (additive only):**
+`app/probe_translator/probe_translator.{c,h}` (FAULT constants,
+5 new transition rows, 1 new state def, 1 new mapping row, count
+bumps); `app/probe_translator/README.md` (FAULT symbols appended);
+`tests/host/test_app_probe_translator_mapping.c` (TC16-TC24
+appended; TC01-TC15 retained verbatim).
+
+**New:** `tests/host/logs/phase_12J_host_<date>.log`;
+`PHASE_12J_PROBE_TRANSLATOR_FAULT_BLOCK.md` closeout.
+
+**Forbidden:** `tests/host/CMakeLists.txt` change;
+`app/probe_translator/CMakeLists.txt`; any Zephyr / devkit / UART
+/ hardware / Architecture B file; any `framework/` / `core/` /
+`platform/` / `devkit/src/` file.
+
+### 12J-pre.5 No CMake change required
+
+Phase 12I's additive block in `tests/host/CMakeLists.txt` lists
+`${APP_DIR}/probe_translator.c` as a target source. Phase 12J adds
+content **inside** that same `.c` file. CMake automatically
+rebuilds the existing target on next configure/build; no
+`add_executable` / `target_include_directories` / `add_test`
+change.
+
+### 12J-pre.6 No bridge ABI impact
+
+The Phase 12J wildcard mapping row uses an existing Phase 12F
+bridge feature (`match_arg0 == false`). The bridge `.c` / `.h`
+files are zero-diff at Phase 12J; the bridge contract test
+(`robotos_fw_event_bridge_contract`) remains unchanged and PASS.
+The bridge ABI memory-layout lock (Phase 12G §11 #9 open gate)
+is **not** triggered.
+
+### 12J-pre.7 Validation and exit criteria for Phase 12J
+
+14 gates (§K of closeout): CMake configure/build PASS; 23/23 tests
+PASS; FSM + bridge + probe-translator targets each PASS; log saved
+as `phase_12J_host_<date>.log`; four grep gates clean (no
+`devkit_app_state.h` / no `devkit_*` calls / no UART command bytes
+/ no Zephyr-devkit-legacy includes); command set unchanged;
+`devkit_app_state` zero-diff; no hardware run. Plus a Phase-12J-
+specific structural check: `transition_count = 10u`,
+`state_count = 4u`, `row_count = 5u` in `probe_translator_init`.
+
+### 12J-pre.8 Boundary preservation
+
+- `devkit_app_state` remains authoritative; not modified.
+  Scope-guard #11 re-affirmed.
+- Command set `a/s/r/?/x/v/L/d/T` unchanged.
+- Architecture B frozen; `probe_translator/` uses Architecture A
+  contracts only.
+- Phase 12I host-test baseline (TC01-TC15, 70/70 assertions, 23/23
+  ctest) preserved verbatim; Phase 12J adds without removing.
+
+### 12J-pre.9 What remains NOT_STARTED
+
+1. FAULT block implementation -- `NOT_STARTED`. Phase 12J requires
+   explicit user authorization.
+2. Non-NULL action callbacks for FAULT -- deferred to a future
+   app-behavior phase.
+3. on_entry / on_exit for FAULT (e.g., cause latching) -- deferred.
+4. Multi-source FAULT cause encoding -- deferred.
+5. Devkit hardware integration of Framework -- `NOT_STARTED`.
+6. Bridge ABI memory-layout lock -- `NOT_STARTED` (not triggered
+   by Phase 12J).
+7. Hardware-runnable Zephyr build of `app/probe_translator/` --
+   `NOT_STARTED`.
+8. Second `app/<product>/` -- `NOT_STARTED`.
+9. `RobotOS_v1.0/examples/` -- `NOT_STARTED`.
+
+### 12J-pre.10 Open gates preserved unchanged
+
+- ACTIVE disarm widening -- `USER_DECISION_REQUIRED_ACTIVE_DISARM`.
+- Scheduler 7A/7B -- `DEFER`.
+- F407 / custom board -- `HOLD/DEFER`.
+- POST_FLASH_AUTOSTART -- `OPEN/MITIGATED_BY_WORKFLOW`.
+- Devkit integration of Framework -- `NOT_STARTED`.
+
+### 12J-pre.11 Next gate
+
+**Hold or open Phase 12J -- Probe Translator FAULT Block
+Extension (host-only additive implementation)** only on **explicit
+user authorization**. The implementation contract is complete in
+[`../03_SPECS/PROBE_TRANSLATOR_FAULT_BLOCK_PLAN.md`](../03_SPECS/PROBE_TRANSLATOR_FAULT_BLOCK_PLAN.md).
+Phase 12J **remains `NOT_STARTED`** at the close of Phase 12J-pre.
 
 ---
 

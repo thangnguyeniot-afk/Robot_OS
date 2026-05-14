@@ -29,6 +29,14 @@ This spec is anchored to
 and extends
 [`PROBE_TRANSLATOR_APP_SKELETON_DRAFT.md`](PROBE_TRANSLATOR_APP_SKELETON_DRAFT.md).
 
+> **FAULT block extension is planned separately.** The Phase 12I
+> deferrals (FAULT state / event / adapter type / transition rows
+> 5-9 / mapping row 4 / `PROBE_ADAPTER_ARG_ANY`) are converted into
+> an execution-ready additive contract by Phase 12J-pre — see
+> [`PROBE_TRANSLATOR_FAULT_BLOCK_PLAN.md`](PROBE_TRANSLATOR_FAULT_BLOCK_PLAN.md).
+> This Phase 12I spec is **not modified** to record FAULT additions;
+> Phase 12J will add a forward-reference cross-link at its close.
+
 ---
 
 ## 1. Status / Scope
